@@ -1,0 +1,523 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1089</width>
+    <height>741</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true"/>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
+   <layout class="QGridLayout" name="gridLayout">
+    <item row="0" column="1">
+     <widget class="QSplitter" name="splitter_3">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <widget class="QSplitter" name="splitter">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+       <widget class="QFrame" name="coronalframe">
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
+        </property>
+       </widget>
+       <widget class="QFrame" name="sagitalframe">
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
+        </property>
+       </widget>
+       <widget class="QFrame" name="horizontalframe">
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
+        </property>
+       </widget>
+      </widget>
+      <widget class="QSplitter" name="splitter_2">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+       <widget class="QFrame" name="sagitalcopyframe">
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
+        </property>
+       </widget>
+       <widget class="QFrame" name="histview">
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
+        </property>
+       </widget>
+       <widget class="GLViewWidget" name="view3d" native="true">
+        <property name="autoFillBackground">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </widget>
+     </widget>
+    </item>
+    <item row="0" column="0">
+     <widget class="QTabWidget" name="sidebar">
+      <property name="minimumSize">
+       <size>
+        <width>300</width>
+        <height>0</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>300</width>
+        <height>16777215</height>
+       </size>
+      </property>
+      <property name="styleSheet">
+       <string notr="true"/>
+      </property>
+      <property name="tabPosition">
+       <enum>QTabWidget::North</enum>
+      </property>
+      <property name="currentIndex">
+       <number>4</number>
+      </property>
+      <widget class="QWidget" name="atlascontrolpanel">
+       <property name="styleSheet">
+        <string notr="true"/>
+       </property>
+       <attribute name="title">
+        <string>Tab 1</string>
+       </attribute>
+      </widget>
+      <widget class="QWidget" name="treeviewpanel">
+       <attribute name="title">
+        <string>Tab 2</string>
+       </attribute>
+      </widget>
+      <widget class="QWidget" name="imagecontrolpanel">
+       <attribute name="title">
+        <string>Page</string>
+       </attribute>
+      </widget>
+      <widget class="QWidget" name="layerpanel">
+       <attribute name="title">
+        <string>Page</string>
+       </attribute>
+      </widget>
+      <widget class="QWidget" name="probecontrolpanel">
+       <attribute name="title">
+        <string>Page</string>
+       </attribute>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <widget class="QMenuBar" name="menuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1089</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">color: rgb(254, 252, 255);
+selection-background-color: rgb(40, 95, 193);
+border-bottom-color: rgb(37, 37, 37); 
+selection-color: rgb(255, 255, 255);
+background-color: rgb(25, 27, 29);</string>
+   </property>
+   <property name="nativeMenuBar">
+    <bool>false</bool>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="styleSheet">
+     <string notr="true">color: rgb(255, 255, 255);
+background-color: qlineargradient(spread:pad, x1:1, y1:1, x2:1, y2:0, stop:0 rgba(42, 49, 53, 255), stop:1 rgba(85, 85, 88, 255));
+selection-color: rgb(255, 255, 255);
+selection-background-color: rgb(63, 124, 234);
+border-color: rgb(75, 78, 84);
+</string>
+    </property>
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionAtlas"/>
+    <addaction name="actionGroup_Images"/>
+    <addaction name="actionSingle_Image"/>
+    <addaction name="separator"/>
+    <addaction name="actionSave_Project"/>
+    <addaction name="actionSave_Image"/>
+    <addaction name="actionSave_Data"/>
+   </widget>
+   <widget class="QMenu" name="menuEdit">
+    <property name="styleSheet">
+     <string notr="true">color: rgb(255, 255, 255);
+background-color: qlineargradient(spread:pad, x1:1, y1:1, x2:1, y2:0, stop:0 rgba(42, 49, 53, 255), stop:1 rgba(85, 85, 88, 255));
+selection-color: rgb(255, 255, 255);
+selection-background-color: rgb(63, 124, 234);
+border-color: rgb(75, 78, 84);</string>
+    </property>
+    <property name="title">
+     <string>Edit</string>
+    </property>
+    <addaction name="actionUndo"/>
+    <addaction name="actionRedo"/>
+    <addaction name="actionCut"/>
+    <addaction name="actionCopy"/>
+    <addaction name="actionPaste"/>
+   </widget>
+   <widget class="QMenu" name="menuImage">
+    <property name="styleSheet">
+     <string notr="true">color: rgb(255, 255, 255);
+background-color: qlineargradient(spread:pad, x1:1, y1:1, x2:1, y2:0, stop:0 rgba(42, 49, 53, 255), stop:1 rgba(85, 85, 88, 255));
+selection-color: rgb(255, 255, 255);
+selection-background-color: rgb(63, 124, 234);
+border-color: rgb(75, 78, 84);</string>
+    </property>
+    <property name="title">
+     <string>Image</string>
+    </property>
+    <addaction name="actionGray_Mode"/>
+    <addaction name="separator"/>
+    <addaction name="action180"/>
+    <addaction name="action90_Clockwise"/>
+    <addaction name="action90_Counter_Clockwise"/>
+    <addaction name="separator"/>
+    <addaction name="actionFlip_Horizontal"/>
+    <addaction name="actionFlip_Vertical"/>
+   </widget>
+   <widget class="QMenu" name="menuAtlas">
+    <property name="styleSheet">
+     <string notr="true">color: rgb(255, 255, 255);
+background-color: qlineargradient(spread:pad, x1:1, y1:1, x2:1, y2:0, stop:0 rgba(42, 49, 53, 255), stop:1 rgba(85, 85, 88, 255));
+selection-color: rgb(255, 255, 255);
+selection-background-color: rgb(63, 124, 234);
+border-color: rgb(75, 78, 84);</string>
+    </property>
+    <property name="title">
+     <string>Atlas</string>
+    </property>
+    <addaction name="actionDownload"/>
+    <addaction name="separator"/>
+    <addaction name="actionSave_Current_Slice"/>
+    <addaction name="actionSave_Slice"/>
+    <addaction name="separator"/>
+    <addaction name="actionMesh"/>
+   </widget>
+   <widget class="QMenu" name="menuView">
+    <property name="styleSheet">
+     <string notr="true">color: rgb(255, 255, 255);
+background-color: qlineargradient(spread:pad, x1:1, y1:1, x2:1, y2:0, stop:0 rgba(42, 49, 53, 255), stop:1 rgba(85, 85, 88, 255));
+selection-color: rgb(255, 255, 255);
+selection-background-color: rgb(63, 124, 234);
+border-color: rgb(75, 78, 84);</string>
+    </property>
+    <property name="title">
+     <string>View</string>
+    </property>
+    <addaction name="actionCoronal_Window"/>
+    <addaction name="actionSagital_Window"/>
+    <addaction name="actionHorizontal_Window"/>
+    <addaction name="action3D_Window"/>
+    <addaction name="actionImage_Window"/>
+    <addaction name="separator"/>
+    <addaction name="action2_Windows"/>
+    <addaction name="action4_Windows"/>
+   </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="styleSheet">
+     <string notr="true">color: rgb(255, 255, 255);
+background-color: qlineargradient(spread:pad, x1:1, y1:1, x2:1, y2:0, stop:0 rgba(42, 49, 53, 255), stop:1 rgba(85, 85, 88, 255));
+selection-color: rgb(255, 255, 255);
+selection-background-color: rgb(63, 124, 234);
+border-color: rgb(75, 78, 84);</string>
+    </property>
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <addaction name="actionAbout_HERBS"/>
+   </widget>
+   <widget class="QMenu" name="menuRun">
+    <property name="styleSheet">
+     <string notr="true">color: rgb(255, 255, 255);
+background-color: qlineargradient(spread:pad, x1:1, y1:1, x2:1, y2:0, stop:0 rgba(42, 49, 53, 255), stop:1 rgba(85, 85, 88, 255));
+selection-color: rgb(255, 255, 255);
+selection-background-color: rgb(63, 124, 234);
+border-color: rgb(75, 78, 84);</string>
+    </property>
+    <property name="title">
+     <string>Run</string>
+    </property>
+    <addaction name="actionTriangulation"/>
+    <addaction name="separator"/>
+    <addaction name="actionTransfer_to_Atlas"/>
+    <addaction name="actionTransfer_to_Tissue"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuEdit"/>
+   <addaction name="menuImage"/>
+   <addaction name="menuAtlas"/>
+   <addaction name="menuView"/>
+   <addaction name="menuRun"/>
+   <addaction name="menuHelp"/>
+  </widget>
+  <widget class="QToolBar" name="toolbar">
+   <property name="minimumSize">
+    <size>
+     <width>0</width>
+     <height>32</height>
+    </size>
+   </property>
+   <property name="maximumSize">
+    <size>
+     <width>16777215</width>
+     <height>32</height>
+    </size>
+   </property>
+   <property name="windowTitle">
+    <string>Tool Bar</string>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">color: rgb(255, 255, 255);
+background-color: rgb(50, 50, 50);
+border: None;
+selection-color: rgb(50, 50, 50);
+selection-background-color: rgb(50, 50, 50);</string>
+   </property>
+   <property name="movable">
+    <bool>false</bool>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+   <addaction name="separator"/>
+  </widget>
+  <action name="action_File">
+   <property name="text">
+    <string>&amp;File</string>
+   </property>
+  </action>
+  <action name="action_Open">
+   <property name="text">
+    <string>&amp;Open</string>
+   </property>
+  </action>
+  <action name="actionImage">
+   <property name="text">
+    <string>Image</string>
+   </property>
+  </action>
+  <action name="actionAtlas">
+   <property name="text">
+    <string>Atlas...</string>
+   </property>
+  </action>
+  <action name="actionGroup_Images">
+   <property name="text">
+    <string>Group Images...</string>
+   </property>
+  </action>
+  <action name="actionSingle_Image">
+   <property name="text">
+    <string>Single Image...</string>
+   </property>
+  </action>
+  <action name="actionSave_Project">
+   <property name="text">
+    <string>Save Project</string>
+   </property>
+  </action>
+  <action name="actionSave_Image">
+   <property name="text">
+    <string>Save Image</string>
+   </property>
+  </action>
+  <action name="actionSave_Data">
+   <property name="text">
+    <string>Save Data</string>
+   </property>
+  </action>
+  <action name="actionUndo">
+   <property name="text">
+    <string>Undo</string>
+   </property>
+  </action>
+  <action name="actionRedo">
+   <property name="text">
+    <string>Redo</string>
+   </property>
+  </action>
+  <action name="actionCut">
+   <property name="text">
+    <string>Cut</string>
+   </property>
+  </action>
+  <action name="actionCopy">
+   <property name="text">
+    <string>Copy</string>
+   </property>
+  </action>
+  <action name="actionPaste">
+   <property name="text">
+    <string>Paste</string>
+   </property>
+  </action>
+  <action name="actionGray_Mode">
+   <property name="text">
+    <string>Gray Mode</string>
+   </property>
+  </action>
+  <action name="action180">
+   <property name="text">
+    <string>180</string>
+   </property>
+  </action>
+  <action name="action90_Clockwise">
+   <property name="text">
+    <string>90 Clockwise</string>
+   </property>
+  </action>
+  <action name="action90_Counter_Clockwise">
+   <property name="text">
+    <string>90 Counter Clockwise</string>
+   </property>
+  </action>
+  <action name="actionFlip_Horizontal">
+   <property name="text">
+    <string>Flip Horizontal</string>
+   </property>
+  </action>
+  <action name="actionFlip_Vertical">
+   <property name="text">
+    <string>Flip Vertical</string>
+   </property>
+  </action>
+  <action name="actionDownload">
+   <property name="text">
+    <string>Download...</string>
+   </property>
+  </action>
+  <action name="actionSave_Current_Slice">
+   <property name="text">
+    <string>Atlas Info</string>
+   </property>
+  </action>
+  <action name="actionAbout_HERBS">
+   <property name="text">
+    <string>About HERBS</string>
+   </property>
+  </action>
+  <action name="actionSave_Slice">
+   <property name="text">
+    <string>Save Slice...</string>
+   </property>
+  </action>
+  <action name="actionMesh">
+   <property name="text">
+    <string>Mesh...</string>
+   </property>
+  </action>
+  <action name="actionCoronal_Window">
+   <property name="text">
+    <string>Coronal Window</string>
+   </property>
+  </action>
+  <action name="actionSagital_Window">
+   <property name="text">
+    <string>Sagital Window</string>
+   </property>
+  </action>
+  <action name="actionHorizontal_Window">
+   <property name="text">
+    <string>Horizontal Window</string>
+   </property>
+  </action>
+  <action name="action3D_Window">
+   <property name="text">
+    <string>3D Window</string>
+   </property>
+  </action>
+  <action name="actionImage_Window">
+   <property name="text">
+    <string>Image Window</string>
+   </property>
+  </action>
+  <action name="action2_Windows">
+   <property name="text">
+    <string>2 Windows</string>
+   </property>
+  </action>
+  <action name="action4_Windows">
+   <property name="text">
+    <string>4 Windows</string>
+   </property>
+  </action>
+  <action name="actionTriangulation">
+   <property name="text">
+    <string>Triangulation</string>
+   </property>
+  </action>
+  <action name="actionTissue_to_Atlas">
+   <property name="text">
+    <string>Tissue to Atlas</string>
+   </property>
+  </action>
+  <action name="actionAtlas_to_Tissue">
+   <property name="text">
+    <string>Atlas to Tissue</string>
+   </property>
+  </action>
+  <action name="actionTransfer_to_Atlas">
+   <property name="text">
+    <string>Transfer to Atlas</string>
+   </property>
+  </action>
+  <action name="actionTransfer_to_Tissue">
+   <property name="text">
+    <string>Transfer to Tissue</string>
+   </property>
+  </action>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>GLViewWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">pyqtgraph.opengl</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>
