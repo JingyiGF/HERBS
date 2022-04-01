@@ -289,6 +289,7 @@ class AtlasView(QObject):
         self.horizontal_rotated = False
 
         self.origin3d = None
+        self.bregma3d = None
 
         self.c_rotm = None
         self.s_rotm = None
@@ -534,6 +535,7 @@ class AtlasView(QObject):
         inverse_l2 = self.atlas_size[0] - atlas_info[3]['Lambda'][2]
         self.Lambda = (inverse_l2, atlas_info[3]['Lambda'][0], atlas_info[3]['Lambda'][1])
         self.origin3d = np.array(atlas_info[3]['Bregma'])
+        self.bregma3d = np.array(atlas_info[3]['Bregma'])
 
         self.current_coronal_index = self.Bregma[2]
         self.current_sagital_index = self.Bregma[1]
@@ -583,8 +585,6 @@ class AtlasView(QObject):
             self.cimg.h_line.setVisible(True)
             self.himg.v_line.setVisible(True)
             self.himg.h_line.setVisible(True)
-            # self.scimg.v_line.setVisible(True)
-            # self.scimg.h_line.setVisible(True)
             self.simg.v_line.setVisible(True)
             self.simg.h_line.setVisible(True)
         else:
@@ -592,8 +592,6 @@ class AtlasView(QObject):
             self.cimg.h_line.setVisible(False)
             self.himg.v_line.setVisible(False)
             self.himg.h_line.setVisible(False)
-            # self.scimg.v_line.setVisible(False)
-            # self.scimg.h_line.setVisible(False)
             self.simg.v_line.setVisible(False)
             self.simg.h_line.setVisible(False)
 
@@ -655,7 +653,6 @@ class AtlasView(QObject):
         val = self.atlas_op_spinbox.value()
         self.cimg.label_img.setOpts(opacity=val)
         self.simg.label_img.setOpts(opacity=val)
-        # self.scimg.label_img.setOpts(opacity=val)
         self.himg.label_img.setOpts(opacity=val)
 
     # slice number changed
@@ -670,7 +667,7 @@ class AtlasView(QObject):
         da_atlas_contour = self.atlas_boundary['c_contour'][:, :, page_number]
         self.cimg.set_data(da_atlas_slice, da_atlas_label, da_atlas_contour, scale=None)
 
-        slide_dist = (page_number - self.Bregma[2]) / 2
+        slide_dist = (page_number - self.Bregma[2])
         ap_plate_verts = self.ap_plate_verts + np.array([0, slide_dist, 0])
         ap_plate_md = gl.MeshData(vertexes=ap_plate_verts, faces=self.ap_plate_faces)
         self.ap_plate_mesh.setMeshData(meshdata=ap_plate_md)
@@ -691,7 +688,7 @@ class AtlasView(QObject):
         # if self.scpage_ctrl.page_slider.value() != page_number:
         #     self.scpage_ctrl.set_val(page_number)
 
-        slide_dist = (page_number - self.Bregma[1]) / 2
+        slide_dist = (page_number - self.Bregma[1])
         ml_plate_verts = self.ml_plate_verts + np.array([slide_dist, 0, 0])
         ml_plate_md = gl.MeshData(vertexes=ml_plate_verts, faces=self.ml_plate_faces)
         self.ml_plate_mesh.setMeshData(meshdata=ml_plate_md)
@@ -717,7 +714,7 @@ class AtlasView(QObject):
         da_atlas_contour = self.atlas_boundary['h_contour'][page_number, :, :]
         self.himg.set_data(da_atlas_slice, da_atlas_label, da_atlas_contour, scale=None)
 
-        slide_dist = (page_number - self.Bregma[0]) / 2
+        slide_dist = (page_number - self.Bregma[0])
         dv_plate_verts = self.dv_plate_verts - np.array([0, 0, slide_dist])
         dv_plate_md = gl.MeshData(vertexes=dv_plate_verts, faces=self.dv_plate_faces)
         self.dv_plate_mesh.setMeshData(meshdata=dv_plate_md)
@@ -728,7 +725,7 @@ class AtlasView(QObject):
         s_id = self.current_sagital_index
         h_id = self.current_horizontal_index
         o_rot = np.array([h_id, s_id, c_id])
-        offset = (o_rot - self.Bregma) / 2
+        offset = (o_rot - self.Bregma)
         self.origin3d = np.array([offset[1], offset[2], - offset[0]])
 
     def coronal_slice_rotated(self, rads):
@@ -768,7 +765,7 @@ class AtlasView(QObject):
 
         self.c_rotm_3d = np.dot(rotation_z(z_angle), rotation_x(-x_angle))
 
-        slide_dist = (self.current_coronal_index - self.Bregma[2]) / 2
+        slide_dist = (self.current_coronal_index - self.Bregma[2])
         ap_plate_verts = self.ap_plate_verts + np.array([0, slide_dist, 0])
         ap_plate_verts = np.dot(self.c_rotm_3d, (ap_plate_verts - self.origin3d).T).T + self.origin3d
         ap_plate_md = gl.MeshData(vertexes=ap_plate_verts, faces=self.ap_plate_faces)
@@ -811,7 +808,7 @@ class AtlasView(QObject):
 
         self.s_rotm_3d = np.dot(rotation_z(z_angle), rotation_y(-y_angle))
 
-        slide_dist = (self.current_sagital_index - self.Bregma[1]) / 2
+        slide_dist = (self.current_sagital_index - self.Bregma[1])
         ml_plate_verts = self.ml_plate_verts + np.array([slide_dist, 0, 0])
         ml_plate_verts = np.dot(self.s_rotm_3d, (ml_plate_verts - self.origin3d).T).T + self.origin3d
         ml_plate_md = gl.MeshData(vertexes=ml_plate_verts, faces=self.ml_plate_faces)
@@ -854,7 +851,7 @@ class AtlasView(QObject):
 
         self.h_rotm_3d = np.dot(rotation_y(-y_angle), rotation_x(-x_angle))
 
-        slide_dist = (self.Bregma[0] - h_id) / 2
+        slide_dist = (self.Bregma[0] - h_id)
         dv_plate_verts = self.dv_plate_verts + np.array([0, 0, slide_dist])
         dv_plate_verts = np.dot(self.h_rotm_3d, (dv_plate_verts - self.origin3d).T).T + self.origin3d
         dv_plate_md = gl.MeshData(vertexes=dv_plate_verts, faces=self.dv_plate_faces)

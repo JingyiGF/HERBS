@@ -951,6 +951,8 @@ class HERBS(QMainWindow, FORM_Main):
         self.tool_box.triang_match_bnd.clicked.connect(self.matching_tri_bnd)
         # cell related
         self.tool_box.cell_radar_btn.clicked.connect(self.cell_detect_btn_clicked)
+        self.tool_box.cell_selector_btn.clicked.connect(self.cell_select_btn_clicked)
+        self.tool_box.cell_aim_btn.clicked.connect(self.cell_aim_btn_clicked)
         # moving related
         self.tool_box.left_button.clicked.connect(self.moving_left_btn_clicked)
         self.tool_box.right_button.clicked.connect(self.moving_right_btn_clicked)
@@ -1379,6 +1381,14 @@ class HERBS(QMainWindow, FORM_Main):
     #               ToolBar loc btn related
     #
     # ------------------------------------------------------------------
+    def cell_select_btn_clicked(self):
+        if self.tool_box.cell_aim_btn.isChecked():
+            self.tool_box.cell_aim_btn.setChecked(False)
+
+    def cell_aim_btn_clicked(self):
+        if self.tool_box.cell_selector_btn.isChecked():
+            self.tool_box.cell_selector_btn.setChecked(False)
+
     def cell_detect_btn_clicked(self):
         if self.working_blob_data is None:
             return
@@ -1388,23 +1398,33 @@ class HERBS(QMainWindow, FORM_Main):
         if self.image_view.current_mode == 'rgb':
             temp = cv2.cvtColor(temp, cv2.COLOR_RGB2GRAY)
 
-        locs = np.asarray(self.working_blob_data)
-        da_colors = temp[locs[: 1], locs[:, 0]]
+        print(temp.shape)
+        locs = np.asarray(self.working_blob_data).astype(int)
+        da_colors = temp[locs[:, 1], locs[:, 0]]
+        print(da_colors)
 
-        small_img = np.zeros((np.max(np.locs[:, 1]) - np.min(np.locs[:, 1]), np.max(np.locs[:, 0]) - np.min(np.locs[:, 0])))
-        small_img = small_img.astype('uint8')
-        small_locs = locs - np.array([np.min(np.locs[:, 0]), np.min(np.locs[:, 1])])
-        small_img[small_locs[:, 0], small_locs[:, 1]] = 1
+        da_width = np.max(locs[:, 0]) - np.min(locs[:, 0]) + 1
+        da_height = np.max(locs[:, 1]) - np.min(locs[:, 1]) + 1
+        small_img = np.zeros((da_height, da_width), 'uint8')
+        small_locs = locs - np.array([np.min(locs[:, 0]), np.min(locs[:, 1])])
+        print(small_img.shape)
+        print(small_locs)
+        small_img[small_locs[:, 1], small_locs[:, 0]] = 1
         ct, ht = cv2.findContours(small_img, mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_NONE)
+
+        print(len(ct))
         cnt = ct[0]
         da_moment = cv2.moments(cnt)
-        cx = int(da_moment['m10'] / da_moment['m00'])
-        cy = int(da_moment['m01'] / da_moment['m00'])
+        print(da_moment)
 
         da_area = cv2.contourArea(cnt)
         da_perimeter = cv2.arcLength(cnt, True)
 
         da_circularity = 4 * np.pi * da_area / (da_perimeter ** 2)
+
+        print(da_area)
+        print(da_perimeter)
+        print(da_circularity)
 
         params = cv2.SimpleBlobDetector_Params()
         # Change thresholds
@@ -1427,6 +1447,15 @@ class HERBS(QMainWindow, FORM_Main):
 
         keypoints = detector.detect(temp)
         print(keypoints)
+        self.working_blob_data = []
+        n_keypoints = len(keypoints)
+        for i in range(n_keypoints):
+            x = keypoints[i].pt[0]  # i is the index of the blob you want to get the position
+            y = keypoints[i].pt[1]
+            size = keypoints[i].size
+            self.working_img_cell_pnt_data.append([x, y])
+
+        self.image_view.img_stacks.cell_pnts.setData(pos=np.asarray(self.working_img_cell_pnt_data))
         # im_with_keypoints = cv2.drawKeypoints(im, keypoints, np.array([]), (0, 0, 255),
         #                                       cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
 
@@ -1991,26 +2020,21 @@ class HERBS(QMainWindow, FORM_Main):
         # ------------------------- loc -- cell
         elif self.tool_box.checkable_btn_dict['loc_btn'].isChecked():
             self.inactive_lasso()
-            if self.tool_box.cell_aim_btn.isChecked():
+            if self.tool_box.cell_selector_btn.isChecked():
                 self.working_img_cell_pnt_data.append([x, y])
                 self.image_view.img_stacks.cell_pnts.setData(pos=np.asarray(self.working_img_cell_pnt_data))
                 locs = np.asarray(self.working_img_cell_pnt_data).astype(int)
                 temp = np.zeros(self.image_view.img_size[:2], 'uint8')
                 temp[locs[:, 1], locs[:, 0]] = 1
-                self.image_view.img_stacks.cell_img.setImage(temp)
                 res = cv2.resize(temp, self.image_view.tb_size, interpolation=cv2.INTER_AREA)
                 self.master_layers(res, layer_type='img-cells')
 
                 self.manual_cell_count += 1
                 total_cell_count = self.manual_cell_count + self.auto_cell_count
                 self.tool_box.cell_count_val.setText(str(total_cell_count))
-            if self.tool_box.cell_selector_btn.isChecked():
+            if self.tool_box.cell_aim_btn.isChecked():
                 self.working_blob_data.append([x, y])
-                print(self.working_blob_data)
-                locs = np.asarray(self.working_blob_data).astype(int)
-                temp = np.zeros(self.image_view.img_size[:2], 'uint8')
-                temp[locs[:, 1], locs[:, 0]] = 1
-                self.image_view.img_stacks.cell_img.setImage(temp)
+                self.image_view.img_stacks.blob_pnts.setData(pos=np.asarray(self.working_blob_data))
 
         # ------------------------- probe
         elif self.tool_box.checkable_btn_dict['probe_btn'].isChecked():
@@ -2529,43 +2553,6 @@ class HERBS(QMainWindow, FORM_Main):
         #     self.working_atlas_text[i].setPos(self.working_atlas_pnts[i][0], self.working_atlas_pnts[i][1])
 
 
-
-
-    #
-    # def view1_mouse_hovered(self, mouse_info):
-    #     id = mouse_info[0]
-    #     x_pos, z_pos = mouse_info[1].x(), mouse_info[1].y()
-    #
-    #     z_angle = np.radians(self.acontrols.atlas_view.cz_angle_slider.value())
-    #     x_angle = np.radians(self.acontrols.atlas_view.cx_angle_slider.value())
-    #     page_num = self.acontrols.atlas_view.c_page_slider.value()
-    #
-    #     if z_angle != 0 or z_angle != 0:
-    #         o_corner = np.array([0, page_num, 0])
-    #         o_rot = np.array([256, page_num, 256])
-    #         rotm = np.dot(rotation_z(z_angle), rotation_x(x_angle))
-    #         oz_vector = np.dot(rotm, np.array([0, 0, 1]))
-    #         ox_vector = np.dot(rotm, np.array([1, 0, 0]))
-    #         o_corner_new = o_rot + np.dot(rotm, o_corner - o_rot)
-    #         pos_3d = d2td3((x_pos, z_pos), ox_vector, oz_vector, o_corner_new)
-    #     else:
-    #         pos_3d = (x_pos, page_num, z_pos)
-    #
-    #     ml = np.round((pos_3d[0] - 246) * self.resolution * 1e-3, 2)
-    #     ap = np.round((pos_3d[1] - 653) * self.resolution * 1e-3, 2)
-    #     dv = np.round((440 - pos_3d[2]) * self.resolution * 1e-3, 2)
-    #     if ml > 0:
-    #         ml = 'R {}'.format(ml)
-    #     elif ml < 0:
-    #         ml = 'L {}'.format(-ml)
-    #     else:
-    #         ml = 0
-    #
-    #     p_pos = np.ravel(pos_3d).astype(int)
-    #
-    #     pstr = '({}, {}, {}), AP: {}mm, ML: {}mm, DV:{}mm, {} '.format(p_pos[0], p_pos[1], p_pos[2], ap, ml, dv,
-    #                                                                    self.acontrols.atlas_view.label_tree.describe(
-    #                                                                        id))
     #     # self.statusLabel.setText(id.astype(str))
     #     self.statusLabel.setText(pstr)
     #     if self.acontrols.hist_img_view.eraser_in_use:
@@ -2574,39 +2561,6 @@ class HERBS(QMainWindow, FORM_Main):
     #         self.view1.setCursor(Qt.ArrowCursor)
     #
 
-    #
-    # def mouse_hovered(self, mouse_info):
-    #     id = mouse_info[0]
-    #     pos = (mouse_info[1].x(), mouse_info[1].y())
-    #     pstr = '({}, {}), {} '.format(pos[0], pos[1], self.acontrols.atlas_view.label_tree.describe(id))
-    #     # self.statusLabel.setText(id.astype(str))
-    #     self.statusLabel.setText(pstr)
-    #     if self.acontrols.hist_img_view.eraser_in_use:
-    #         self.view1.setCursor(self.eraser_cursor)
-    #     else:
-    #         self.view1.setCursor(Qt.ArrowCursor)
-    #
-    # def mouse_hovered_hist(self, pos):
-    #     if self.acontrols.hist_img_view.eraser_in_use:
-    #         self.view5.setCursor(self.eraser_cursor)
-    #     else:
-    #         self.view5.setCursor(Qt.ArrowCursor)
-    #
-
-    # # ----------------------------------------------------------------------------
-    # def auto_resize(self):
-    #     if self.image_view.image_file is None:
-    #         return
-    #     shp = self.image_view.current_gray_img.shape[:2]
-    #
-    #     scale_percent = np.ceil(np.max([shp[1] / self.atlas_view.slice_size[0], shp[0] / self.atlas_view.slice_size[1]]))  # percent of original size
-    #     width = int(shp[1] * scale_percent)
-    #     height = int(shp[0] * scale_percent)
-    #     dim = (width, height)
-    #
-    #     temp = []
-    #     for i in range(len(self.image_view.current_color_img)):
-    #         self.image_view.current_color_img[i] = cv2.resize(self.image_view.current_color_img[i], dim, interpolation=cv2.INTER_AREA)
 
 
 
@@ -2616,18 +2570,6 @@ class HERBS(QMainWindow, FORM_Main):
 
 
 
-
-
-
-
-
-
-
-        # translate cells
-
-        # translate lines
-
-        # translate boundary
 
 
 
@@ -2788,15 +2730,23 @@ class HERBS(QMainWindow, FORM_Main):
     def get_coronal_3d(self, points2):
         da_y = np.ones(len(points2)) * self.atlas_view.current_coronal_index
         points3 = np.vstack([points2[:, 0], da_y, self.atlas_view.atlas_size[0] - points2[:, 1]]).T
+        points3 = points3 - self.atlas_view.bregma3d
+        shift_dist = self.atlas_view.current_coronal_index - self.atlas_view.bregma3d[1]
+        points3 = points3 + np.array([0, shift_dist, 0])
         if self.atlas_view.coronal_rotated:
             rotm = self.atlas_view.c_rotm_3d
             origin = self.atlas_view.origin3d
+            print(origin)
             points3 = np.dot(rotm, (points3 - origin).T).T + origin
+            print('p3', points3)
         return points3
 
     def get_sagital_3d(self, points2):
         da_x = np.ones(len(points2)) * self.atlas_view.current_sagital_index
         points3 = np.vstack([da_x, points2[:, 0], self.atlas_view.atlas_size[0] - points2[:, 1]]).T
+        points3 = points3 - self.atlas_view.bregma3d
+        shift_dist = self.atlas_view.current_sagital_index - self.atlas_view.bregma3d[0]
+        points3 = points3 + np.array([shift_dist, 0, 0])
         if self.atlas_view.sagital_rotated:
             rotm = self.atlas_view.s_rotm_3d
             origin = self.atlas_view.origin3d
@@ -2806,6 +2756,9 @@ class HERBS(QMainWindow, FORM_Main):
     def get_horizontal_3d(self, points2):
         da_z = np.ones(len(points2)) * self.atlas_view.current_horizontal_index
         points3 = np.vstack([points2[:, 1], points2[:, 0], self.atlas_view.atlas_size[0] - da_z]).T
+        points3 = points3 - self.atlas_view.bregma3d
+        shift_dist = self.atlas_view.current_sagital_index - self.atlas_view.bregma3d[2]
+        points3 = points3 + np.array([0, 0, shift_dist])
         if self.atlas_view.horizontal_rotated:
             rotm = self.atlas_view.h_rotm_3d
             origin = self.atlas_view.origin3d
@@ -2850,16 +2803,15 @@ class HERBS(QMainWindow, FORM_Main):
 
     #
     def merge_probes(self):
+        # check none type, should not run when there is none type
         data = self.object_ctrl.merge_probe_pieces()
         print(data)
         label_data = np.transpose(self.atlas_view.atlas_label, (1, 2, 0))[:, :, ::-1]
-        da_bregma = np.array([self.atlas_view.Bregma[1], self.atlas_view.Bregma[2],
-                              self.atlas_view.atlas_size[0] - self.atlas_view.Bregma[0]])
-        print(da_bregma)
+
         for i in range(len(data)):
             self.object_ctrl.add_merged_object('merged probe', object_data=[])
             info_dict = calculate_probe_info(data[i], label_data, self.atlas_view.label_info, self.atlas_view.vxsize_um,
-                                             self.tip_length, self.channel_size, da_bregma)
+                                             self.tip_length, self.channel_size, self.atlas_view.bregma3d)
 
             info_dict['probe_color'] = self.object_ctrl.obj_list[-1].color.name()
             self.registered_prob_list.append(info_dict)
@@ -2872,10 +2824,10 @@ class HERBS(QMainWindow, FORM_Main):
     def add_3d_probe_lines(self, data_dict):
         da_bregma = np.array([self.atlas_view.Bregma[1], self.atlas_view.Bregma[2],
                               self.atlas_view.atlas_size[0] - self.atlas_view.Bregma[0]])
-        sp = data_dict['new_sp'] - da_bregma
-        ep = data_dict['new_ep'] - da_bregma
+        sp = data_dict['new_sp']
+        ep = data_dict['new_ep']
         print(sp, ep)
-        pos = np.stack([sp, ep], axis=0) * 0.5
+        pos = np.stack([sp, ep], axis=0)
         print(pos)
         probe_line = gl.GLLinePlotItem(pos=pos, color=data_dict['probe_color'], width=3, mode='line_strip')
         probe_line.setGLOptions('opaque')
@@ -3100,7 +3052,7 @@ class HERBS(QMainWindow, FORM_Main):
                     self.verts, self.faces = render_volume(da_atlas.atlas_data, self.atlas_folder, factor=2, level=0.1)
                     # self.verts = np.dot(rotm, self.verts.T).T
 
-            md = gl.MeshData(vertexes=self.verts, faces=self.faces)
+            md = gl.MeshData(vertexes=self.verts * 2, faces=self.faces)
             # mesh = gl.GLMeshItem(meshdata=md, smooth=True)
             #
             # file = 'test_md.pkl'
@@ -3116,7 +3068,7 @@ class HERBS(QMainWindow, FORM_Main):
 
 
             self.atlas_view.mesh.setMeshData(meshdata=md)
-            self.mesh_origin = np.ravel(da_atlas.atlas_info[3]['Bregma']) / 2
+            self.mesh_origin = np.ravel(da_atlas.atlas_info[3]['Bregma'])
             self.atlas_view.mesh.translate(-self.mesh_origin[0], -self.mesh_origin[1], -self.mesh_origin[2])
 
             self.statusbar.showMessage('Brain mesh is Loaded.')
@@ -3206,6 +3158,7 @@ class HERBS(QMainWindow, FORM_Main):
             self.show_2_windows()
 
         self.image_view.img_stacks.mask_img.setLookupTable(self.tool_box.base_lut)
+        self.image_view.img_stacks.cell_img.setLookupTable(self.tool_box.base_lut)
 
 
         # self.hist_lut.setImageItem(self.image_view.current_color_img)

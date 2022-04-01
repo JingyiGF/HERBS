@@ -106,7 +106,11 @@ class ImageStacks(pg.GraphicsLayoutWidget):
         self.probe_img = pg.ImageItem()
         self.probe_pnts = pg.ScatterPlotItem(pen=pg.mkPen(color=(128, 128, 128)), symbol='s', symbolSize=2, brush=None)
         self.cell_img = pg.ImageItem()
-        self.cell_pnts = pg.ScatterPlotItem(pen=QColor(238, 130, 238), symbol='d', symbolSize=2, brush=None)
+        self.cell_img.setLevels(levels=(0, 1))
+        self.cell_pnts = pg.ScatterPlotItem(pen=(55, 55, 55), symbolBrush=(55, 55, 55), symbolPen=(55, 55, 55),
+                                            symbol='s', symbolSize=1)
+        self.blob_pnts = pg.ScatterPlotItem(pen=(55, 55, 55), symbolBrush=(55, 55, 55), symbolPen=(55, 55, 55),
+                                            symbol='s', symbolSize=1)
         self.drawing_img = pg.ImageItem()
         self.drawing_img.setLevels(levels=(0, 1))
         self.drawing_pnts = pg.PlotDataItem(pen=pg.mkPen(color=(128, 128, 128), width=3), brush=None)
@@ -134,6 +138,7 @@ class ImageStacks(pg.GraphicsLayoutWidget):
         self.vb.addItem(self.probe_pnts)
         self.vb.addItem(self.cell_img)
         self.vb.addItem(self.cell_pnts)
+        self.vb.addItem(self.blob_pnts)
         self.vb.addItem(self.drawing_img)
         self.vb.addItem(self.drawing_pnts)
         self.vb.addItem(self.contour_img)

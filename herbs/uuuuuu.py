@@ -84,6 +84,7 @@ def line_fit(points):
     p2 = points[np.where(points[:, 2] == np.min(points[:, 2]))[0], :]
     sp = get_closest_point_to_line(avg, direction, p1)
     ep = get_closest_point_to_line(avg, direction, p2)
+    print(sp, ep)
     return sp, ep, avg, direction
 
 
@@ -118,7 +119,7 @@ def pandas_to_str(label_name, label_ano, length, channels):
     return df.to_string(col_space=30, justify="justify")
 
 
-def get_probe_length(segmentation_data, sp, ep, direction, resolution, tip_length, channel_size):
+def get_probe_length(segmentation_data, sp, ep, direction, resolution, tip_length, channel_size, bregma):
     probe_length = np.sqrt(np.sum((sp - ep)**2)) * resolution - tip_length
     pix_probe_length = probe_length / resolution
 
@@ -134,7 +135,8 @@ def get_probe_length(segmentation_data, sp, ep, direction, resolution, tip_lengt
 
         new_ep = chk_pnts[-1]
         # chk_vox = chk_vox + 0.5 * (chk_vox[1] - chk_vox[0])
-        chk_vox = chk_pnts.astype(int)
+        chk_vox = chk_pnts + bregma
+        chk_vox = chk_vox.astype(int)
 
         chn_lines_labels = np.zeros(total_chn_lines)
         for i in range(total_chn_lines):
@@ -203,26 +205,36 @@ def block_same_label(chn_lines_labels, chn_line_color):
 
 
 def correct_start_pnt(label_data, start_pnt, direction):
+    temp = start_pnt - direction
+    if temp[2] < start_pnt[2]:
+        direction = - direction
+
     for i in range(1000):
         temp = start_pnt - i * direction
         check_vox = temp.astype(int)
         if label_data[check_vox[0], check_vox[1], check_vox[2]] == 0:
             break
-        new_sp = start_pnt - (i - 1) * direction
-    return new_sp
+    new_sp = start_pnt - (i - 1) * direction
+    return new_sp, direction
 
 
 def calculate_probe_info(data, label_data, label_info, vxsize_um, tip_length, channel_size, bregma):
     start_pnt, end_pnt, avg, direction = line_fit(data)
-    # print(start_pnt, end_pnt, avg, direction)
+    start_vox = start_pnt + bregma
+    end_vox = end_pnt + bregma
+    print(start_pnt, end_pnt, avg, direction)
+    print('dir', direction)
     theta, phi = get_angles(direction)
     # print(theta, phi)
-    new_sp = correct_start_pnt(label_data, start_pnt, direction)
+    new_start_vox, direction = correct_start_pnt(label_data, start_vox, direction)
+    print(direction)
+    new_sp = new_start_vox - bregma
+    print('new_sp', new_sp)
     probe_length, chn_lines_labels, region_label, region_length, region_channels, new_ep = \
-        get_probe_length(label_data, new_sp, end_pnt, direction, vxsize_um, tip_length, channel_size)
+        get_probe_length(label_data, new_sp, end_pnt, direction, vxsize_um, tip_length, channel_size, bregma)
     # print(chn_lines_labels, region_label, region_length, region_channels, new_ep)
-    enter_coords = (new_sp - bregma) * vxsize_um
-    enter_coords[2] = - enter_coords[2]
+    enter_coords = new_sp * vxsize_um
+    print(enter_coords)
     label_names, label_acronym, label_color, chn_line_color = get_label_name(label_info, region_label, chn_lines_labels)
     # print(label_names, label_acronym, label_color, chn_line_color)
 
@@ -231,6 +243,7 @@ def calculate_probe_info(data, label_data, label_info, vxsize_um, tip_length, ch
 
     da_dict = {'sp': start_pnt, 'ep': end_pnt, 'direction': direction, 'data': data, 'probe_length': probe_length,
                'new_sp': new_sp, 'new_ep': new_ep, 'theta': theta, 'phi': phi, 'coords': enter_coords,
+               'enter_vox': new_start_vox,
                'chn_lines_labels': merged_labels, 'chn_lines_color': merged_colors, 'block_count': block_count,
                'region_label': region_label, 'region_length': region_length, 'region_channels': region_channels,
                'label_name': label_names, 'label_acronym': label_acronym, 'label_color': label_color}
