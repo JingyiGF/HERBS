@@ -1,0 +1,15 @@
+ for the HERBS core, the HERBS guide, various
+    bug-fixes and code contributions.
+
+
+for planning and code contributions.
+ for code snippets, ideas, bugfixes, and testing.
+
+For help with xxx.py, testing, and bug fixes.
+Jonathan Whitlock for administration and community coordination.
+
+
+Institutions
+------------
+
+
