@@ -217,8 +217,7 @@ class SingleLayer(QWidget):
             im[:, :, 1] = thumbnail_data
             im[:, :, 2] = thumbnail_data
         else:
-            im_temp = thumbnail_data.astype('uint8')
-            im = cv2.rotate(im_temp, cv2.ROTATE_90_COUNTERCLOCKWISE)
+            im = thumbnail_data.astype('uint8')
 
         im_shape = np.ravel(im.shape[:2])
 

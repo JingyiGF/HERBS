@@ -222,6 +222,10 @@ border-color: rgb(75, 78, 84);</string>
     <addaction name="separator"/>
     <addaction name="actionFlip_Horizontal"/>
     <addaction name="actionFlip_Vertical"/>
+    <addaction name="separator"/>
+    <addaction name="actionCopy_Current_Image"/>
+    <addaction name="actionHide_Original_Image"/>
+    <addaction name="actionShow_Original_Image"/>
    </widget>
    <widget class="QMenu" name="menuAtlas">
     <property name="styleSheet">
@@ -236,6 +240,7 @@ border-color: rgb(75, 78, 84);</string>
     </property>
     <addaction name="actionDownload"/>
     <addaction name="separator"/>
+    <addaction name="actionLoad_Image_as_Atlas"/>
     <addaction name="actionSave_Current_Slice"/>
     <addaction name="actionSave_Slice"/>
     <addaction name="separator"/>
@@ -332,17 +337,17 @@ selection-background-color: rgb(50, 50, 50);</string>
   </action>
   <action name="actionAtlas">
    <property name="text">
-    <string>Atlas...</string>
+    <string>Load Atlas ...</string>
    </property>
   </action>
   <action name="actionGroup_Images">
    <property name="text">
-    <string>Group Images...</string>
+    <string>Load Group Images ...</string>
    </property>
   </action>
   <action name="actionSingle_Image">
    <property name="text">
-    <string>Single Image...</string>
+    <string>Load Single Image ...</string>
    </property>
   </action>
   <action name="actionSave_Project">
@@ -412,12 +417,12 @@ selection-background-color: rgb(50, 50, 50);</string>
   </action>
   <action name="actionDownload">
    <property name="text">
-    <string>Download...</string>
+    <string>Download Waxholm Rat Atlas ...</string>
    </property>
   </action>
   <action name="actionSave_Current_Slice">
    <property name="text">
-    <string>Atlas Info</string>
+    <string>Atlas Info ...</string>
    </property>
   </action>
   <action name="actionAbout_HERBS">
@@ -427,7 +432,7 @@ selection-background-color: rgb(50, 50, 50);</string>
   </action>
   <action name="actionSave_Slice">
    <property name="text">
-    <string>Save Slice...</string>
+    <string>Save Slice ...</string>
    </property>
   </action>
   <action name="actionMesh">
@@ -483,6 +488,26 @@ selection-background-color: rgb(50, 50, 50);</string>
   <action name="actionRGB_Mode">
    <property name="text">
     <string>RGB Mode</string>
+   </property>
+  </action>
+  <action name="actionCopy_Current_Image">
+   <property name="text">
+    <string>Copy Current Image</string>
+   </property>
+  </action>
+  <action name="actionHide_Original_Image">
+   <property name="text">
+    <string>Hide Original Image</string>
+   </property>
+  </action>
+  <action name="actionShow_Original_Image">
+   <property name="text">
+    <string>Show Original Image</string>
+   </property>
+  </action>
+  <action name="actionLoad_Image_as_Atlas">
+   <property name="text">
+    <string>Load Image as Atlas ...</string>
    </property>
   </action>
  </widget>

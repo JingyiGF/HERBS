@@ -162,7 +162,7 @@ class ImageView(QObject):
         self.img_stacks.tri_pnts.set_range(self.img_size[1], self.img_size[0])
 
         scale_factor = np.max(np.ravel(self.img_size) / 80)
-        self.tb_size = np.floor(self.img_size / scale_factor).astype(int)
+        self.tb_size = (int(self.img_size[1] / scale_factor), int(self.img_size[0] / scale_factor))
         print('tb_size', self.tb_size)
 
         for i in range(self.max_num_channels):
@@ -425,5 +425,15 @@ class ImageView(QObject):
         self.current_img = da_img.copy()
         self.img_stacks.set_data(self.current_img, is_rgb=True)
         self.current_mode = mode
+
+    def hide_original_image(self):
+        if self.image_file is None or not self.image_file.is_rgb:
+            return
+        self.img_stacks.image_list[0].setVisible(False)
+
+    def show_original_image(self):
+        if self.image_file is None or not self.image_file.is_rgb:
+            return
+        self.img_stacks.image_list[0].setVisible(True)
 
 
