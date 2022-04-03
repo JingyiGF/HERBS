@@ -14,23 +14,6 @@ from label_tree import LabelTree
 from uuuuuu import *
 
 
-# class AtlasDisplayCtrl(pg.parametertree.ParameterTree):
-#     """UI for controlling how the atlas is displayed.
-#     """
-#     def __init__(self, parent=None):
-#         pg.parametertree.ParameterTree.__init__(self, parent=parent)
-#         params = [
-#             {'name': 'Orientation', 'type': 'list', 'values': ['right', 'anterior', 'dorsal']},
-#             {'name': 'Opacity', 'type': 'float', 'limits': [0, 1], 'value': 0.5, 'step': 0.1},
-#             {'name': 'Composition', 'type': 'list', 'values': ['Multiply', 'Overlay', 'SourceOver']},
-#             {'name': 'Downsample', 'type': 'int', 'value': 1, 'limits': [1, None], 'step': 1},
-#             {'name': 'Interpolate', 'type': 'bool', 'value': True},
-#         ]
-#         self.params = pg.parametertree.Parameter(name='params', type='group', children=params)
-#         self.setParameters(self.params, showTop=False)
-#         self.setHeaderHidden(True)
-
-
 atlas_rotation_gb_style = '''
 QGroupBox {
     background-color: transparent; 
@@ -103,7 +86,7 @@ class PageController(QWidget):
         self.page_right_btn.clicked.connect(self.right_btn_clicked)
 
         self.page_fast_left_btn = QPushButton()
-        self.page_fast_left_btn.setIcon(QtGui.QIcon("icons/double_triangle_left.png"))
+        self.page_fast_left_btn.setIcon(QtGui.QIcon( "icons/double_triangle_left.png"))
         self.page_fast_left_btn.setIconSize(QtCore.QSize(10, 10))
         # self.page_fast_left_btn.setFixedSize(30, 20)
         self.page_fast_left_btn.clicked.connect(self.fast_left_btn_clicked)

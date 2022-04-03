@@ -5,7 +5,6 @@ import pyqtgraph as pg
 import numpy as np
 from pyqtgraph.Qt import QtGui, QtCore
 
-
 toolbar_spinbox_textedit_style = '''
 QLineEdit { 
     background-color: #292929;
@@ -13,6 +12,7 @@ QLineEdit {
     color: white;
 }
 '''
+
 
 class ToolBox(QObject):
 
@@ -28,7 +28,7 @@ class ToolBox(QObject):
         self.add_atlas = QAction(QIcon('icons/toolbar/atlas_icon.png'), 'Upload Waxholm Rat Brain Atlas', self)
         self.add_image_stack = QAction(QIcon('icons/toolbar/image_icon.svg'), 'upload histological image', self)
 
-        self.vis2 = QAction(QIcon('icons/toolbar/two_window.png'), 'show 2 windows', self)
+        self.vis2 = QAction(QIcon( 'icons/toolbar/two_window.png'), 'show 2 windows', self)
         self.vis4 = QAction(QIcon('icons/toolbar/window4.png'), 'show 4 windows', self)
         self.vis3 = QAction(QIcon('icons/toolbar/window3.png'), 'show 3 windows', self)
 
