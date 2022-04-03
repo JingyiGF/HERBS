@@ -122,7 +122,8 @@ class ImageStacks(pg.GraphicsLayoutWidget):
         self.contour_pnts = pg.ScatterPlotItem()
         self.virus_img = pg.ImageItem()
         self.virus_img.setLevels(levels=(0, 1))
-        self.virus_pnts = pg.ScatterPlotItem(pen='b', symbol='o', symbolSize=2, brush=None)
+        self.virus_pnts = pg.ScatterPlotItem(pen=(133, 255, 117), symbolBrush=(133, 255, 117), symbolPen=(55, 55, 55),
+                                             symbol='s', symbolSize=1)
 
         self.image_list = [self.img1, self.img2, self.img3, self.img4]
 

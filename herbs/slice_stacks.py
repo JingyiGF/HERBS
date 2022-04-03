@@ -148,7 +148,6 @@ class SliceStacks(pg.GraphicsLayoutWidget):
         self.boundary.setVisible(False)
 
         self.tri_pnts = TriangulationPoints()
-        self.tri_pnts.setVisible(False)
         self.tri_lines_list = []
 
         self.circle_follow = pg.PlotDataItem(pen=pg.mkPen('r', width=2, style=Qt.DashLine))
@@ -156,23 +155,22 @@ class SliceStacks(pg.GraphicsLayoutWidget):
                                           symbolPen='r', symbol='o', symbolSize=4)
 
         self.overlay_img = pg.ImageItem()
-        self.overlay_img.setCompositionMode(QtGui.QPainter.CompositionMode.CompositionMode_Plus)
+
         self.overlay_contour = pg.ImageItem()
         self.overlay_contour.setLevels(levels=(0, 1))
 
         self.mask_img = pg.ImageItem()
         # self.mask_img.setLevels(levels=(0, 1))
-        self.virus_img = pg.ImageItem()
-        self.virus_img.setLevels(levels=(0, 1))
-        self.virus_pnts = pg.ScatterPlotItem(pen='b', symbol='o', symbolSize=2, brush=None)
-        self.temp_probe_line = pg.PlotDataItem(pen=pg.mkPen(color='r', width=1, style=Qt.DashLine))
-        self.probe_pnts = pg.ScatterPlotItem(pen=pg.mkPen(color=(128, 128, 128)), symbol='s', symbolSize=2, brush=None)
-        self.cell_img = pg.ImageItem()
-        self.cell_img.setLevels(levels=(0, 1))
+
+        self.virus_pnts = pg.ScatterPlotItem(pen=(133, 255, 117), symbolBrush=(133, 255, 117), symbolPen=(55, 55, 55),
+                                             symbol='s', symbolSize=1)
+
+        self.probe_pnts = pg.ScatterPlotItem(pen=pg.mkPen(color=(128, 128, 128)), symbol='+', symbolSize=2, brush=None)
         self.cell_pnts = pg.ScatterPlotItem(pen=QColor(238, 130, 238), symbol='d', symbolSize=2, brush=None)
-        self.drawing_img = pg.ImageItem()
-        self.drawing_img.setLevels(levels=(0, 1))
         self.drawing_pnts = pg.ScatterPlotItem(pen='b', symbol='o', symbolSize=2, brush=None)
+        self.contour_pnts = pg.ScatterPlotItem(pen='b', symbol='o', symbolSize=2, brush=None)
+
+        self.temp_probe_line = pg.PlotDataItem(pen=pg.mkPen(color='r', width=1, style=Qt.DashLine))
 
         self.v_line = pg.InfiniteLine(angle=90, movable=False)
         self.h_line = pg.InfiniteLine(angle=0, movable=False)
@@ -196,14 +194,12 @@ class SliceStacks(pg.GraphicsLayoutWidget):
         self.vb.addItem(self.overlay_contour)
 
         self.vb.addItem(self.mask_img)
-        self.vb.addItem(self.virus_img)
         self.vb.addItem(self.virus_pnts)
         self.vb.addItem(self.temp_probe_line)
         self.vb.addItem(self.probe_pnts)
-        self.vb.addItem(self.cell_img)
         self.vb.addItem(self.cell_pnts)
-        self.vb.addItem(self.drawing_img)
         self.vb.addItem(self.drawing_pnts)
+        self.vb.addItem(self.contour_pnts)
 
         self.vb.addItem(self.v_line, ignoreBounds=True)
         self.vb.addItem(self.h_line, ignoreBounds=True)

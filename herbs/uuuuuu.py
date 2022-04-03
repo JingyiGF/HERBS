@@ -485,13 +485,13 @@ def warp_points(pnts, t1, t2):
 
     # pnts =
 
-    da_pnts = np.append(pnts, 1)
+    da_pnts = np.hstack([pnts, np.ones((len(pnts), 1))])
     # Offset points by left top corner of the respective rectangles
     # t1_rect = t1 - r1[:2]
     # t2_rect = t2 - r2[:2]
 
     warp_mat = get_warp_matrix(t1, t2)
-    output = np.dot(warp_mat, da_pnts)
+    output = np.dot(warp_mat, da_pnts.T).T
 
     return output
 
@@ -554,8 +554,15 @@ def get_pnts_triangle_ind(tri_vet_inds, tri_data, size, pnts):
     # import numpy as np
     # img_rec = (0, 0, 100, 200)
     # da_triangle = np.array([[0, 0], [0, 50], [100, 100]])
+    # size = (200, 100)
+    # pnts = np.array([[0, 1], [0, 2], [60, 200]])
 
-    loc = []
+
+    update_pnts = pnts.copy()
+    n_pnts = len(pnts)
+    loc = np.zeros(n_pnts)
+    loc[:] = np.nan
+    da_order = []
 
     ct_list = []
     for i in range(len(tri_vet_inds)):
@@ -566,13 +573,32 @@ def get_pnts_triangle_ind(tri_vet_inds, tri_data, size, pnts):
         ct, hc = cv2.findContours(image=mask, mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_NONE)
         ct_list.append(ct[0])
 
+        # range_y = (np.min(da_triangle[:, 1]), np.max(da_triangle[:, 1]))
+        # range_x = (np.min(da_triangle[:, 0]), np.max(da_triangle[:, 0]))
+        #
+        # valid_pnts_ind = [ind for ind in range(n_pnts) if range_x[0] <= pnts[ind][0] <= range_x[1] and range_y[0] <= pnts[ind][1] <= range_y[1]]
+        # valid_pnts_ind = [ind for ind in valid_pnts_ind if ind not in da_order]
+        # valid_pnts = pnts[valid_pnts_ind]
+        # for j in range(len(valid_pnts)):
+        #     res = cv2.pointPolygonTest(ct_list[i], (int(pnts[j][0]), int(pnts[j][1])), True)
+        #     if res >= 0:
+        #         loc.append(i)
+        #         da_order.append(valid_pnts_ind[j])
+
+    #     temp = np.zeros(len(update_pnts))
+    #
+    #
+    # for i in range(len(tri_vet_inds)):
+    #     da_
+    #
     for i in range(len(pnts)):
         for j in range(len(ct_list)):
             da_ct = ct_list[j]
-            res = cv2.pointPolygonTest(da_ct, (int(pnts[i][0]), int(pnts[i][1])), True)
+            res = cv2.pointPolygonTest(da_ct, (int(pnts[i][0]), int(pnts[i][1])), False)
             if res >= 0:
-                loc.append(j)
+                loc[i] = j
                 break
+
 
     return loc
 

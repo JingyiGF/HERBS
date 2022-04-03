@@ -2,12 +2,12 @@ import os
 from os.path import dirname, realpath, join
 import sys
 
+from .herbsgui import main
+
 
 def run_herbs():
+    current_wd = os.getcwd()
     script_dir = dirname(realpath(__file__))
     os.chdir(script_dir)
-    print(script_dir)
-    # os.system(join(script_dir, 'herbsgui.py'))
-    exec(open('herbsgui.py').read())
-    # runfile('/Users/jingyig/Work/Kavli/PyCode/Archived/HERBS/herbs/herbsgui.py',
-    #         wdir='/Users/jingyig/Work/Kavli/PyCode/Archived/HERBS/herbs')
+    main()
+    os.chdir(current_wd)

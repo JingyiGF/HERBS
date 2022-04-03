@@ -6,8 +6,10 @@ import pyqtgraph.functions as fn
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
-from wtiles import *
+
 import cv2
+
+from wtiles import *
 
 
 btm_style = '''
