@@ -552,8 +552,10 @@ class HERBS(QMainWindow, FORM_Main):
         # --------------------------------------------------------
         #                 connect all menu actions
         # --------------------------------------------------------
+        # file menu related
         self.actionSingle_Image.triggered.connect(self.load_image)
-        # load other atlases
+        # atlas menu related
+        self.actionDownload.triggered.connect(self.download_waxholm_rat_atlas)
 
         self.actionCoronal_Window.triggered.connect(self.show_only_coronal_window)
         self.actionSagital_Window.triggered.connect(self.show_only_sagital_window)
@@ -575,6 +577,7 @@ class HERBS(QMainWindow, FORM_Main):
         self.actionCopy_Current_Image.triggered.connect(self.make_copy_of_current_image)
         self.actionHide_Original_Image.triggered.connect(self.image_view.hide_original_image)
         self.actionShow_Original_Image.triggered.connect(self.image_view.show_original_image)
+
 
 
         self.init_tool_bar()
@@ -898,6 +901,18 @@ class HERBS(QMainWindow, FORM_Main):
         self.small_atlas_rect = None
         self.small_histo_rect = None
 
+    def vis_atlas_boundary(self):
+        if self.atlas_view.atlas_data is None:
+            return
+        if self.atlas_view.show_boundary_btn.isChecked():
+            self.atlas_view.cimg.boundary.setVisible(True)
+            self.atlas_view.simg.boundary.setVisible(True)
+            self.atlas_view.himg.boundary.setVisible(True)
+        else:
+            self.atlas_view.cimg.boundary.setVisible(False)
+            self.atlas_view.simg.boundary.setVisible(False)
+            self.atlas_view.himg.boundary.setVisible(False)
+
 
     # ------------------------------------------------------------------
     #
@@ -914,6 +929,12 @@ class HERBS(QMainWindow, FORM_Main):
 
     # ------------------------------------------------------------------
     #
+    #                  Menu Bar ---- Edit ----- related
+    #
+    # ------------------------------------------------------------------
+
+    # ------------------------------------------------------------------
+    #
     #                  Menu Bar ---- Image ----- related
     #
     # ------------------------------------------------------------------
@@ -925,8 +946,14 @@ class HERBS(QMainWindow, FORM_Main):
         res = cv2.resize(self.process_img, self.image_view.tb_size, interpolation=cv2.INTER_AREA)
         self.master_layers(res, layer_type='img-copy')
 
-
-
+    # ------------------------------------------------------------------
+    #
+    #                  Menu Bar ---- Atlas ----- related
+    #
+    # ------------------------------------------------------------------
+    def download_waxholm_rat_atlas(self):
+        download_waxholm_rat_window = AtlasDownloader()
+        download_waxholm_rat_window.show()
 
 
     # ------------------------------------------------------------------
@@ -937,7 +964,7 @@ class HERBS(QMainWindow, FORM_Main):
     def init_tool_bar(self):
         self.toolbar.setStyleSheet(toolbar_style)
         # -------------- ToolBar layout and functions -------------- #
-        self.tool_box.add_atlas.triggered.connect(self.load_waxholm_rat_atlas)
+        self.tool_box.add_atlas.triggered.connect(lambda: self.load_atlas('WHS'))
         self.tool_box.add_image_stack.triggered.connect(self.load_image)
         #     add_cell_act = QAction(QIcon('icons/neuron.png'), 'upload recorded cell activities', self)
         self.tool_box.vis2.triggered.connect(self.show_2_windows)
@@ -2401,6 +2428,7 @@ class HERBS(QMainWindow, FORM_Main):
                 t2 = np.reshape(t2, (3, 2))
                 warp_triangle(input_img, img_wrap, t1, t2, True)
 
+            #
 
             # # img_overlay = self.atlas_view.working_atlas.overlay_img.image.copy()
             # img_wrap = img_overlay.copy()
@@ -2455,17 +2483,7 @@ class HERBS(QMainWindow, FORM_Main):
         if self.tool_box.triang_vis_btn.isChecked():
             self.update_atlas_tri_lines()
 
-    def vis_atlas_boundary(self):
-        if self.atlas_view.atlas_data is None:
-            return
-        if self.atlas_view.show_boundary_btn.isChecked():
-            self.atlas_view.cimg.boundary.setVisible(True)
-            self.atlas_view.simg.boundary.setVisible(True)
-            self.atlas_view.himg.boundary.setVisible(True)
-        else:
-            self.atlas_view.cimg.boundary.setVisible(False)
-            self.atlas_view.simg.boundary.setVisible(False)
-            self.atlas_view.himg.boundary.setVisible(False)
+
 
 
     # ------------------------------------------------------------------
@@ -2555,10 +2573,6 @@ class HERBS(QMainWindow, FORM_Main):
 
 
 
-    # def coronal_window_hovered(self, pos):
-    #     if self.atlas_view.navigation_btn.isChecked():
-
-
 
 
     def atlas_drawing_pnts_clicked(self, points, ev):
@@ -2571,56 +2585,6 @@ class HERBS(QMainWindow, FORM_Main):
 
 
 
-
-
-
-
-    #     print(img_warped.shape)
-    #     # tform = estimate_transform('projective', np.array(self.working_img), np.array(self.working_atlas))
-    #     # tf_img_warp = warp(self.da_pstep_data, tform.inverse, mode='constant')
-    #     # print(tf_img_warp)
-    #     # print(np.max(tf_img_warp))
-    #     img_warp = img_warped * (255. / np.max(img_warped))
-    #     self.image_data[page_number] = img_warp
-    #     self.acontrols.hist_img_view.img1.setImage(img_warp)
-    #     self.working_atlas = []
-    #     self.working_image = []
-    #     self.img_point_count = 0
-    #     self.img_point_count = 0
-    #     self.scatter1.setData(None, None)
-    #     self.scatter5.setData(None, None)
-    #     for i in range(len(self.working_atlas_text)):
-    #         self.working_atlas_text[i].setPos(self.faraway_place, self.faraway_place)
-    #     for i in range(len(self.working_img_text)):
-    #         self.working_img_text[i].setPos(self.faraway_place, self.faraway_place)
-    #
-    # def overlay_image(self):
-    #     # if len(self.working_atlas) == 0 or len(self.working_img) == 0:
-    #     #     return
-    #     page_number = self.acontrols.hist_img_view.page_slider.value()
-    #     if self.atlas_display == 'coronal':
-    #         da_show_image = rotate(self.image_data[page_number], 90, preserve_range=True)
-    #         # da_show_image = da_show_image[::-1,:]
-    #         self.overlay_img1.setImage(da_show_image)
-    #     self.overlay_img = da_show_image
-    #     self.hist_overlay = True
-    #
-    # def register_image(self):
-    #     self.overlay_img1.clear()
-    #     self.hist_overlay = False
-    #
-    # def image_size_changed(self):
-    #     val = self.acontrols.hist_img_view.rescale_slider.value()
-    #     page_number = self.acontrols.hist_img_view.page_slider.value()
-    #     da_image_data = self.image_data[page_number]
-    #     da_image_data = resize(da_image_data, (da_image_data.shape[0] // val, da_image_data.shape[1] // val),
-    #                            anti_aliasing=True)
-    #     if self.hist_overlay:
-    #         if self.atlas_display == 'coronal':
-    #             self.overlay_img1.setImage(da_image_data)
-    #     else:
-    #         self.image_data[page_number] = da_image_data
-    #         self.acontrols.hist_img_view.img1.setImage(self.image_data[page_number])
     #
     # def image_rotation_changed(self):
     #     val = self.acontrols.hist_img_view.image_rt_slider.value()
@@ -2882,10 +2846,6 @@ class HERBS(QMainWindow, FORM_Main):
         self.view3d.addItem(self.probe_lines_3d_list[-1])
 
 
-
-
-
-
     def probe_info_on_click(self, ev):
         print(ev)
         index = ev[0]
@@ -2911,64 +2871,28 @@ class HERBS(QMainWindow, FORM_Main):
         for i in range(len(self.probe_lines_3d)):
             self.probe_lines_3d[i].setData(width=val)
 
-
-
-
-
-
-
     # ------------------------------------------------------------------
     #
     #                       Atlas Loader
     #
     # ------------------------------------------------------------------
+    def load_atlas(self, atlas_name):
+        atlas_folder = str(QFileDialog.getExistingDirectory(self, "Select Atlas Folder"))
 
-
-
-    def render_small_volume(self, factor=2, level=0.1):
-        self.small_verts_list = {}
-        self.small_faces_list = {}
-        # small_pimg_list = {}
-
-        for id in np.unique(self.atlas_view.atlas_label):
-            if id == 0:
-                continue
-            temp_atlas = self.atlas_view.atlas_data.copy()
-            temp_atlas[self.atlas_view.atlas_label != id] = 0
-            pimg = np.ascontiguousarray(temp_atlas[::factor, ::factor, ::factor])
-            verts, faces = pg.isosurface(ndi.gaussian_filter(pimg.astype('float64'), (2, 2, 2)), np.max(temp_atlas) * level)
-
-            # small_pimg_list[str(id)] = pimg
-            self.small_verts_list[str(id)] = verts
-            self.small_faces_list[str(id)] = faces
-
-        outfile = open(os.path.join(self.atlas_folder, 'WHS_atlas_small_verts.pkl'), 'wb')
-        pickle.dump(self.small_verts_list, outfile)
-        outfile.close()
-
-        outfile = open(os.path.join(self.atlas_folder, 'WHS_atlas_small_faces.pkl'), 'wb')
-        pickle.dump(self.small_faces_list, outfile)
-        outfile.close()
-
-    # render volume
-    # vol = np.empty(img.shape + (4,), dtype='ubyte')
-    # vol[:] = img[..., None]
-    # vol = np.ascontiguousarray(vol.transpose(1, 2, 0, 3))
-    # vi = pgl.GLVolumeItem(vol)
-    # self.glView.addItem(vi)
-    # vi.translate(-vol.shape[0]/2., -vol.shape[1]/2., -vol.shape[2]/2.)
-
-    def load_waxholm_rat_atlas(self):
-        atlas_folder = '/Users/jingyig/Work/Kavli/WaxholmRat/'
-        # infile = open(atlas_folder + '/WHS_atlas_labels.pkl', 'rb')
-        # label_data = pickle.load(infile)
-        # infile.close()
-        # atlas_folder = str(QFileDialog.getExistingDirectory(self, "Select Atlas Folder"))
         if atlas_folder != '':
             self.statusbar.showMessage('Loading Atlas...')
             self.atlas_folder = atlas_folder
             with pg.BusyCursor():
-                da_atlas = AtlasLoader(atlas_folder)
+                da_atlas = AtlasLoader(atlas_folder, atlas_name=atlas_name,
+                                       data_file='WHS_SD_rat_T2star_v1.01.nii.gz',
+                                       segmentation_file='WHS_SD_rat_atlas_v4.nii.gz',
+                                       mask_file='WHS_SD_rat_brainmask_v1.01.nii.gz',
+                                       bregma_coordinates=(246, 653, 440),
+                                       lambda_coordinates=(244, 442, 464))
+                if da_atlas.atlas_data is None or da_atlas.segmentation_data is None:
+                    self.statusbar.showMessage('Something went wrong with atlas, please check your atlas data.')
+                    return
+
                 atlas_data = np.transpose(da_atlas.atlas_data, [2, 0, 1])[::-1, :, :]
                 segmentation_data = np.transpose(da_atlas.segmentation_data, [2, 0, 1])[::-1, :, :]
 
@@ -2985,42 +2909,23 @@ class HERBS(QMainWindow, FORM_Main):
 
             self.statusbar.showMessage('Atlas Loaded.')
 
-            pre_made_verts_path = os.path.join(atlas_folder, 'WHS_atlas_verts.pkl')
-            pre_made_faces_path = os.path.join(atlas_folder, 'WHS_atlas_faces.pkl')
+            # pre_made_verts_path = os.path.join(atlas_folder, '{}_atlas_verts.pkl'.format(atlas_name))
+            # pre_made_faces_path = os.path.join(atlas_folder, '{}_atlas_faces.pkl'.format(atlas_name))
+            pre_made_meshdata_path = os.path.join(atlas_folder, '{}_atlas_meshdata.pkl'.format(atlas_name))
 
-            if os.path.exists(pre_made_verts_path) and os.path.exists(pre_made_faces_path):
-
-                infile = open(pre_made_verts_path, 'rb')
-                self.verts = pickle.load(infile)
-                infile.close()
-
-                infile = open(pre_made_faces_path, 'rb')
-                self.faces = pickle.load(infile)
+            if os.path.exists(pre_made_meshdata_path):
+                infile = open(pre_made_meshdata_path, 'rb')
+                self.meshdata = pickle.load(infile)
                 infile.close()
 
             else:
                 self.statusbar.showMessage('Brain mesh is not found! Mesh is constructing in 3D view....')
                 with pg.BusyCursor():
-                    # rotm = np.dot(rotation_x(np.radians(90)), rotation_z(np.radians(90)))
-                    self.verts, self.faces = render_volume(da_atlas.atlas_data, self.atlas_folder, factor=2, level=0.1)
-                    # self.verts = np.dot(rotm, self.verts.T).T
+                    self.meshdata = render_volume(da_atlas.atlas_data, self.atlas_folder,
+                                                  atlas_name, factor=2, level=0.1)
 
-            md = gl.MeshData(vertexes=self.verts * 2, faces=self.faces)
-            # mesh = gl.GLMeshItem(meshdata=md, smooth=True)
-            #
-            # file = 'test_md.pkl'
-            # infile = open(file, 'wb')
-            # pickle.dump(md, infile, protocol=pickle.HIGHEST_PROTOCOL)
-            # infile.close()
-            #
-            # file = 'test_mesh.pkl'
-            # infile = open(file, 'wb')
-            # pickle.dump(mesh, infile, protocol=pickle.HIGHEST_PROTOCOL)
-            # infile.close()
-
-
-
-            self.atlas_view.mesh.setMeshData(meshdata=md)
+            # md = gl.MeshData(vertexes=self.verts * 2, faces=self.faces)
+            self.atlas_view.mesh.setMeshData(meshdata=self.meshdata)
             self.mesh_origin = np.ravel(da_atlas.atlas_info[3]['Bregma'])
             self.atlas_view.mesh.translate(-self.mesh_origin[0], -self.mesh_origin[1], -self.mesh_origin[2])
 
@@ -3037,23 +2942,20 @@ class HERBS(QMainWindow, FORM_Main):
             # v.translate(-self.mesh_origin[0], -self.mesh_origin[1], -self.mesh_origin[2])
             # self.view3d.addItem(v)
 
-            return
+            # return
 
-            pre_made_small_verts_path = os.path.join(atlas_folder, 'WHS_atlas_small_verts.pkl')
-            pre_made_small_faces_path = os.path.join(atlas_folder, 'WHS_atlas_small_faces.pkl')
-            if os.path.exists(pre_made_small_verts_path) and os.path.exists(pre_made_small_faces_path):
-
-                infile = open(pre_made_small_verts_path, 'rb')
-                self.small_verts_list = pickle.load(infile)
-                infile.close()
-
-                infile = open(pre_made_small_faces_path, 'rb')
-                self.small_faces_list = pickle.load(infile)
+            # pre_made_small_verts_path = os.path.join(atlas_folder, 'WHS_atlas_small_verts.pkl')
+            # pre_made_small_faces_path = os.path.join(atlas_folder, 'WHS_atlas_small_faces.pkl')
+            pre_made_small_meshdata_path = os.path.join(atlas_folder, 'WHS_atlas_small_meshdata.pkl')
+            if os.path.exists(pre_made_small_meshdata_path):
+                infile = open(pre_made_small_meshdata_path, 'rb')
+                self.small_meshdata_list = pickle.load(infile)
                 infile.close()
             else:
                 self.statusbar.showMessage('Brain region mesh is not found! Rendering in 3D view....')
                 with pg.BusyCursor():
-                    self.render_small_volume(factor=2, level=0.1)
+                    self.small_meshdata_list = render_small_volume(da_atlas.atlas_data, da_atlas.segmentation_data,
+                                                                   self.atlas_folder, atlas_name, factor=2, level=0.1)
 
             for id in np.unique(self.atlas_view.atlas_label):
                 if id == 0:
@@ -3061,11 +2963,10 @@ class HERBS(QMainWindow, FORM_Main):
                 if id in self.atlas_view.label_info['index']:
                     id = int(id)
                     color_to_set = self.atlas_view.label_info['color'][(self.atlas_view.label_info['index'] == id)][0] / 255
-                    md = gl.MeshData(vertexes=self.small_verts_list[str(id)], faces=self.small_faces_list[str(id)])
-                    mesh = gl.GLMeshItem(meshdata=md, smooth=True,
+                    mesh = gl.GLMeshItem(meshdata=self.small_meshdata_list[str(id)], smooth=True,
                                          color=(color_to_set[0], color_to_set[1], color_to_set[2], 0.8), shader='balloon')
                     mesh.setGLOptions('opaque')
-                    mesh.translate(-self.mesh_shape[0], -self.mesh_shape[1], -self.mesh_shape[2])
+                    mesh.translate(-self.mesh_origin[0], -self.mesh_origin[1], -self.mesh_origin[2])
                     # mesh.setVisible(False)
                     self.small_mesh_list[str(id)] = mesh
                     self.small_mesh_list[str(id)].setVisible(False)
@@ -3078,26 +2979,14 @@ class HERBS(QMainWindow, FORM_Main):
 
             self.statusbar.showMessage('Brain region mesh is Loaded.')
 
+        self.statusbar.showMessage('Atlas loaded successfully.')
 
-
-
-
-
-            # self.view1.autoRange(items=[self.coronal_img.atlas_img])
-            # self.view2.autoRange(items=[self.sagital_img.atlas_img])
-            # self.view3.autoRange(items=[self.horizon_img.atlas_img])
-            # self.view4.autoRange(items=[self.sagital_img_copy.atlas_img])
-            # # self.statusLabel.setText('')
-            #
-            # self.renderVolume(atlas_folder)
-            self.statusbar.showMessage('Atlas loaded successfully.')
 
     # ------------------------------------------------------------------
     #
     #                       Image Loader
     #
     # ------------------------------------------------------------------
-
     def load_image(self):
 
         # path = "/Users/jingyig/Work/Kavli/PyCode/herrbs/test.jpeg"
@@ -3108,59 +2997,61 @@ class HERBS(QMainWindow, FORM_Main):
         if self.image_view.image_file is not None:
             print('need to clean everything')
 
-
-        # image_file = ImageReader("/Users/jingyig/Work/Kavli/PyCode/herrbs/test.jpeg")
+        # image_file = CZIReader("/Users/jingyig/Work/Kavli/Data/HERBS_DATA/grethe/13234_BDADAB_s4_g005.czi")
+        # image_file.read_data(0.1, scene_index=0)
         # self.image_view.set_data(image_file)
-
-        image_file = CZIReader("/Users/jingyig/Work/Kavli/Data/HERBS_DATA/grethe/13234_BDADAB_s4_g005.czi")
-        image_file.read_data(0.1, scene_index=0)
-        self.image_view.set_data(image_file)
-        self.reset_corners_hist()
-        if self.atlas_view.atlas_data is None:
-            self.show_only_image_window()
-        else:
-            self.show_2_windows()
-
-        self.image_view.img_stacks.mask_img.setLookupTable(self.tool_box.base_lut)
-        self.image_view.img_stacks.virus_img.setLookupTable(self.tool_box.base_lut)
-        self.image_view.img_stacks.contour_img.setLookupTable(self.tool_box.base_lut)
+        # self.reset_corners_hist()
+        # if self.atlas_view.atlas_data is None:
+        #     self.show_only_image_window()
+        # else:
+        #     self.show_2_windows()
+        #
+        # self.image_view.img_stacks.mask_img.setLookupTable(self.tool_box.base_lut)
+        # self.image_view.img_stacks.virus_img.setLookupTable(self.tool_box.base_lut)
+        # self.image_view.img_stacks.contour_img.setLookupTable(self.tool_box.base_lut)
 
 
         # self.hist_lut.setImageItem(self.image_view.current_color_img)
 
-        # filter = "CZI (*.czi);;JPEG (*.jpg;*.jpeg);;PNG (*.png);;TIFF (*.tif)"
-        # dlg = QFileDialog()
-        # dlg.setFileMode(QFileDialog.ExistingFiles)
-        # image_file_path = dlg.getOpenFileName(self, "Select Histological Image File", str(Path.home()), filter)
+        filter = "CZI (*.czi);;JPEG (*.jpg;*.jpeg);;PNG (*.png);;TIFF (*.tif)"
+        dlg = QFileDialog()
+        dlg.setFileMode(QFileDialog.ExistingFiles)
+        image_file_path = dlg.getOpenFileName(self, "Select Histological Image File", str(Path.home()), filter)
 
-        # self.image_file_type = image_file_path[0][-4:].lower()
-        # if image_file_path[0] != '':
-        #     self.statusbar.showMessage('Image file loading ...')
-        #     with pg.BusyCursor():
-        #         with warnings.catch_warnings():
-        #             warnings.filterwarnings("error")
-        #             if self.image_file_type == '.czi':
-        #                 image_file = CZIReader(image_file_path[0])
-        #                 scale = self.image_view.scale_slider.value()
-        #                 scale = 0.01 if scale == 0 else scale * 0.01
-        #                 if self.image_view.check_scenes.isChecked():
-        #                     image_file.read_data(scale, scene_index=None)
-        #                 else:
-        #                     image_file.read_data(scale, scene_index=0)
-        #             else:
-        #                 image_file = ImageReader(image_file_path[0])
-        #         self.image_view.set_data(image_file)
-        #     self.layerpanel.setEnabled(True)
-        #     self.statusbar.showMessage('Image file loaded.')
-        #     # change sidebar focus
-        #     self.sidebar.setCurrentIndex(2)
-        #     if self.atlas_view.atlas_data is None:
-        #         self.show_only_image_window()
-        #     else:
-        #         self.histview.setVisible(True)
-        # else:
-        #     return
+        self.image_file_type = image_file_path[0][-4:].lower()
+        if image_file_path[0] != '':
+            self.statusbar.showMessage('Image file loading ...')
+            with pg.BusyCursor():
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("error")
+                    if self.image_file_type == '.czi':
+                        image_file = CZIReader(image_file_path[0])
+                        scale = self.image_view.scale_slider.value()
+                        scale = 0.01 if scale == 0 else scale * 0.01
+                        if self.image_view.check_scenes.isChecked():
+                            image_file.read_data(scale, scene_index=None)
+                        else:
+                            image_file.read_data(scale, scene_index=0)
+                    else:
+                        image_file = ImageReader(image_file_path[0])
+                self.image_view.set_data(image_file)
+                self.reset_corners_hist()
+            self.layerpanel.setEnabled(True)
+            self.statusbar.showMessage('Image file loaded.')
+            # change sidebar focus
+            self.sidebar.setCurrentIndex(2)
+            if self.atlas_view.atlas_data is None:
+                self.show_only_image_window()
+            else:
+                self.show_2_windows()
 
+            self.image_view.img_stacks.mask_img.setLookupTable(self.tool_box.base_lut)
+            self.image_view.img_stacks.virus_img.setLookupTable(self.tool_box.base_lut)
+            self.image_view.img_stacks.contour_img.setLookupTable(self.tool_box.base_lut)
+        else:
+            return
+
+    # load multiple images
     def load_images(self):
         images_folder = str(QFileDialog.getExistingDirectory(self, "Select Images Folder"))
         print(images_folder)

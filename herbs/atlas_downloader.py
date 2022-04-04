@@ -107,10 +107,12 @@ class DownloadThread(QThread):
             print(e)
 
 
-class AtlasDownloader(QWidget):
+class AtlasDownloader(QDialog):
     def __init__(self, *args, **kwargs):
         super(AtlasDownloader, self).__init__(*args, **kwargs)
         layout = QVBoxLayout(self)
+
+        self.setWindowTitle("Atlas Downloader")
 
         self.label_url = "https://www.nitrc.org/frs/download.php/12261/WHS_SD_rat_atlas_v4.label"
         self.data_url = "https://www.nitrc.org/frs/downloadlink.php/9423/WHS_SD_rat_T2star_v1.01.nii.gz"
@@ -144,48 +146,67 @@ class AtlasDownloader(QWidget):
         self.download_btn. setMinimumWidth(100)
         self.download_btn.setText("Download")
 
+        # ok button, used to close window
+        ok_btn = QDialogButtonBox(QDialogButtonBox.Ok)
+        ok_btn.accepted.connect(self.accept)
+
         layout.addWidget(self.label_bar)
         layout.addWidget(self.data_bar)
         layout.addWidget(self.mask_bar)
         layout.addWidget(self.segmentation_bar)
         layout.addWidget(self.download_btn)
+        layout.addWidget(ok_btn)
 
         # Binding Button Event
         self.download_btn.clicked.connect(self.download_start)
 
     # Download button event
     def download_start(self):
-        saving_folder = str(QFileDialog.getExistingDirectory(self, "Select Folder to Save Atlas"))
+        self.saving_folder = str(QFileDialog.getExistingDirectory(self, "Select Folder to Save Atlas"))
 
-        if saving_folder != '':
-            label_file_size = requests.get(self.label_url, stream=True).headers['Content-Length']
-            label_file_obj = open(os.path.join(saving_folder, self.label_local), 'wb')
+        if self.saving_folder != '':
+            self.start_thread(self.label_url, self.label_local, self.set_label_bar_value)
+            self.start_thread(self.data_url, self.data_local, self.set_data_bar_value)
+            self.start_thread(self.mask_url, self.mask_local, self.set_mask_bar_value)
+            self.start_thread(self.segmentation_url, self.segmentation_local, self.set_segmentation_bar_value)
 
-            self.label_thread = DownloadThread(self.label_url, label_file_size, label_file_obj, buffer=10240)
-            self.label_thread.download_proess_signal.connect(self.set_label_bar_value)
-            self.label_thread.start()
+    #
+    def start_thread(self, url, local, func):
+        file_size = requests.get(url, stream=True).headers['Content-Length']
+        file_obj = open(os.path.join(self.saving_folder, local), 'wb')
+
+        self.da_thread = DownloadThread(url, file_size, file_obj, buffer=1024)
+        self.da_thread.download_proess_signal.connect(func)
+        self.da_thread.start()
 
     # Setting progress bar
     def set_label_bar_value(self, value):
-        self.progressBar.setValue(value)
+        self.label_bar.setValue(value)
         if value == 100:
             self.finish[0] = True
-
             return
 
+    def set_data_bar_value(self, value):
+        self.data_bar.setValue(value)
+        if value == 100:
+            self.finish[1] = True
+            return
+
+    def set_mask_bar_value(self, value):
+        self.mask_bar.setValue(value)
+        if value == 100:
+            self.finish[2] = True
+            return
+
+    def set_segmentation_bar_value(self, value):
+        self.segmentation_bar.setValue(value)
+        if value == 100:
+            self.finish[3] = True
+            return
+
+    def accept(self) -> None:
+        self.close()
 
 
 
 
-
-
-
-
-####################################
-#Program entry
-####################################
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    w = AtlasDownloader()
-    w.show()
-    sys.exit(app.exec_())
