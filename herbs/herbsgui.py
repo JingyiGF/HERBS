@@ -953,7 +953,7 @@ class HERBS(QMainWindow, FORM_Main):
     # ------------------------------------------------------------------
     def download_waxholm_rat_atlas(self):
         download_waxholm_rat_window = AtlasDownloader()
-        download_waxholm_rat_window.show()
+        download_waxholm_rat_window.exec()
 
 
     # ------------------------------------------------------------------
