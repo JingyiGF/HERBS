@@ -786,18 +786,12 @@ def get_bound_color(color, tol, level, mode):
 # ----------------------------------------------------------------------------------
 # ----------------------------------------------------------------------------------
 def render_volume(atlas_data, atlas_folder, atlas_name, factor=2, level=0.1):
-    img = np.ascontiguousarray(atlas_data[::factor, ::factor, ::factor])
-    verts, faces = pg.isosurface(ndi.gaussian_filter(img.astype('float64'), (2, 2, 2)), np.max(atlas_data) * level)
+
+    da_data = atlas_data.copy()
+    img = np.ascontiguousarray(da_data[::factor, ::factor, ::factor])
+    verts, faces = pg.isosurface(ndi.gaussian_filter(img.astype('float64'), (2, 2, 2)), np.max(da_data) * level)
 
     md = gl.MeshData(vertexes=verts * factor, faces=faces)
-
-    outfile = open(os.path.join(atlas_folder, '{}_atlas_verts.pkl'.format(atlas_name)), 'wb')
-    pickle.dump(verts, outfile)
-    outfile.close()
-
-    outfile = open(os.path.join(atlas_folder, '{}_atlas_faces.pkl'.format(atlas_name)), 'wb')
-    pickle.dump(faces, outfile)
-    outfile.close()
 
     outfile = open(os.path.join(atlas_folder, '{}_atlas_meshdata.pkl'.format(atlas_name)), 'wb')
     pickle.dump(md, outfile)
@@ -807,36 +801,26 @@ def render_volume(atlas_data, atlas_folder, atlas_name, factor=2, level=0.1):
 
 
 def render_small_volume(atlas_data, atlas_label, atlas_folder, atlas_name, factor=2, level=0.1):
-    small_verts_list = {}
-    small_faces_list = {}
+    # small_verts_list = {}
+    # small_faces_list = {}
     small_meshdata_list = {}
 
     for id in np.unique(atlas_label):
         id = int(id)
+        print(id)
         if id == 0:
             continue
-
         temp_atlas = atlas_data.copy()
         temp_atlas[atlas_label != id] = 0
         pimg = np.ascontiguousarray(temp_atlas[::factor, ::factor, ::factor])
-        verts, faces = pg.isosurface(ndi.gaussian_filter(pimg.astype('float32'), (2, 2, 2)), np.max(temp_atlas) * level)
-
-        small_verts_list[str(id)] = verts
-        small_faces_list[str(id)] = faces
+        verts, faces = pg.isosurface(ndi.gaussian_filter(pimg.astype('float64'), (2, 2, 2)), np.max(temp_atlas) * level)
+        # small_verts_list[str(id)] = verts
+        # small_faces_list[str(id)] = faces
 
         md = gl.MeshData(vertexes=verts * factor, faces=faces)
 
         small_meshdata_list[str(id)] = md
 
-    print('test')
-
-    outfile = open(os.path.join(atlas_folder, '{}_atlas_small_verts.pkl'.format(atlas_name)), 'wb')
-    pickle.dump(small_verts_list, outfile)
-    outfile.close()
-
-    outfile = open(os.path.join(atlas_folder, '{}_atlas_small_faces.pkl'.format(atlas_name)), 'wb')
-    pickle.dump(small_faces_list, outfile)
-    outfile.close()
 
     outfile = open(os.path.join(atlas_folder, '{}_atlas_small_meshdata.pkl'.format(atlas_name)), 'wb')
     pickle.dump(small_meshdata_list, outfile)

@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from pyqtgraph.Qt import QtGui, QtCore
-from uuuuuu import hsv2rgb, gamma_line, get_qhsv_from_czi_hsv, make_hist_data
+from .uuuuuu import hsv2rgb, gamma_line, get_qhsv_from_czi_hsv, make_hist_data
 
 
 channel_button_style = '''

@@ -4,7 +4,7 @@ from os.path import dirname, realpath, join
 import pickle
 import numpy as np
 import colorsys
-from uuuuuu import hex2rgb
+from .uuuuuu import hex2rgb
 
 
 class CZIReader(object):
@@ -59,9 +59,7 @@ class CZIReader(object):
                 channel_vals = []
                 for j in range(len(single_channel_tags)):
                     channel_vals.append(metadata[ds_ind][ch_ind][i][j].text)
-                if len(channel_vals[np.where(np.ravel(single_channel_tags) == 'Gamma')[0]]) > 0:
-                    print(channel_vals[np.where(np.ravel(single_channel_tags) == 'Gamma')[0]])
-                    print(channel_vals[np.where(np.ravel(single_channel_tags) == 'Gamma')[0][0]])
+                if len(np.where(np.ravel(single_channel_tags) == 'Gamma')[0]) > 0:
                     self.gamma_val.append(channel_vals[np.where(np.ravel(single_channel_tags) == 'Gamma')[0][0]])
             self.hsv_colors = [(0, self.level, self.level),
                                (120, self.level, self.level),
@@ -77,9 +75,7 @@ class CZIReader(object):
                     channel_vals.append(metadata[ds_ind][ch_ind][i][j].text)
                 hex_color = channel_vals[np.where(np.ravel(single_channel_tags) == 'Color')[0][0]]
                 self.channel_name.append(channel_vals[np.where(np.ravel(single_channel_tags) == 'ShortName')[0][0]])
-                if len(channel_vals[np.where(np.ravel(single_channel_tags) == 'Gamma')[0]]) > 0:
-                    print(channel_vals[np.where(np.ravel(single_channel_tags) == 'Gamma')[0]])
-                    print(channel_vals[np.where(np.ravel(single_channel_tags) == 'Gamma')[0][0]])
+                if len(np.where(np.ravel(single_channel_tags) == 'Gamma')[0]) > 0:
                     self.gamma_val.append(channel_vals[np.where(np.ravel(single_channel_tags) == 'Gamma')[0][0]])
                 da_color = hex_color[0] + hex_color[3:]
                 r, g, b = hex2rgb(da_color)

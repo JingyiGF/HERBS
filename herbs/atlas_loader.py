@@ -10,7 +10,7 @@ import nibabel as nib
 import numpy as np
 import pandas as pd
 import cv2
-from uuuuuu import make_contour_img
+from .uuuuuu import make_contour_img
 
 
 def _make_label(label_file_path, excel_file_path):

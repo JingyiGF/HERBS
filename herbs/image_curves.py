@@ -12,11 +12,11 @@ from scipy.interpolate import interp1d
 
 import cv2
 
-from image_stacks import ImageStacks
-from image_reader import ImageReader
-from uuuuuu import hsv2rgb, gamma_line, get_qhsv_from_czi_hsv, make_hist_data
-from widgets_utils import BWSpin, GammaSpin, ColorCombo, ChannelSelector
-from movable_points import MovablePoints
+from .image_stacks import ImageStacks
+from .image_reader import ImageReader
+from .uuuuuu import hsv2rgb, gamma_line, get_qhsv_from_czi_hsv, make_hist_data
+from .widgets_utils import BWSpin, GammaSpin, ColorCombo, ChannelSelector
+from .movable_points import MovablePoints
 
 
 multi_handle_slider_style = """

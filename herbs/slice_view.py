@@ -7,9 +7,9 @@ import pyqtgraph.functions as fn
 import pyqtgraph.opengl as gl
 from PyQt5.QtWidgets import *
 
-from slice_stacks import SliceStacks
-from label_tree import LabelTree
-from uuuuuu import *
+from .slice_stacks import SliceStacks
+from .label_tree import LabelTree
+from .uuuuuu import *
 
 
 # class AtlasDisplayCtrl(pg.parametertree.ParameterTree):

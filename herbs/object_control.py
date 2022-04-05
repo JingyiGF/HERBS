@@ -8,7 +8,7 @@ from pyqtgraph.Qt import QtGui, QtCore
 import pyqtgraph.functions as fn
 from PyQt5.QtGui import QIcon, QPixmap, QColor, QFont
 from PyQt5.QtCore import Qt, QSize
-from wtiles import *
+from .wtiles import *
 
 btm_style = '''
 

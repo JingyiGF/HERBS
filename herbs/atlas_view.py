@@ -9,9 +9,9 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtCore import Qt, QSize, QObject
 
-from slice_stacks import SliceStacks
-from label_tree import LabelTree
-from uuuuuu import *
+from .slice_stacks import SliceStacks
+from .label_tree import LabelTree
+from .uuuuuu import *
 
 
 atlas_rotation_gb_style = '''

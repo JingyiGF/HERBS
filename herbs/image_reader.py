@@ -5,7 +5,7 @@ import numpy as np
 from aicspylibczi import CziFile
 from pathlib import Path
 from os.path import dirname, realpath, join
-from czi_reader import CZIReader
+from .czi_reader import CZIReader
 
 
 # class ImageReader(object):

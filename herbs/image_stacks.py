@@ -8,7 +8,7 @@ from PyQt5.QtGui import *
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtGui, QtCore
 import pyqtgraph.functions as fn
-from movable_points import TriangulationPoints
+from .movable_points import TriangulationPoints
 
 
 class ClickableImage(pg.ImageItem):

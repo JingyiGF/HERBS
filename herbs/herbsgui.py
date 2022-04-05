@@ -46,23 +46,23 @@ from pyqtgraph import metaarray
 import warnings
 
 
-from uuuuuu import *
-from czi_reader import CZIReader
+from .uuuuuu import *
+from .czi_reader import CZIReader
 
-from atlas_downloader import *
-from atlas_loader import AtlasLoader
-from atlas_view import AtlasView
-from slice_stacks import *
+from .atlas_downloader import *
+from .atlas_loader import AtlasLoader
+from .atlas_view import AtlasView
+from .slice_stacks import *
 
-from image_reader import ImageReader, ImagesReader
-from image_stacks import *
-from image_curves import *
-from image_view import ImageView
+from .image_reader import ImageReader, ImagesReader
+from .image_stacks import *
+from .image_curves import *
+from .image_view import ImageView
 
-from label_tree import *
-from layers_control import *
-from object_control import *
-from toolbox import ToolBox
+from .label_tree import *
+from .layers_control import *
+from .object_control import *
+from .toolbox import ToolBox
 
 
 herbs_style = '''
@@ -2845,7 +2845,7 @@ class HERBS(QMainWindow, FORM_Main):
         self.probe_lines_3d_list.append(probe_line)
         self.view3d.addItem(self.probe_lines_3d_list[-1])
 
-
+    #
     def probe_info_on_click(self, ev):
         print(ev)
         index = ev[0]
@@ -2909,8 +2909,6 @@ class HERBS(QMainWindow, FORM_Main):
 
             self.statusbar.showMessage('Atlas Loaded.')
 
-            # pre_made_verts_path = os.path.join(atlas_folder, '{}_atlas_verts.pkl'.format(atlas_name))
-            # pre_made_faces_path = os.path.join(atlas_folder, '{}_atlas_faces.pkl'.format(atlas_name))
             pre_made_meshdata_path = os.path.join(atlas_folder, '{}_atlas_meshdata.pkl'.format(atlas_name))
 
             if os.path.exists(pre_made_meshdata_path):
@@ -2922,9 +2920,8 @@ class HERBS(QMainWindow, FORM_Main):
                 self.statusbar.showMessage('Brain mesh is not found! Mesh is constructing in 3D view....')
                 with pg.BusyCursor():
                     self.meshdata = render_volume(da_atlas.atlas_data, self.atlas_folder,
-                                                  atlas_name, factor=2, level=0.1)
+                                                  atlas_name, factor=2, level=0.01)
 
-            # md = gl.MeshData(vertexes=self.verts * 2, faces=self.faces)
             self.atlas_view.mesh.setMeshData(meshdata=self.meshdata)
             self.mesh_origin = np.ravel(da_atlas.atlas_info[3]['Bregma'])
             self.atlas_view.mesh.translate(-self.mesh_origin[0], -self.mesh_origin[1], -self.mesh_origin[2])
@@ -2944,8 +2941,6 @@ class HERBS(QMainWindow, FORM_Main):
 
             # return
 
-            # pre_made_small_verts_path = os.path.join(atlas_folder, 'WHS_atlas_small_verts.pkl')
-            # pre_made_small_faces_path = os.path.join(atlas_folder, 'WHS_atlas_small_faces.pkl')
             pre_made_small_meshdata_path = os.path.join(atlas_folder, 'WHS_atlas_small_meshdata.pkl')
             if os.path.exists(pre_made_small_meshdata_path):
                 infile = open(pre_made_small_meshdata_path, 'rb')
@@ -2955,13 +2950,13 @@ class HERBS(QMainWindow, FORM_Main):
                 self.statusbar.showMessage('Brain region mesh is not found! Rendering in 3D view....')
                 with pg.BusyCursor():
                     self.small_meshdata_list = render_small_volume(da_atlas.atlas_data, da_atlas.segmentation_data,
-                                                                   self.atlas_folder, atlas_name, factor=2, level=0.1)
+                                                                   self.atlas_folder, atlas_name, factor=2, level=0.01)
 
-            for id in np.unique(self.atlas_view.atlas_label):
+            for id in np.unique(da_atlas.segmentation_data):
+                id = int(id)
                 if id == 0:
                     continue
                 if id in self.atlas_view.label_info['index']:
-                    id = int(id)
                     color_to_set = self.atlas_view.label_info['color'][(self.atlas_view.label_info['index'] == id)][0] / 255
                     mesh = gl.GLMeshItem(meshdata=self.small_meshdata_list[str(id)], smooth=True,
                                          color=(color_to_set[0], color_to_set[1], color_to_set[2], 0.8), shader='balloon')
@@ -3083,9 +3078,6 @@ def main():
     exit(app.exec_())
     # app.exec_()
 
-
-if __name__ == '__main__':
-    main()
 
 
 
