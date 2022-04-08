@@ -9,6 +9,7 @@ import pyqtgraph.functions as fn
 from PyQt5.QtGui import QIcon, QPixmap, QColor, QFont
 from PyQt5.QtCore import Qt, QSize
 from .wtiles import *
+from .styles import Styles
 
 btm_style = '''
 
@@ -426,6 +427,8 @@ class ObjectControl(QObject):
 
         QObject.__init__(self)
 
+        styles = Styles()
+
         self.current_obj_ind = None
 
         self.obj_count = 0
@@ -464,6 +467,10 @@ class ObjectControl(QObject):
         combo_value = ['Multiply', 'Overlay', 'SourceOver']
         self.obj_blend_combo.addItems(combo_value)
         self.obj_blend_combo.setCurrentText('Multiply')
+        self.obj_blend_combo.setFixedHeight(24)
+        combo_list = QListView(self.obj_blend_combo)
+        combo_list.setStyleSheet(styles.text_combo_list_style)
+        self.obj_blend_combo.setView(combo_list)
 
         obj_opacity_label = QLabel('Opacity:')
         self.obj_opacity_slider = QSlider(Qt.Horizontal)
@@ -486,8 +493,8 @@ class ObjectControl(QObject):
         self.line_width_slider.setMinimum(1)
         self.line_width_slider.setMaximum(100)
 
-        self.top_frame = QFrame()
-        top_layout = QGridLayout(self.top_frame)
+        top_frame = QFrame()
+        top_layout = QGridLayout(top_frame)
         top_layout.setContentsMargins(0, 0, 0, 0)
         top_layout.setSpacing(5)
         top_layout.addWidget(combo_label, 0, 0, 1, 1)
@@ -495,13 +502,14 @@ class ObjectControl(QObject):
         top_layout.addWidget(obj_opacity_label, 1, 0, 1, 1)
         top_layout.addWidget(self.obj_opacity_slider, 1, 1, 1, 2)
         top_layout.addWidget(self.obj_opacity_val_label, 1, 3, 1, 1)
-        top_layout.addWidget(point_size_label, 2, 0, 1, 1)
-        top_layout.addWidget(self.point_size_slider, 2, 1, 1, 2)
+        # top_layout.addWidget(point_size_label, 2, 0, 1, 1)
+        # top_layout.addWidget(self.point_size_slider, 2, 1, 1, 2)
         # top_layout.addWidget(self.obj_opacity_val_label, 1, 3, 1, 1)
-        top_layout.addWidget(line_width_label, 3, 0, 1, 1)
-        top_layout.addWidget(self.line_width_slider, 3, 1, 1, 2)
+        # top_layout.addWidget(line_width_label, 3, 0, 1, 1)
+        # top_layout.addWidget(self.line_width_slider, 3, 1, 1, 2)
 
         self.layer_frame = QFrame()
+        self.layer_frame.setStyleSheet('background: transparent; border: 0px;')
         self.layer_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.layer_layout = QBoxLayout(QBoxLayout.BottomToTop, self.layer_frame)
         self.layer_layout.setAlignment(Qt.AlignBottom)
@@ -509,19 +517,28 @@ class ObjectControl(QObject):
         self.layer_layout.setSpacing(5)
 
         self.layer_scroll = QScrollArea()
+        self.layer_scroll.setStyleSheet('background: transparent; border: 0px;')
         self.layer_scroll.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.layer_scroll.setWidget(self.layer_frame)
         self.layer_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
         self.layer_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.layer_scroll.setWidgetResizable(True)
 
+        mid_frame = QFrame()
+        mid_frame.setStyleSheet('background: transparent; border: 1px solid rgb(128, 128, 128);')
+        mid_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        mid_layout = QGridLayout(mid_frame)
+        mid_layout.setContentsMargins(0, 0, 0, 0)
+        mid_layout.setSpacing(0)
+        mid_layout.setAlignment(Qt.AlignBottom)
+        mid_layout.addWidget(self.layer_scroll, 0, 0, 1, 1)
+
         self.outer_frame = QFrame()
         self.outer_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         outer_layout = QVBoxLayout(self.outer_frame)
         outer_layout.setSpacing(0)
-        # outer_layout.setAlignment(Qt.AlignTop)
-        outer_layout.addWidget(self.top_frame)
-        outer_layout.addWidget(self.layer_scroll)
+        outer_layout.addWidget(top_frame)
+        outer_layout.addWidget(mid_frame)
 
         # bottom buttons
         self.merge_probe_btn = QPushButton()

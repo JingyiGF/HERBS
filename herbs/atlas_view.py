@@ -39,6 +39,7 @@ QLineEdit {
     border: 0px;
     color: white;
 }
+
 '''
 
 slice_label_btn_style = '''
@@ -53,6 +54,56 @@ QPushButton {
 }
 '''
 
+atlas_panel_button_style = '''
+QPushButton{
+    background: #656565;
+    border-radius: 5px;
+    color: white;
+    border-style: outset;
+    border-bottom: 1px solid rgb(30, 30, 30);
+}
+'''
+
+
+page_control_style = '''
+QLabel{
+    border: None;
+    color: white;
+}
+
+QPushButton{
+    border: 1px solid #242424;
+    background: #656565;
+    border-radius: 4px;
+    min-height: 16px;
+    width: 30px;
+    padding: 5px;
+}
+
+QSlider {
+    min-height: 20px;
+    max-height: 20px;
+    background: transparent;
+    border: None;
+}
+
+QSlider::groove:horizontal {
+    border: None;
+    height: 2px; /* the groove expands to the size of the slider by default. by giving it a height, it has a fixed size */
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #B1B1B1, stop:1 #c4c4c4);
+    margin: 2px 0px;
+}
+
+QSlider::handle:horizontal {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #b4b4b4, stop:1 #8f8f8f);
+    border: 1px solid #5c5c5c;
+    width: 10px;
+    height: 30px;
+    margin: -4px -2px; /* handle is placed by default on the contents rect of the groove. Expand outside the groove */
+    border-radius: 0px;
+}
+'''
+
 
 class PageController(QWidget):
     class SignalProxy(QtCore.QObject):
@@ -64,6 +115,8 @@ class PageController(QWidget):
 
         QWidget.__init__(self)
 
+        self.setStyleSheet(page_control_style)
+
         self.max_val = None
 
         self.page_slider = QSlider(QtCore.Qt.Horizontal)
@@ -74,37 +127,37 @@ class PageController(QWidget):
         self.page_label.setFixedSize(50, 20)
 
         self.page_left_btn = QPushButton()
-        self.page_left_btn.setIcon(QtGui.QIcon("icons/triangle_left.png"))
-        self.page_left_btn.setIconSize(QtCore.QSize(10, 10))
-        # self.page_left_btn.setFixedSize(30, 20)
+        self.page_left_btn.setIcon(QtGui.QIcon("icons/backward.svg"))
+        self.page_left_btn.setIconSize(QtCore.QSize(16, 16))
         self.page_left_btn.clicked.connect(self.left_btn_clicked)
 
         self.page_right_btn = QPushButton()
-        self.page_right_btn.setIcon(QtGui.QIcon("icons/triangle_right.png"))
-        self.page_right_btn.setIconSize(QtCore.QSize(10, 10))
-        # self.page_right_btn.setFixedSize(30, 20)
+        self.page_right_btn.setIcon(QtGui.QIcon("icons/forward.svg"))
+        self.page_right_btn.setIconSize(QtCore.QSize(16, 16))
         self.page_right_btn.clicked.connect(self.right_btn_clicked)
 
         self.page_fast_left_btn = QPushButton()
-        self.page_fast_left_btn.setIcon(QtGui.QIcon( "icons/double_triangle_left.png"))
-        self.page_fast_left_btn.setIconSize(QtCore.QSize(10, 10))
-        # self.page_fast_left_btn.setFixedSize(30, 20)
+        self.page_fast_left_btn.setIcon(QtGui.QIcon("icons/fast_backward.svg"))
+        self.page_fast_left_btn.setIconSize(QtCore.QSize(16, 16))
         self.page_fast_left_btn.clicked.connect(self.fast_left_btn_clicked)
 
         self.page_fast_right_btn = QPushButton()
-        self.page_fast_right_btn.setIcon(QtGui.QIcon("icons/double_triangle_right.png"))
-        self.page_fast_right_btn.setIconSize(QtCore.QSize(10, 10))
-        # self.page_fast_right_btn.setFixedSize(30, 20)
+        self.page_fast_right_btn.setIcon(QtGui.QIcon("icons/fast_forward.svg"))
+        self.page_fast_right_btn.setIconSize(QtCore.QSize(16, 16))
         self.page_fast_right_btn.clicked.connect(self.fast_right_btn_clicked)
 
         page_ctrl_layout = QHBoxLayout()
-        page_ctrl_layout.setSpacing(3)
-        page_ctrl_layout.setContentsMargins(0, 0, 0, 0)
+        page_ctrl_layout.setSpacing(0)
+        page_ctrl_layout.setContentsMargins(10, 5, 10, 5)
         page_ctrl_layout.addWidget(self.page_left_btn)
+        page_ctrl_layout.addSpacing(10)
         page_ctrl_layout.addWidget(self.page_fast_left_btn)
+        page_ctrl_layout.addSpacing(10)
         page_ctrl_layout.addWidget(self.page_slider)
+        page_ctrl_layout.addSpacing(5)
         page_ctrl_layout.addWidget(self.page_label)
         page_ctrl_layout.addWidget(self.page_fast_right_btn)
+        page_ctrl_layout.addSpacing(10)
         page_ctrl_layout.addWidget(self.page_right_btn)
 
         self.setLayout(page_ctrl_layout)
@@ -311,14 +364,6 @@ class AtlasView(QObject):
         self.slut = pg.HistogramLUTWidget()
         self.slut.setImageItem(self.simg.img)
 
-        # self.scimg = SliceStacks()
-        # self.sproxy = pg.SignalProxy(self.scimg.vb.scene().sigMouseMoved, rateLimit=60, slot=self.sagital_crosshair)
-        # # self.scpage_ctrl = PageController()
-        # # self.scpage_ctrl.sig_page_changed.connect(self.sagital_copy_slice_page_changed)
-        # self.sclut = pg.HistogramLUTWidget()
-        # self.sclut.setImageItem(self.scimg.img)
-
-
         self.himg = SliceStacks()
         self.hproxy = pg.SignalProxy(self.himg.vb.scene().sigMouseMoved, rateLimit=60, slot=self.horizontal_crosshair)
         self.hpage_ctrl = PageController()
@@ -327,21 +372,22 @@ class AtlasView(QObject):
         self.hlut.setImageItem(self.himg.img)
 
         self.label_tree = LabelTree()
-        # self.label_tree.labels_changed.connect(self.labels_changed)
 
-
-        # self.working_cut_changed('coronal')
 
         # radio buttons
         self.radio_group = QFrame()
         self.radio_group.setFixedHeight(50)
         self.radio_group.setStyleSheet('QFrame{border: 1px solid gray; border-radius: 3px}')
         radio_group_layout = QHBoxLayout(self.radio_group)
-        radio_group_layout.setContentsMargins(0, 0, 0, 0)
+        radio_group_layout.setContentsMargins(5, 0, 5, 0)
+        radio_group_layout.setAlignment(Qt.AlignCenter)
         self.section_rabnt1 = QRadioButton('Coronal')
         self.section_rabnt1.setChecked(True)
         self.section_rabnt2 = QRadioButton('Sagital')
         self.section_rabnt3 = QRadioButton('Horizontal')
+        self.section_rabnt1.setStyleSheet('color: white')
+        self.section_rabnt2.setStyleSheet('color: white')
+        self.section_rabnt3.setStyleSheet('color: white')
         radio_group_layout.addWidget(self.section_rabnt1)
         radio_group_layout.addWidget(self.section_rabnt2)
         radio_group_layout.addWidget(self.section_rabnt3)
@@ -381,10 +427,12 @@ class AtlasView(QObject):
 
         # boundary
         self.show_boundary_btn = QPushButton('Show Boundary')
+        self.show_boundary_btn.setStyleSheet(atlas_panel_button_style)
         self.show_boundary_btn.setCheckable(True)
 
         #
         self.navigation_btn = QPushButton('Navigation')
+        self.navigation_btn.setStyleSheet(atlas_panel_button_style)
         self.navigation_btn.setCheckable(True)
         self.navigation_btn.clicked.connect(self.navigation_btn_clicked)
 
@@ -459,14 +507,19 @@ class AtlasView(QObject):
 
         self.sidebar_wrap = QFrame()
         sidebar_wrap_layout = QVBoxLayout(self.sidebar_wrap)
-        sidebar_wrap_layout.setContentsMargins(0, 0, 0, 0)
-        sidebar_wrap_layout.setSpacing(10)
+        sidebar_wrap_layout.setSpacing(0)
         sidebar_wrap_layout.addWidget(self.radio_group)
+        sidebar_wrap_layout.addSpacing(10)
         sidebar_wrap_layout.addWidget(opacity_wrap)
+        sidebar_wrap_layout.addSpacing(10)
         sidebar_wrap_layout.addWidget(self.show_boundary_btn)
+        sidebar_wrap_layout.addSpacing(10)
         sidebar_wrap_layout.addWidget(coronal_rotation_wrap)
+        sidebar_wrap_layout.addSpacing(10)
         sidebar_wrap_layout.addWidget(sagital_rotation_wrap)
+        sidebar_wrap_layout.addSpacing(10)
         sidebar_wrap_layout.addWidget(horizontal_rotation_wrap)
+        sidebar_wrap_layout.addSpacing(10)
         sidebar_wrap_layout.addWidget(self.navigation_btn)
 
         # 3d things
@@ -528,18 +581,14 @@ class AtlasView(QObject):
         self.cpage_ctrl.set_val(self.current_coronal_index)
         self.spage_ctrl.set_max(self.atlas_size[1] - 1)
         self.spage_ctrl.set_val(self.current_sagital_index)
-        # self.scpage_ctrl.set_max(self.atlas_size[1] - 1)
-        # self.scpage_ctrl.set_val(self.current_sagital_index)
         self.hpage_ctrl.set_max(self.atlas_size[0] - 1)
         self.hpage_ctrl.set_val(self.current_horizontal_index)
 
         self.cimg.label_img.setLevels(levels=[0, self.label_tree.label_level])
         self.simg.label_img.setLevels(levels=[0, self.label_tree.label_level])
         self.himg.label_img.setLevels(levels=[0, self.label_tree.label_level])
-        # self.scimg.label_img.setLevels(levels=[0, self.label_tree.label_level])
 
         lut = self.label_tree.lookup_table()
-        # self.scimg.label_img.setLookupTable(lut=lut)
         self.cimg.label_img.setLookupTable(lut=lut)
         self.simg.label_img.setLookupTable(lut=lut)
         self.himg.label_img.setLookupTable(lut=lut)

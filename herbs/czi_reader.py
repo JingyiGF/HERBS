@@ -29,16 +29,14 @@ class CZIReader(object):
             self.n_channels = self.dimensions[0]['C'][1]
 
         self.n_scenes = len(self.dimensions)
-        if self.n_scenes == 1:
-            if isinstance(self.dimensions, list):
-                print('list')
-            if isinstance(self.dimensions, dict):
-                print('dict')
-            raise Exception('Coder never met this situation, please give coder an example.')
-        else:
-            self.scene_bbox = []
+        self.scene_bbox = []
+        if self.is_mosaic:
             for i in range(self.n_scenes):
                 bbox = self.czi.get_mosaic_scene_bounding_box(index=i)
+                self.scene_bbox.append((bbox.x, bbox.y, bbox.w, bbox.h))
+        else:
+            for i in range(self.n_scenes):
+                bbox = self.czi.get_scene_bounding_box(index=i)
                 self.scene_bbox.append((bbox.x, bbox.y, bbox.w, bbox.h))
 
         # get colors from metadata

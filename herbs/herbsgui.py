@@ -63,11 +63,14 @@ from .label_tree import *
 from .layers_control import *
 from .object_control import *
 from .toolbox import ToolBox
+from .styles import Styles
 
 
 herbs_style = '''
 QMainWindow {
     background-color: rgb(50, 50, 50);
+    color: white;
+    font-size: 12px;
 }
 
 /*---------------------- Slider -----------------------*/
@@ -75,21 +78,22 @@ QSlider {
     min-height: 20px;
     max-height: 20px;
     background: transparent;
+    border: None;
 }
 
 QSlider::groove:horizontal {
-    border: 1px solid #999999;
+    border: None;
     height: 2px; /* the groove expands to the size of the slider by default. by giving it a height, it has a fixed size */
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #B1B1B1, stop:1 #c4c4c4);
-    margin: 0px 12px;
+    margin: 2px 0px;
 }
 
 QSlider::handle:horizontal {
     background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #b4b4b4, stop:1 #8f8f8f);
     border: 1px solid #5c5c5c;
-    width: 2px;
+    width: 10px;
     height: 30px;
-    margin: -6px -2px; /* handle is placed by default on the contents rect of the groove. Expand outside the groove */
+    margin: -4px -2px; /* handle is placed by default on the contents rect of the groove. Expand outside the groove */
     border-radius: 0px;
 }
 
@@ -102,10 +106,12 @@ QLineEdit {
 /*---------------------- SpinBox -----------------------*/
 QSpinBox {
     padding-right: 0px; /* make room for the arrows */
-    border-width: 0;
+    border: 1px solid #242424;
+    background: transparent;
 }
 
 QSpinBox::up-button {
+    background: transparent;
     subcontrol-origin: border;
     subcontrol-position: top right; /* position at the top right corner */
     width: 15px; 
@@ -113,6 +119,7 @@ QSpinBox::up-button {
 }
 
 QSpinBox::down-button {
+    background: transparent;
     subcontrol-origin: border;
     subcontrol-position: bottom right; /* position at bottom right corner */
     width: 15px;
@@ -152,10 +159,13 @@ QSpinBox::down-arrow {
 /*---------------------- DoubleSpinBox -----------------------*/
 QDoubleSpinBox {
     padding-right: 0px; 
-    border-width: 0;
+    border: 1px solid #242424;
+    background: transparent;
+    
 }
 
 QDoubleSpinBox::up-button {
+    background: transparent;
     subcontrol-origin: border;
     subcontrol-position: top right; /* position at the top right corner */
     width: 15px; 
@@ -163,6 +173,7 @@ QDoubleSpinBox::up-button {
 }
 
 QDoubleSpinBox::down-button {
+    background: transparent;
     subcontrol-origin: border;
     subcontrol-position: bottom right; /* position at bottom right corner */
     width: 15px;
@@ -198,118 +209,95 @@ QDoubleSpinBox::down-arrow {
     width: 7px;
     height: 7px;
 }
-'''
 
-
-tab_style = '''
-/*---------------------- QTabWidget -----------------------*/
-QTabWidget{
-    background-color: transparent;
-    margin-bottom: 0px;
-
-}
-
-QTabWidget::pane {
-    background-color: transparent;
-    margin-left: 0px;
-    padding-left:0px;
-    border-top: 1px solid #747a80;
-    border-left: 1px solid #747a80;
-    border-right: 1px solid #747a80;
-    border-bottom: 1px solid #747a80;
-    margin-bottom: 0px;
-}
-
-QTabWidget::tab-bar {
-    bottom: 0;
-    border: 1px solid gray;
-}
-
-QTabBar::tab {
-    background-color: #3c3f41;
-    height:30px;
-    width: 30px;
-    border-bottom: 3px solid #323232;
-    margin: 0px;
-    padding-top: 5px;
-    padding-left: 6px;
-}
-
-QTabBar::tab:selected {
-    background: #4e5254;
-    border-bottom: 3px solid #747a80;
-}
-
-QTabBar::tab:hover{
-    background: #27292a;
-}
-
-QGroupBox {
-    background-color: transparent; 
-    border: 1px solid; 
-    border-radius: 3px; 
-    padding-top: 3px; 
-    padding-bottom: 3px; 
-    margin-top: 0px
-}
-
-
-'''
-
-
-image_tool_frame_style = '''
-QFrame {
-    background-color: #535352;
-    border-top-color: #2a2a2b;
-    border: 2px solid;
-    border-radius: 0px;
-    padding-top: 0px;
-    padding-bottom: 0px; 
-    margin-top: 0px;
-} 
-
-'''
-
-sidebar_title_label_style = '''
-QLabel{
+/*---------------------- QComboBox -----------------------*/
+QComboBox {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    selection-background-color: transparent;
     color: white;
-    background: #747a80;
-    width: 300px;
-    height: 20px;
-    padding-bottom: 5px;
-    padding-left: 5px;
-    padding-top: 2px;
-}
-
-'''
-
-ic_bnt_style = '''
-
-QPushButton {
-    border : None; 
-    background: transparent;
+    background-color: transparent;
+    border: None;
+    border-radius: 5px;
+    padding: 0px 0px 0px 5px;
     margin: 0px;
-    padding-top: 0px;
-    border-radius: 0px;
-    min-width: 32px;
-    min-height: 30px;
-}
-QPushButton:checked {
-    background-color: #383838; 
-    border: 1px solid #636363; 
 }
 
-QPushButton:pressed {
-    background-color: #383838; 
-    border: 1px solid #636363; 
+QComboBox:item {
+    background: #323232;
+    color: white;
+    min-height: 10px;
+    margin: 0px;
 }
 
-QPushButton:hover {
-    background-color: #383838; 
-    border: 1px solid #636363; 
+QComboBox:item:selected
+{
+    border: None;
+    background: #232323;
+    margin: 0px;
+}
+
+
+QComboBox:editable {
+    background: transparent;
+}
+
+QComboBox:!editable, QComboBox::drop-down:editable {
+     background: #656565;
+}
+
+/* QComboBox gets the "on" state when the popup is open */
+QComboBox:!editable:on, QComboBox::drop-down:editable:on {
+    background: transparent;
+}
+
+QComboBox:on { /* shift the text when the popup opens */
+    padding: 3px;
+    color: white;
+    background-color: transparent;
+    selection-background-color: transparent;
+}
+
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 20px;
+    border-top: None;
+    border-bottom: None;
+    border-left-width: 1px;
+    border-left-color: transparent;
+    border-left-style: solid; /* just a single line */
+    border-top-right-radius: 3px; /* same radius as the QComboBox */
+    border-bottom-right-radius: 3px;
+}
+
+QComboBox::down-arrow {
+    image: url(icons/tdown.svg);
+    width: 13px;
+    height: 14px;
+    padding-right: 3px;
+}
+
+QComboBox::down-arrow:on { /* shift the arrow when popup is open */
+    top: 1px;
+    left: 1px;
+}
+
+/*---------------------- QSplitter -----------------------*/
+QSplitter::handle {
+    image: url(icons/dot.svg);
+}
+
+QSplitter::handle:horizontal {
+    width: 5px;
+}
+
+QSplitter::handle:vertical {
+    height: 5px;
 }
 
 '''
+
 
 toolbar_style = '''
 QToolBar::separator { 
@@ -333,6 +321,10 @@ QToolBar {
 QToolButton {
     border-top: 2px solid rgb(50, 50, 50);
     border-bottom: 2px solid rgb(50, 50, 50);
+}
+
+QRadioButton {
+    color: white;
 }
 
 
@@ -399,6 +391,8 @@ class HERBS(QMainWindow, FORM_Main):
         self.setWindowTitle("HERBS - Histological E-data Registration in Rat Brain Space")
 
         self.num_windows = 1
+
+        self.styles = Styles()
 
         self.np_onside = None
         self.atlas_rect = None
@@ -497,14 +491,11 @@ class HERBS(QMainWindow, FORM_Main):
         self.image_mode = None
         self.process_img = None
 
+        self.triangle_color = QColor(128, 128, 128, 255)
+
         # ---------------------
         self.tool_box = ToolBox()
         self.toolbar_wrap_action_dict = {}
-
-        self.statusLabel = QLabel()
-        self.statusLabel.setFixedHeight(30)
-        self.statusbar.addWidget(self.statusLabel)
-        self.statusbar.showMessage('Ready')
 
         # ---------------------------- load controls, views, panels
         self.layer_ctrl = LayersControl()
@@ -577,8 +568,6 @@ class HERBS(QMainWindow, FORM_Main):
         self.actionCopy_Current_Image.triggered.connect(self.make_copy_of_current_image)
         self.actionHide_Original_Image.triggered.connect(self.image_view.hide_original_image)
         self.actionShow_Original_Image.triggered.connect(self.image_view.show_original_image)
-
-
 
         self.init_tool_bar()
         self.init_side_bar()
@@ -656,6 +645,8 @@ class HERBS(QMainWindow, FORM_Main):
         tab4_shortcut.activated.connect(lambda: self.sidebar_tab_state(3))
         tab5_shortcut = QShortcut(QKeySequence('Ctrl+5'), self)
         tab5_shortcut.activated.connect(lambda: self.sidebar_tab_state(4))
+
+        self.statusbar.showMessage('Ready')
 
     def sidebar_tab_state(self, tab_num):
         self.sidebar.setCurrentIndex(tab_num)
@@ -879,6 +870,10 @@ class HERBS(QMainWindow, FORM_Main):
         self.atlas_tri_onside_data = num_side_pnt_changed(self.np_onside, self.atlas_corner_points, self.atlas_side_lines)
         self.atlas_tri_data = self.atlas_tri_onside_data + self.atlas_tri_inside_data
         self.atlas_view.working_atlas.tri_pnts.setData(pos=np.asarray(self.atlas_tri_data))
+        if self.tool_box.checkable_btn_dict['triang_btn'].isChecked():
+            self.atlas_view.working_atlas.tri_pnts.setVisible(True)
+        else:
+            self.atlas_view.working_atlas.tri_pnts.setVisible(False)
         if self.tool_box.triang_vis_btn.isChecked():
             self.update_atlas_tri_lines()
         self.small_atlas_rect = None
@@ -896,6 +891,10 @@ class HERBS(QMainWindow, FORM_Main):
 
         self.histo_tri_data = self.histo_tri_onside_data + self.histo_tri_inside_data
         self.image_view.img_stacks.tri_pnts.setData(pos=np.asarray(self.histo_tri_data))
+        if self.tool_box.checkable_btn_dict['triang_btn'].isChecked():
+            self.image_view.img_stacks.tri_pnts.setVisible(True)
+        else:
+            self.image_view.img_stacks.tri_pnts.setVisible(False)
         if self.tool_box.triang_vis_btn.isChecked():
             self.update_histo_tri_lines()
         self.small_atlas_rect = None
@@ -912,7 +911,6 @@ class HERBS(QMainWindow, FORM_Main):
             self.atlas_view.cimg.boundary.setVisible(False)
             self.atlas_view.simg.boundary.setVisible(False)
             self.atlas_view.himg.boundary.setVisible(False)
-
 
     # ------------------------------------------------------------------
     #
@@ -955,7 +953,6 @@ class HERBS(QMainWindow, FORM_Main):
         download_waxholm_rat_window = AtlasDownloader()
         download_waxholm_rat_window.exec()
 
-
     # ------------------------------------------------------------------
     #
     #                      ToolBar layout and connections
@@ -988,6 +985,7 @@ class HERBS(QMainWindow, FORM_Main):
         self.tool_box.magic_wand_virus_register.clicked.connect(self.get_virus_img)
         self.tool_box.magic_wand_bnd_register.clicked.connect(self.get_contour_img)
         # triangle related
+        self.tool_box.triang_color_btn.sigColorChanged.connect(self.change_triangle_color)
         self.tool_box.bound_pnts_num.textEdited.connect(self.number_of_side_points_changed)
         self.tool_box.triang_vis_btn.clicked.connect(self.vis_tri_lines_btn_clicked)
         self.tool_box.triang_match_bnd.clicked.connect(self.matching_tri_bnd)
@@ -1056,63 +1054,52 @@ class HERBS(QMainWindow, FORM_Main):
     #              ToolBar checkable btn clicked
     # ------------------------------------------------------------------
     def moving_btn_clicked(self):
-        if self.eraser_is_on:
-            self.remove_eraser_symbol()
-            self.eraser_is_on = False
         self.inactive_lasso()
         self.set_toolbox_btns_unchecked('moving')
+        self.vis_eraser_symbol(False)
 
     def lasso_btn_clicked(self):
-        if self.eraser_is_on:
-            self.remove_eraser_symbol()
         self.set_toolbox_btns_unchecked('lasso')
+        self.vis_eraser_symbol(False)
 
     def magic_wand_btn_clicked(self):
-        if self.eraser_is_on:
-            self.remove_eraser_symbol()
-            self.eraser_is_on = False
         self.inactive_lasso()
         self.set_toolbox_btns_unchecked('magic_wand')
+        self.vis_eraser_symbol(False)
 
     def pencil_btn_clicked(self):
-        if self.eraser_is_on:
-            self.remove_eraser_symbol()
-            self.eraser_is_on = False
         self.inactive_lasso()
         self.set_toolbox_btns_unchecked('pencil')
+        self.vis_eraser_symbol(False)
 
     def eraser_btn_clicked(self):
         self.inactive_lasso()
         self.set_toolbox_btns_unchecked('eraser')
+        if self.tool_box.checkable_btn_dict['eraser_btn'].isChecked():
+            self.vis_eraser_symbol(True)
+        else:
+            self.vis_eraser_symbol(False)
 
     def rotation_btn_clicked(self):
-        if self.eraser_is_on:
-            self.remove_eraser_symbol()
-            self.eraser_is_on = False
         self.inactive_lasso()
         self.set_toolbox_btns_unchecked('rotation')
+        self.vis_eraser_symbol(False)
 
     def triang_btn_clicked(self):
-        if self.eraser_is_on:
-            self.remove_eraser_symbol()
-            self.eraser_is_on = False
         self.inactive_lasso()
         self.set_toolbox_btns_unchecked('triang')
         self.show_triangle_points('triang')
+        self.vis_eraser_symbol(False)
 
     def probe_btn_clicked(self):
-        if self.eraser_is_on:
-            self.remove_eraser_symbol()
-            self.eraser_is_on = False
         self.inactive_lasso()
         self.set_toolbox_btns_unchecked('probe')
+        self.vis_eraser_symbol(False)
 
     def loc_btn_clicked(self):
-        if self.eraser_is_on:
-            self.remove_eraser_symbol()
-            self.eraser_is_on = False
         self.inactive_lasso()
         self.set_toolbox_btns_unchecked('loc')
+        self.vis_eraser_symbol(False)
 
     def set_toolbox_btns_unchecked(self, current_btn):
         if self.tool_box.checkable_btn_dict['{}_btn'.format(current_btn)].isChecked():
@@ -1131,11 +1118,8 @@ class HERBS(QMainWindow, FORM_Main):
             self.current_checked_tool = None
             self.toolbar_wrap_action_dict['{}_act'.format(current_btn)].setVisible(False)
 
-
-
-    def remove_eraser_symbol(self):
-        self.image_view.img_stacks.circle_follow.clear()
-        self.image_view.img_stacks.circle_follow.updateItems()
+    def vis_eraser_symbol(self, vis):
+        self.image_view.img_stacks.circle_follow.setVisible(vis)
 
     # ------------------------------------------------------------------
     #
@@ -1143,16 +1127,12 @@ class HERBS(QMainWindow, FORM_Main):
     #
     # ------------------------------------------------------------------
     def init_side_bar(self):
-        self.sidebar.setStyleSheet(tab_style)
+        self.sidebar.setStyleSheet(self.styles.tab_style)
         self.sidebar.setIconSize(QSize(24, 24))
         self.sidebar.setTabIcon(0, QIcon('icons/sidebar/atlascontrol.svg'))
-        # self.sidebar.setIconSize(QtCore.QSize(24, 24))
         self.sidebar.setTabIcon(1, QIcon('icons/sidebar/treeview.svg'))
-        # self.sidebar.setIconSize(QtCore.QSize(24, 24))
         self.sidebar.setTabIcon(2, QIcon('icons/sidebar/tool.svg'))
-        # self.sidebar.setIconSize(QtCore.QSize(24, 24))
         self.sidebar.setTabIcon(3, QIcon('icons/sidebar/layers.svg'))
-        # self.sidebar.setIconSize(QtCore.QSize(24, 24))
         self.sidebar.setTabIcon(4, QIcon('icons/sidebar/object.svg'))
 
         # ---------------------------- atlas control panel
@@ -1160,7 +1140,7 @@ class HERBS(QMainWindow, FORM_Main):
         atlas_panel_layout.setContentsMargins(0, 0, 0, 0)
         atlas_panel_layout.setAlignment(Qt.AlignTop)
         atlas_control_label = QLabel('Atlasing Controller')
-        atlas_control_label.setStyleSheet(sidebar_title_label_style)
+        atlas_control_label.setStyleSheet(self.styles.sidebar_title_label_style)
 
         atlas_panel_layout.addWidget(atlas_control_label)
         atlas_panel_layout.addWidget(self.atlas_view.sidebar_wrap)
@@ -1170,18 +1150,15 @@ class HERBS(QMainWindow, FORM_Main):
         label_panel_layout.setContentsMargins(0, 0, 0, 0)
         label_panel_layout.setAlignment(Qt.AlignTop)
         label_control_label = QLabel('Segmentation View Controller')
-        label_control_label.setStyleSheet(sidebar_title_label_style)
+        label_control_label.setStyleSheet(self.styles.sidebar_title_label_style)
 
-        label_panel_layout.addWidget(label_control_label)
-
-        label_container = QFrame()
-        label_container_layout = QVBoxLayout(label_container)
-        label_container_layout.setContentsMargins(0, 0, 0, 0)
-        label_container_layout.setSpacing(5)
+        label_tree_container = QFrame()
+        label_container_layout = QVBoxLayout(label_tree_container)
+        # label_container_layout.setContentsMargins(0, 0, 0, 0)
+        label_container_layout.setSpacing(0)
         label_container_layout.setAlignment(Qt.AlignTop)
         show_3d_button = QPushButton()
-        show_3d_button.setStyleSheet(
-            'margin-left: 5px; margin-right:5px; margin-bottom:10px; padding-top:3px; height: 20px;')
+        show_3d_button.setStyleSheet('margin: 0px;')
         show_3d_button.setCheckable(True)
         show_3d_button.setText('Show in 3D view')
         show_3d_button.clicked.connect(self.show_small_area_in_3d)
@@ -1189,12 +1166,43 @@ class HERBS(QMainWindow, FORM_Main):
         composition_label = QLabel('Composition: ')
         self.composition_combo = QComboBox()
         self.composition_combo.addItems(['opaque', 'translucent', 'additive'])
+        self.composition_combo.setFixedHeight(24)
+        combo_list = QListView(self.composition_combo)
+        combo_list.setStyleSheet(self.styles.text_combo_list_style)
+        self.composition_combo.setView(combo_list)
         self.composition_combo.currentIndexChanged.connect(self.composition_3d_changed)
 
         label_container_layout.addWidget(show_3d_button)
+        label_container_layout.addSpacing(10)
         label_container_layout.addWidget(self.composition_combo)
+        label_container_layout.addSpacing(10)
         label_container_layout.addWidget(self.atlas_view.label_tree)
-        label_panel_layout.addWidget(label_container)
+
+        label_panel_layout.addWidget(label_control_label)
+        label_panel_layout.addWidget(label_tree_container)
+
+        # ---------------------------- image panel
+        image_panel_layout = QVBoxLayout(self.imagecontrolpanel)
+        image_panel_layout.setContentsMargins(0, 0, 0, 0)
+        image_panel_layout.setSpacing(0)
+        image_panel_layout.setAlignment(Qt.AlignTop)
+        image_control_label = QLabel('Image View Controller')
+        image_control_label.setStyleSheet(self.styles.sidebar_title_label_style)
+
+        image_panel_layout.addWidget(image_control_label)
+
+        space_item = QSpacerItem(300, 10, QSizePolicy.Expanding)
+
+        image_container = QFrame()
+        image_container_layout = QVBoxLayout(image_container)
+        image_container_layout.setSpacing(5)
+        image_container_layout.setAlignment(Qt.AlignTop)
+        image_container_layout.addWidget(self.image_view.outer_frame)
+        # image_container_layout.addSpacerItem(space_item)
+        # image_container_layout.addWidget(self.image_view.chn_widget_wrap)
+
+        image_panel_layout.addWidget(image_container)
+        image_panel_layout.insertStretch(-1, 1)
 
         # ---------------------------- layer panel
         layer_panel_layout = QVBoxLayout(self.layerpanel)
@@ -1202,7 +1210,7 @@ class HERBS(QMainWindow, FORM_Main):
         layer_panel_layout.setSpacing(0)
         layer_panel_layout.setAlignment(Qt.AlignTop)
         layer_control_label = QLabel('Layer View Controller')
-        layer_control_label.setStyleSheet(sidebar_title_label_style)
+        layer_control_label.setStyleSheet(self.styles.sidebar_title_label_style)
 
         layer_btm_ctrl = QFrame()
         layer_btm_ctrl.setStyleSheet('background-color:rgb(65, 65, 65);')
@@ -1221,36 +1229,13 @@ class HERBS(QMainWindow, FORM_Main):
         layer_panel_layout.addWidget(layer_btm_ctrl)
         # self.layerpanel.setEnabled(False)
 
-        # ---------------------------- image panel
-        image_panel_layout = QVBoxLayout(self.imagecontrolpanel)
-        image_panel_layout.setContentsMargins(0, 0, 0, 0)
-        image_panel_layout.setSpacing(0)
-        image_panel_layout.setAlignment(Qt.AlignTop)
-        image_control_label = QLabel('Image View Controller')
-        image_control_label.setStyleSheet(sidebar_title_label_style)
-
-        image_panel_layout.addWidget(image_control_label)
-
-        space_item = QSpacerItem(300, 10, QSizePolicy.Expanding)
-
-        image_container = QFrame()
-        image_container_layout = QVBoxLayout(image_container)
-        image_container_layout.setSpacing(5)
-        image_container_layout.setAlignment(Qt.AlignTop)
-        image_container_layout.addWidget(self.image_view.outer_frame)
-        # image_container_layout.addSpacerItem(space_item)
-        # image_container_layout.addWidget(self.image_view.chn_widget_wrap)
-
-        image_panel_layout.addWidget(image_container)
-        image_panel_layout.insertStretch(-1, 1)
-
         # ---------------------------- object panel
         object_panel_layout = QVBoxLayout(self.probecontrolpanel)
         object_panel_layout.setContentsMargins(0, 0, 0, 0)
         object_panel_layout.setSpacing(0)
         object_panel_layout.setAlignment(Qt.AlignTop)
         object_control_label = QLabel('Object View Controller')
-        object_control_label.setStyleSheet(sidebar_title_label_style)
+        object_control_label.setStyleSheet(self.styles.sidebar_title_label_style)
 
         object_btm_ctrl = QFrame()
         object_btm_ctrl.setStyleSheet('background-color:rgb(65, 65, 65);')
@@ -1695,6 +1680,25 @@ class HERBS(QMainWindow, FORM_Main):
             self.update_histo_tri_lines()
             self.update_atlas_tri_lines()
 
+    # change color for triangle points and text
+    def change_triangle_color(self, ev):
+        self.triangle_color = ev.color()
+        # triang_color = np.ravel(triang_color.getRgb())
+        self.image_view.img_stacks.tri_pnts.scatter.setPen(color=self.triangle_color)
+        self.image_view.img_stacks.tri_pnts.scatter.setBrush(color=self.triangle_color)
+        if self.working_img_text:
+            for i in range(len(self.working_img_text)):
+                self.working_img_text[i].setColor(self.triangle_color)
+        self.atlas_view.cimg.tri_pnts.scatter.setPen(color=self.triangle_color)
+        self.atlas_view.simg.tri_pnts.scatter.setPen(color=self.triangle_color)
+        self.atlas_view.himg.tri_pnts.scatter.setPen(color=self.triangle_color)
+        self.atlas_view.cimg.tri_pnts.scatter.setBrush(color=self.triangle_color)
+        self.atlas_view.simg.tri_pnts.scatter.setBrush(color=self.triangle_color)
+        self.atlas_view.himg.tri_pnts.scatter.setBrush(color=self.triangle_color)
+        if self.working_atlas_text:
+            for i in range(len(self.working_atlas_text)):
+                self.working_atlas_text[i].setColor(self.triangle_color)
+
     # ------------------------------------------------------------------
     #
     #               ToolBar transform btn clicked
@@ -1918,7 +1922,7 @@ class HERBS(QMainWindow, FORM_Main):
 
         if self.working_img_probe_data:
             res_pnts = self.transfer_pnt(np.asarray(self.working_img_probe_data), tri_vet_inds)
-            self.working_atlas_probe = res_pnts
+            self.working_atlas_probe = res_pnts.tolist()
             self.atlas_view.working_atlas.probe_pnts.setData(pos=np.asarray(self.working_atlas_probe))
             if not self.atlas_view.working_atlas.probe_pnts.isVisible():
                 self.atlas_view.working_atlas.probe_pnts.setVisible(True)
@@ -2071,6 +2075,7 @@ class HERBS(QMainWindow, FORM_Main):
             self.histo_tri_data = self.histo_tri_onside_data + self.histo_tri_inside_data
             self.image_view.img_stacks.tri_pnts.setData(pos=np.asarray(self.histo_tri_data))
             self.working_img_text.append(pg.TextItem(str(len(self.histo_tri_data) - (self.np_onside - 1) * 4)))
+            self.working_img_text[-1].setColor(self.triangle_color)
             self.image_view.img_stacks.vb.addItem(self.working_img_text[-1])
             self.working_img_text[-1].setPos(x, y)
             if self.tool_box.triang_vis_btn.isChecked():
@@ -2114,14 +2119,18 @@ class HERBS(QMainWindow, FORM_Main):
         y = pos.y()
         x = pos.x()
         if self.tool_box.checkable_btn_dict['eraser_btn'].isChecked():
-            self.eraser_is_on = True
             r = self.tool_box.eraser_size_slider.value()
             shp = self.image_view.current_img.shape
             if x - r > 0 and x + r < shp[1] and y - r > 0 and y + r < shp[0]:
+                if not self.image_view.img_stacks.circle_follow.isVisible():
+                    self.vis_eraser_symbol(True)
                 data = self.tool_box.circle.copy()
                 data[:, 0] = data[:, 0] + x
                 data[:, 1] = data[:, 1] + y
                 self.image_view.img_stacks.circle_follow.setData(data)
+            else:
+                if self.image_view.img_stacks.circle_follow.isVisible():
+                    self.vis_eraser_symbol(False)
         if self.tool_box.checkable_btn_dict['pencil_btn'].isChecked():
             if self.is_pencil_allowed:
                 self.working_img_drawing_data.append([x, y])
@@ -2282,7 +2291,7 @@ class HERBS(QMainWindow, FORM_Main):
 
         coords = np.round((da_pnt - np.ravel(self.atlas_view.Bregma)) * self.atlas_view.vxsize_um, 2)
         pstr = 'Atlas voxel:({}, {}, {}), ML:{}um, AP:{}um, DV:{}um) : {} '.format(
-            int(da_pnt[1]), int(da_pnt[2]), int(self.atlas_view.atlas_size[0] - da_pnt[0]), coords[1], coords[2], coords[0],
+            int(da_pnt[1]), int(da_pnt[2]), int(da_pnt[0]), coords[1], coords[2], coords[0],
             self.atlas_view.label_tree.describe(da_id))
         self.statusbar.showMessage(pstr)
 
@@ -2305,7 +2314,7 @@ class HERBS(QMainWindow, FORM_Main):
 
         coords = np.round((da_pnt - np.ravel(self.atlas_view.Bregma)) * self.atlas_view.vxsize_um, 2)
         pstr = 'Atlas voxel:({}, {}, {}), ML:{}um, AP:{}um, DV:{}um) : {} '.format(
-            int(da_pnt[1]), int(da_pnt[2]), int(self.atlas_view.atlas_size[0] - da_pnt[0]), coords[1], coords[2], coords[0],
+            int(da_pnt[1]), int(da_pnt[2]), int(da_pnt[0]), coords[1], coords[2], coords[0],
             self.atlas_view.label_tree.describe(da_id))
         self.statusbar.showMessage(pstr)
 
@@ -2328,7 +2337,7 @@ class HERBS(QMainWindow, FORM_Main):
 
         coords = np.round((da_pnt - np.ravel(self.atlas_view.Bregma)) * self.atlas_view.vxsize_um, 2)
         pstr = 'Atlas voxel:({}, {}, {}), ML:{}um, AP:{}um, DV:{}um) : {} '.format(
-            int(da_pnt[1]), int(da_pnt[2]), int(self.atlas_view.atlas_size[0] - da_pnt[0]), coords[1], coords[2], coords[0],
+            int(da_pnt[1]), int(da_pnt[2]), int(da_pnt[0]), coords[1], coords[2], coords[0],
             self.atlas_view.label_tree.describe(da_id))
         self.statusbar.showMessage(pstr)
 
@@ -2348,8 +2357,9 @@ class HERBS(QMainWindow, FORM_Main):
             self.atlas_tri_data = self.atlas_tri_onside_data + self.atlas_tri_inside_data
             self.atlas_view.working_atlas.tri_pnts.setData(pos=np.asarray(self.atlas_tri_data))
             self.working_atlas_text.append(pg.TextItem(str(len(self.atlas_tri_inside_data))))
-            self.atlas_view.working_atlas.vb.addItem(self.working_atlas_text[-1])
+            self.working_atlas_text[-1].setColor(self.triangle_color)
             self.working_atlas_text[-1].setPos(x, y)
+            self.atlas_view.working_atlas.vb.addItem(self.working_atlas_text[-1])
             if self.tool_box.triang_vis_btn.isChecked():
                 self.update_atlas_tri_lines()
         if self.tool_box.checkable_btn_dict['probe_btn'].isChecked():
@@ -2743,14 +2753,13 @@ class HERBS(QMainWindow, FORM_Main):
             data_tobe_registered = self.working_img_probe_data
         else:
             data_tobe_registered = self.working_atlas_probe
-        if not data_tobe_registered:
-            return
-        processing_data = np.asarray(data_tobe_registered)
-        data = self.get_3d_pnts(processing_data)
-        self.object_ctrl.add_object_piece(object_name='probe - piece', object_data=data)
-        self.working_atlas_probe = []
-        # self.atlas_view.working_atlas.probe_pnts.setPointsVisible(False)
-        # self.atlas_view.working_atlas.probe_pnts.clear()
+        if data_tobe_registered:
+            processing_data = np.asarray(data_tobe_registered)
+            data = self.get_3d_pnts(processing_data)
+            self.object_ctrl.add_object_piece(object_name='probe - piece', object_data=data)
+            self.working_atlas_probe = []
+            # self.atlas_view.working_atlas.probe_pnts.setPointsVisible(False)
+            # self.atlas_view.working_atlas.probe_pnts.clear()
 
     def make_virus_piece(self):
         if self.a2h_transferred:
@@ -2889,25 +2898,26 @@ class HERBS(QMainWindow, FORM_Main):
                                        mask_file='WHS_SD_rat_brainmask_v1.01.nii.gz',
                                        bregma_coordinates=(246, 653, 440),
                                        lambda_coordinates=(244, 442, 464))
-                if da_atlas.atlas_data is None or da_atlas.segmentation_data is None:
-                    self.statusbar.showMessage('Something went wrong with atlas, please check your atlas data.')
-                    return
+            if da_atlas.atlas_data is None or da_atlas.segmentation_data is None:
+                self.statusbar.showMessage('Something went wrong with atlas, please check your atlas data.')
+                return
 
-                atlas_data = np.transpose(da_atlas.atlas_data, [2, 0, 1])[::-1, :, :]
-                segmentation_data = np.transpose(da_atlas.segmentation_data, [2, 0, 1])[::-1, :, :]
+            atlas_data = np.transpose(da_atlas.atlas_data, [2, 0, 1])[::-1, :, :]
+            segmentation_data = np.transpose(da_atlas.segmentation_data, [2, 0, 1])[::-1, :, :]
 
-                s_boundary = np.transpose(da_atlas.boundary['s_contour'], [2, 0, 1])[::-1, :, :]
-                c_boundary = np.transpose(da_atlas.boundary['c_contour'], [2, 0, 1])[::-1, :, :]
-                h_boundary = np.transpose(da_atlas.boundary['h_contour'], [2, 0, 1])[::-1, :, :]
+            s_boundary = np.transpose(da_atlas.boundary['s_contour'], [2, 0, 1])[::-1, :, :]
+            c_boundary = np.transpose(da_atlas.boundary['c_contour'], [2, 0, 1])[::-1, :, :]
+            h_boundary = np.transpose(da_atlas.boundary['h_contour'], [2, 0, 1])[::-1, :, :]
 
-                boundary = {'s_contour': s_boundary, 'c_contour': c_boundary, 'h_contour': h_boundary}
+            boundary = {'s_contour': s_boundary, 'c_contour': c_boundary, 'h_contour': h_boundary}
 
-                self.atlas_view.set_data(atlas_data, segmentation_data, da_atlas.atlas_info,
-                                         da_atlas.label_info, boundary)
-                self.atlas_view.working_cut_changed(self.atlas_display)
-                self.reset_corners_atlas()
+            self.atlas_view.set_data(atlas_data, segmentation_data, da_atlas.atlas_info,
+                                     da_atlas.label_info, boundary)
+            self.atlas_view.working_cut_changed(self.atlas_display)
+            self.reset_corners_atlas()
 
             self.statusbar.showMessage('Atlas Loaded.')
+
 
             pre_made_meshdata_path = os.path.join(atlas_folder, '{}_atlas_meshdata.pkl'.format(atlas_name))
 
@@ -2939,7 +2949,6 @@ class HERBS(QMainWindow, FORM_Main):
             # v.translate(-self.mesh_origin[0], -self.mesh_origin[1], -self.mesh_origin[2])
             # self.view3d.addItem(v)
 
-            # return
 
             pre_made_small_meshdata_path = os.path.join(atlas_folder, 'WHS_atlas_small_meshdata.pkl')
             if os.path.exists(pre_made_small_meshdata_path):
@@ -2976,22 +2985,16 @@ class HERBS(QMainWindow, FORM_Main):
 
         self.statusbar.showMessage('Atlas loaded successfully.')
 
-
     # ------------------------------------------------------------------
     #
     #                       Image Loader
     #
     # ------------------------------------------------------------------
     def load_image(self):
-
-        # path = "/Users/jingyig/Work/Kavli/PyCode/herrbs/test.jpeg"
-        # image = cv2.imread(path)
-        # window_name = 'image'
-        # cv2.imshow(window_name, image)
-        # cv2.waitKey(0)
         if self.image_view.image_file is not None:
-            print('need to clean everything')
+            print('need to clean everything outside of image_view')
 
+        self.statusbar.showMessage('Choose Image file to load ...')
         # image_file = CZIReader("/Users/jingyig/Work/Kavli/Data/HERBS_DATA/grethe/13234_BDADAB_s4_g005.czi")
         # image_file.read_data(0.1, scene_index=0)
         # self.image_view.set_data(image_file)
@@ -3005,17 +3008,13 @@ class HERBS(QMainWindow, FORM_Main):
         # self.image_view.img_stacks.virus_img.setLookupTable(self.tool_box.base_lut)
         # self.image_view.img_stacks.contour_img.setLookupTable(self.tool_box.base_lut)
 
-
-        # self.hist_lut.setImageItem(self.image_view.current_color_img)
-
-        filter = "CZI (*.czi);;JPEG (*.jpg;*.jpeg);;PNG (*.png);;TIFF (*.tif)"
+        filter = "CZI (*.czi);;JPEG (*.jpg;*.jpeg);;PNG (*.png);;TIFF (*.tif);;BMP (*.bmp)"
         dlg = QFileDialog()
         dlg.setFileMode(QFileDialog.ExistingFiles)
         image_file_path = dlg.getOpenFileName(self, "Select Histological Image File", str(Path.home()), filter)
 
         self.image_file_type = image_file_path[0][-4:].lower()
         if image_file_path[0] != '':
-            self.statusbar.showMessage('Image file loading ...')
             with pg.BusyCursor():
                 with warnings.catch_warnings():
                     warnings.filterwarnings("error")
@@ -3044,21 +3043,23 @@ class HERBS(QMainWindow, FORM_Main):
             self.image_view.img_stacks.virus_img.setLookupTable(self.tool_box.base_lut)
             self.image_view.img_stacks.contour_img.setLookupTable(self.tool_box.base_lut)
         else:
+            if self.image_view.image_file is None:
+                self.statusbar.showMessage('No image file is selected.')
+            else:
+                self.statusbar.showMessage('No new image file is selected.')
             return
 
     # load multiple images
     def load_images(self):
         images_folder = str(QFileDialog.getExistingDirectory(self, "Select Images Folder"))
-        print(images_folder)
-        # histology_images_folder = '/Users/jingyig/Work/Kavli/PyCode/vitlab/racer/image/Jacopo 26504 S2 Sld1 NeuN DiI/'
         if images_folder != '':
-            image_files_list = os.listdir(images_folder)
-            image_files_list = natsorted(image_files_list)
+            # image_files_list = os.listdir(images_folder)
+            # image_files_list = natsorted(image_files_list)
             self.statusbar.showMessage('Image files loading ...')
             with pg.BusyCursor():
                 with warnings.catch_warnings():
                     warnings.filterwarnings("error")
-                    image_file = ImagesReader(images_folder, image_files_list)
+                    image_file = ImagesReader(images_folder)
                     self.image_view.set_data(image_file)
 
             self.sidebar.setCurrentIndex(3)
@@ -3074,9 +3075,8 @@ def main():
     #     app.instance().exec_()
     window = HERBS()
     window.show()
-
     exit(app.exec_())
-    # app.exec_()
+
 
 
 

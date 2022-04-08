@@ -8,6 +8,130 @@ import pyqtgraph.functions as fn
 from PyQt5.QtGui import QIcon, QPixmap, QColor
 from PyQt5.QtCore import Qt, QSize
 
+label_tree_style = '''
+QWidget{
+    background-color: transparent;
+    color: white;
+}
+
+QPushButton{
+    background: transparent;
+    border-radius: 3px;
+    color: white;
+    border: None;
+    height: 24px;
+    margin: 5px;
+    padding: 0px;
+}
+
+QTreeWidget{
+    background-color: transparent;
+    border: 1px solid #636363;
+}
+
+QTreeWidget::item{
+    background-color: transparent;
+    color: rgb(255, 255, 255);
+    min-height: 20px;
+}
+
+QTreeWidget::item:selected{
+    background-color: transparent;
+    color: white;
+}
+
+QTreeView {
+    border: 1px solid rgb(128, 128, 128);
+    background-color: transparent;
+    selection-background-color: transparent; /* Used on Mac */
+    selection-color: white; /* Used on Mac */
+    show-decoration-selected: 1;
+}
+
+QTreeView::item {
+    border: None;
+    background-color: transparent;
+}
+
+QTreeView::item:hover {
+    background: transparent;
+    border: None;
+}
+
+QTreeView::item:selected {
+    border: None;
+    background: transparent;
+    color: white;
+}
+
+QTreeView::branch {
+        background: transparent;
+}
+
+QTreeView::branch:selected {
+        background: transparent;
+}
+
+QTreeView::branch:selected:active {
+    background: transparent;
+}
+
+QTreeView::branch:selected:!active {
+    background: transparent;
+}
+QTreeView::branch:has-siblings:!adjoins-item {
+    border-image: None;
+    background: transparent;
+}
+
+QTreeView::branch:has-siblings:adjoins-item {
+    border-image: None;
+    background: transparent;
+}
+
+QTreeView::branch:!has-siblings:!adjoins-item {
+    border-image: None;
+    background: transparent;
+}
+
+QTreeView::branch:!has-siblings:adjoins-item {
+    border-image: None;
+    background: transparent;
+}
+
+QTreeView::branch:!has-children:!has-siblings:adjoins-item {
+    border-image: None;
+    background: transparent;
+}
+
+QTreeView::branch:has-children:!has-siblings:closed,
+QTreeView::branch:closed:has-children:has-siblings {
+        background: transparent;
+        border-image: none;
+        image: url(icons/tree_close.svg);
+}
+
+QTreeView::branch:open:has-children:!has-siblings,
+QTreeView::branch:open:has-children:has-siblings  {
+        border-image: none;
+        background: transparent;
+        image: url(icons/tree_open.svg);
+}
+
+
+'''
+
+reset_button_style = '''
+QPushButton{
+    background: #656565;
+    border-radius: 5px;
+    color: white;
+    border-style: outset;
+    border-bottom: 1px solid rgb(30, 30, 30);
+    min-height: 16px;
+    margin: 0px;
+}
+'''
 
 
 class SignalBlock(object):
@@ -35,7 +159,9 @@ class LabelTree(QWidget):
     def __init__(self, parent=None):
         self._block_signals = False
         QWidget.__init__(self, parent)
-        self.layout = QGridLayout()
+        self.setStyleSheet(label_tree_style)
+
+        self.layout = QVBoxLayout()
         self.setLayout(self.layout)
         self.layout.setSpacing(0)
         self.layout.setContentsMargins(0, 0, 0, 0)
@@ -44,7 +170,7 @@ class LabelTree(QWidget):
         self.current_lut = None
         
         self.tree = QTreeWidget(self)
-        self.layout.addWidget(self.tree, 0, 0)
+        self.layout.addWidget(self.tree)
         self.tree.header().setResizeMode(QtGui.QHeaderView.ResizeToContents)
         self.tree.headerItem().setText(0, "id")
         self.tree.headerItem().setText(1, "name")
@@ -53,9 +179,11 @@ class LabelTree(QWidget):
         self.labels_by_acronym = {}
         self.checked = set()
         self.tree.itemChanged.connect(self.item_change)
-        
+
+        self.layout.addSpacing(10)
         self.reset_btn = QtGui.QPushButton('Reset colors')
-        self.layout.addWidget(self.reset_btn, 1, 0)
+        self.reset_btn.setStyleSheet(reset_button_style)
+        self.layout.addWidget(self.reset_btn)
         self.reset_btn.clicked.connect(self.reset_colors)
     
     def set_labels(self, label_data):

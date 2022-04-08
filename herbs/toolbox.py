@@ -5,6 +5,8 @@ import pyqtgraph as pg
 import numpy as np
 from pyqtgraph.Qt import QtGui, QtCore
 
+from .styles import Styles
+
 toolbar_spinbox_textedit_style = '''
 QLineEdit { 
     background-color: #292929;
@@ -18,6 +20,8 @@ class ToolBox(QObject):
 
     def __init__(self):
         QObject.__init__(self)
+
+        styles = Styles()
 
         self.moving_px = 0
         self.base_lut = np.array([[0, 0, 0, 0], [128, 128, 128, 255]])
@@ -156,8 +160,11 @@ class ToolBox(QObject):
         self.magic_tol_val.setText('0')
 
         self.magic_wand_kernel = QComboBox()
-        self.magic_wand_kernel.setFixedWidth(100)
+        self.magic_wand_kernel.setFixedSize(QSize(100, 22))
         self.magic_wand_kernel.addItems(["Kernel", "Rectangular", "Elliptical", "Cross-shaped"])
+        combo_list = QListView(self.magic_wand_kernel)
+        combo_list.setStyleSheet(styles.text_combo_list_style)
+        self.magic_wand_kernel.setView(combo_list)
 
         magic_wand_ksize_label = QLabel('Size:')
         self.magic_wand_ksize = QLineEdit()

@@ -10,6 +10,7 @@ from PyQt5.QtCore import *
 import cv2
 
 from .wtiles import *
+from .styles import Styles
 
 
 btm_style = '''
@@ -268,6 +269,8 @@ class LayersControl(QWidget):
 
         QWidget.__init__(self)
 
+        styles = Styles()
+
         self.aimg = None
         self.himg = None
 
@@ -291,6 +294,10 @@ class LayersControl(QWidget):
         combo_value = ['Multiply', 'Overlay', 'SourceOver']
         self.layer_blend_combo.addItems(combo_value)
         self.layer_blend_combo.setCurrentText('Multiply')
+        self.layer_blend_combo.setFixedHeight(24)
+        combo_list = QListView(self.layer_blend_combo)
+        combo_list.setStyleSheet(styles.text_combo_list_style)
+        self.layer_blend_combo.setView(combo_list)
 
         layer_opacity_label = QLabel('Opacity:')
         self.layer_opacity_slider = QSlider(Qt.Horizontal)
@@ -308,6 +315,7 @@ class LayersControl(QWidget):
         top_layout.addWidget(self.layer_opacity_val_label, 1, 3, 1, 1)
 
         self.layer_frame = QFrame()
+        self.layer_frame.setStyleSheet('background: transparent; border: 0px;')
         self.layer_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.layer_layout = QBoxLayout(QBoxLayout.BottomToTop, self.layer_frame)
         self.layer_layout.setAlignment(Qt.AlignBottom)
@@ -315,6 +323,7 @@ class LayersControl(QWidget):
         self.layer_layout.setSpacing(0)
 
         self.layer_scroll = QScrollArea()
+        self.layer_scroll.setStyleSheet('background: transparent; border: 0px;')
         self.layer_scroll.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.layer_scroll.setWidget(self.layer_frame)
         self.layer_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
@@ -322,6 +331,7 @@ class LayersControl(QWidget):
         self.layer_scroll.setWidgetResizable(True)
 
         mid_frame = QFrame()
+        mid_frame.setStyleSheet('background: transparent; border: 1px solid rgb(128, 128, 128);')
         mid_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         mid_layout = QGridLayout(mid_frame)
         mid_layout.setContentsMargins(0, 0, 0, 0)

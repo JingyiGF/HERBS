@@ -31,6 +31,9 @@
         <enum>Qt::Vertical</enum>
        </property>
        <widget class="QFrame" name="coronalframe">
+        <property name="styleSheet">
+         <string notr="true">border: 1px solid rgb(39, 39, 39);</string>
+        </property>
         <property name="frameShape">
          <enum>QFrame::StyledPanel</enum>
         </property>
@@ -39,6 +42,9 @@
         </property>
        </widget>
        <widget class="QFrame" name="sagitalframe">
+        <property name="styleSheet">
+         <string notr="true">border: 1px solid rgb(39, 39, 39);</string>
+        </property>
         <property name="frameShape">
          <enum>QFrame::StyledPanel</enum>
         </property>
@@ -47,6 +53,9 @@
         </property>
        </widget>
        <widget class="QFrame" name="horizontalframe">
+        <property name="styleSheet">
+         <string notr="true">border: 1px solid rgb(39, 39, 39);</string>
+        </property>
         <property name="frameShape">
          <enum>QFrame::StyledPanel</enum>
         </property>
@@ -60,6 +69,9 @@
         <enum>Qt::Vertical</enum>
        </property>
        <widget class="QFrame" name="sagitalcopyframe">
+        <property name="styleSheet">
+         <string notr="true">border: 1px solid rgb(39, 39, 39);</string>
+        </property>
         <property name="frameShape">
          <enum>QFrame::StyledPanel</enum>
         </property>
@@ -68,6 +80,9 @@
         </property>
        </widget>
        <widget class="QFrame" name="histview">
+        <property name="styleSheet">
+         <string notr="true">border: 1px solid rgb(39, 39, 39);</string>
+        </property>
         <property name="frameShape">
          <enum>QFrame::StyledPanel</enum>
         </property>
@@ -78,6 +93,9 @@
        <widget class="GLViewWidget" name="view3d" native="true">
         <property name="autoFillBackground">
          <bool>false</bool>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">border: 1px solid rgb(39, 39, 39);</string>
         </property>
        </widget>
       </widget>
@@ -138,7 +156,14 @@
     </item>
    </layout>
   </widget>
-  <widget class="QStatusBar" name="statusbar"/>
+  <widget class="QStatusBar" name="statusbar">
+   <property name="styleSheet">
+    <string notr="true">background-color: rgb(50, 50, 50);
+color: rgb(255, 255, 255);
+border-top: 1px solid #272727;
+padding-left: 10px;</string>
+   </property>
+  </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
     <rect>
@@ -305,7 +330,10 @@ border-color: rgb(75, 78, 84);</string>
    <property name="styleSheet">
     <string notr="true">color: rgb(255, 255, 255);
 background-color: rgb(50, 50, 50);
-border: None;
+border-top: None;
+border-left: None;
+border-right: None;
+border-bottom: 1px solid #272727;
 selection-color: rgb(50, 50, 50);
 selection-background-color: rgb(50, 50, 50);</string>
    </property>

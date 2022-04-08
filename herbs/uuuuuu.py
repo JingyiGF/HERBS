@@ -404,8 +404,8 @@ def make_hist_data(image_data, max_val):
         y = np.log1p(hist_y)
         y = y / np.max(y) * max_val
         y = np.append(y, 0)
-        inter_x = np.linspace(0, x[-1], 200)
         sfunc = interp1d(x, y, 'cubic')
+        inter_x = np.linspace(np.min(x), np.max(x), 200)
         inter_y = sfunc(inter_x)
         inter_y[inter_y < 0] = 0
         hist_data_list.append([inter_x, inter_y])
@@ -820,7 +820,6 @@ def render_small_volume(atlas_data, atlas_label, atlas_folder, atlas_name, facto
         md = gl.MeshData(vertexes=verts * factor, faces=faces)
 
         small_meshdata_list[str(id)] = md
-
 
     outfile = open(os.path.join(atlas_folder, '{}_atlas_small_meshdata.pkl'.format(atlas_name)), 'wb')
     pickle.dump(small_meshdata_list, outfile)

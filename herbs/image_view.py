@@ -16,6 +16,7 @@ from pyqtgraph.Qt import QtGui, QtCore
 from .image_stacks import ImageStacks
 from .image_curves import CurveWidget, ChannelSelector
 from .uuuuuu import hsv2rgb, gamma_line, color_img, make_color_lut, get_corner_line_from_rect
+from .styles import Styles
 
 
 class ImageView(QObject):

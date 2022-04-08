@@ -6,44 +6,157 @@ from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from pyqtgraph.Qt import QtGui, QtCore
 from .uuuuuu import hsv2rgb, gamma_line, get_qhsv_from_czi_hsv, make_hist_data
-
+from .styles import Styles
 
 channel_button_style = '''
 QPushButton {
     margin: 0 px; 
     padding: 0 px; 
-    border-top: 1px solid #747a80; 
-    border-left: 1px solid #747a80; 
-    border-right: 1px solid #747a80; 
+    border-color: transparent; 
     background-color: #747a80;
     color: white;
+    border-top-right-radius: 5px;
+    border-top-left-radius: 5px;
+    border-bottom-right-radius: 0px;
+    border-bottom-left-radius: 0px;
 } 
 
-QComboBox {
-    border-bottom: 1px solid #747a80;
-    border-right: 1px solid #747a80;
-    border-left: 1px solid #747a80;
-    border-top: 0px;
-    border-radius: 1px;
-    color: #535352;
-    background-color: transparent;
-    padding: 1px 18px 1px 3px;
+QLabel {
+    border-radius: 0px;
+    border-top: 5px solid rgb(255, 255, 255);
+    border-bottom: None;
+    border-left: None;
+    border-right: None;
 }
-
-QComboBox QAbstractItemView
-{
-    border: None;
-    color: black;
-    selection-color: red;
-    selection-background-color: blue;
-}
-
-QComboBox:item:selected {
-     background: #DCDEF1;
- }
 
 '''
 
+
+color_combo_style = '''
+/*---------------------- QComboBox -----------------------*/
+QComboBox {
+    border-left: 1px solid gray;
+    border-right: 1px solid gray;
+    border-bottom: 1px solid gray;
+    border-top: None;
+    border-top-right-radius: 0px;
+    border-top-left-radius: 0px;
+    border-bottom-right-radius: 5px;
+    border-bottom-left-radius: 5px;
+    padding: 0px 3px 0px 3px;
+    background-color: transparent;
+    color: white;
+    margin: 0px;
+}
+
+QComboBox:item {
+    background: #323232;
+    color: white;
+    min-height: 10px;
+    margin: 0px;
+}
+
+QComboBox:item:selected
+{
+    border: None;
+    background: #232323;
+    margin: 0px;
+}
+
+QComboBox:editable {
+    background: transparent;
+}
+
+QComboBox:!editable, QComboBox::drop-down:editable {
+    background: transparent;
+    border-left: 1px solid gray;
+    border-right: 1px solid gray;
+    border-bottom: 1px solid gray;
+    border-top: None;
+    border-top-right-radius: 0px;
+    border-top-left-radius: 0px;
+    border-bottom-right-radius: 5px;
+    border-bottom-left-radius: 5px;
+}
+
+
+
+/* QComboBox gets the "on" state when the popup is open */
+QComboBox:!editable:on, QComboBox::drop-down:editable:on {
+    background: transparent;
+}
+
+QComboBox:on { /* shift the text when the popup opens */
+    padding: 3px;
+    color: white;
+    background-color: transparent;
+    selection-background-color: transparent;
+}
+
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    border-top: None;
+    border-bottom: None;
+    border-left-width: 1px;
+    border-left-color: transparent;
+    border-left-style: solid; /* just a single line */
+    border-top-right-radius: 3px; /* same radius as the QComboBox */
+    border-bottom-right-radius: 3px;
+}
+
+QComboBox::down-arrow {
+    image: url(icons/tdown.svg);
+    width: 13px;
+    height: 14px;
+    padding-right: 3px;
+}
+
+QComboBox::down-arrow:on { /* shift the arrow when popup is open */
+    top: 1px;
+    left: 1px;
+}
+
+'''
+
+text_combo_list_style = '''
+    QListView {
+        background: #656565;
+        border: 1px solid gray;
+        color: white;
+        border-radius: 0px;
+    }
+
+    QListView::item {
+        border: None;
+        background: transparent;
+        margin:3px;
+        height: 20px;
+    }                             
+
+    QListView::item:selected { 
+        border: None;
+        margin:3px;
+        color: white;
+        background: #232323; 
+        height: 20px;
+    }
+
+    QListView::item:selected:!active {
+        background: #323232;
+        border: None;
+    }
+
+    QListView::item:selected:active {
+        background: #323232;
+        border: None;
+    }
+
+    QListView::item:hover {
+        background: #323232;
+        border: None;
+    }
+'''
 
 class BWSpin(QWidget):
     def __init__(self, parent=None):
@@ -81,8 +194,11 @@ class GammaSpin(QWidget):
 class ColorCombo(QComboBox):
     def __init__(self, parent=None):
         QComboBox.__init__(self)
+        # styles = Styles()
+        self.setStyleSheet(color_combo_style)
         self.px = QPixmap(80, 30)
-        n_vals = ['Light Blue', 'Blue', 'Green', 'Lime Green', 'Yellow', 'Olive', 'Red', 'Dark Red', 'Violet', 'Purple', 'Orange', 'Dark Orange', 'Turquoise', 'Blue Green']
+        n_vals = ['Light Blue', 'Blue', 'Green', 'Lime Green', 'Yellow', 'Olive', 'Red', 'Dark Red', 'Violet', 'Purple',
+                  'Orange', 'Dark Orange', 'Turquoise', 'Blue Green']
         h_vals = [199, 235, 103, 115, 60, 60, 5, 4, 295, 279, 21, 20, 181, 151]
         s_vals = [60, 100, 70, 57, 67, 55, 85, 88, 77,  84, 81, 82, 51, 46]
         v_vals = [98, 96, 98, 59, 100, 60, 90, 54, 97,  77, 92, 73, 99, 79]
@@ -95,6 +211,10 @@ class ColorCombo(QComboBox):
             self.hsv_color_list.append((h_vals[i] / 360., s_vals[i] / 255., v_vals[i] / 255.))
             self.px.fill(QColor.fromHsv(h_vals[i], s_vals[i], v_vals[i]))
             self.addItem(QIcon(self.px), n_vals[i])
+
+        combo_list = QListView(self)
+        combo_list.setStyleSheet(text_combo_list_style)
+        self.setView(combo_list)
 
 
 class ChannelSelector(QWidget):
@@ -126,7 +246,6 @@ class ChannelSelector(QWidget):
         self.color_combo.setFixedSize(60, 28)
         self.color_combo.currentIndexChanged.connect(self.selection_change)
         self.color_label = QLabel()
-        self.color_label.setStyleSheet('border-top: 5px solid rgb(255, 255, 255);')
 
         self.color_label.setVisible(False)
 
@@ -163,3 +282,5 @@ class ChannelSelector(QWidget):
     def delete_item(self):
         self.color_combo.hsv_color_list.pop()
         self.color_combo.removeItem(len(self.color_combo.hsv_color_list)-1)
+
+

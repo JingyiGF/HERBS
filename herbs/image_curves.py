@@ -17,6 +17,7 @@ from .image_reader import ImageReader
 from .uuuuuu import hsv2rgb, gamma_line, get_qhsv_from_czi_hsv, make_hist_data
 from .widgets_utils import BWSpin, GammaSpin, ColorCombo, ChannelSelector
 from .movable_points import MovablePoints
+from .styles import Styles
 
 
 multi_handle_slider_style = """
@@ -245,6 +246,8 @@ class CurveWidget(QWidget):
 
         QWidget.__init__(self)
 
+        styles = Styles()
+
         self.gray_max = 65535
         self.gamma = 1
         # self.prev_handle_pos = (0., 32767., 65535.)
@@ -285,6 +288,8 @@ class CurveWidget(QWidget):
         self.gamma_spinbox.spin_val.valueChanged.connect(self.gamma_spinbox_changed)
 
         self.reset_btn = QPushButton('Reset')
+        self.reset_btn.setFont(QFont('Arial', 13))
+        self.reset_btn.setFixedHeight(27)
         self.reset_btn.clicked.connect(self.reset_pressed)
 
         self.line_type_combo = QComboBox()
@@ -292,13 +297,17 @@ class CurveWidget(QWidget):
         self.line_type_combo.addItems(ltypes)
         self.line_type_combo.setCurrentText('gamma')
         self.line_type = 'gamma'
+        self.line_type_combo.setFixedHeight(24)
+        combo_list = QListView(self.line_type_combo)
+        combo_list.setStyleSheet(styles.text_combo_list_style)
+        self.line_type_combo.setView(combo_list)
         self.line_type_combo.currentTextChanged.connect(self.line_type_changed)
 
         top_wrap = QFrame()
-        top_layout = QHBoxLayout(top_wrap)
+        top_layout = QGridLayout(top_wrap)
         top_layout.setContentsMargins(0, 0, 0, 0)
-        top_layout.addWidget(self.line_type_combo)
-        top_layout.addWidget(self.reset_btn)
+        top_layout.addWidget(self.line_type_combo, 0, 0, 1, 1)
+        top_layout.addWidget(self.reset_btn, 0, 1, 1, 1)
 
         bgw_wrap = QFrame()
         bgw_wrap_layout = QHBoxLayout(bgw_wrap)

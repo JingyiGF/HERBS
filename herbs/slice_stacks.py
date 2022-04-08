@@ -186,12 +186,13 @@ class SliceStacks(pg.GraphicsLayoutWidget):
         self.vb.addItem(self.boundary)
         # for i in range(4):
         #     self.vb.addItem(self.overlay_img[i])
-        self.vb.addItem(self.tri_pnts)
-        self.vb.addItem(self.circle_follow)
-        self.vb.addItem(self.lasso_path)
 
         self.vb.addItem(self.overlay_img)
         self.vb.addItem(self.overlay_contour)
+
+        self.vb.addItem(self.tri_pnts)
+        self.vb.addItem(self.circle_follow)
+        self.vb.addItem(self.lasso_path)
 
         self.vb.addItem(self.mask_img)
         self.vb.addItem(self.virus_pnts)

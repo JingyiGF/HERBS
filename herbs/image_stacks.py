@@ -8,7 +8,7 @@ from PyQt5.QtGui import *
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtGui, QtCore
 import pyqtgraph.functions as fn
-from .movable_points import TriangulationPoints
+from .movable_points import TriangulationPoints, TriangulationPointsTest
 
 
 class ClickableImage(pg.ImageItem):
@@ -87,16 +87,9 @@ class ImageStacks(pg.GraphicsLayoutWidget):
 
         self.processing_image = pg.ImageItem()
 
-        self.tri_pnts = TriangulationPoints()
-        self.tri_pnts.setVisible(False)
-        self.tri_lines_list = []
-
         self.circle_follow = pg.PlotDataItem(pen=pg.mkPen('r', width=2, style=Qt.DashLine))
         self.lasso_path = pg.PlotDataItem(pen=pg.mkPen(color='r', width=3, style=Qt.DashLine),
                                           symbolPen='r', symbol='o', symbolSize=4)
-
-
-        # self.processing_image.setLevels(levels=(0, 1))
 
         self.overlay_img = pg.ImageItem()
         self.overlay_img.setCompositionMode(QtGui.QPainter.CompositionMode.CompositionMode_Plus)
@@ -105,6 +98,11 @@ class ImageStacks(pg.GraphicsLayoutWidget):
 
         self.mask_img = pg.ImageItem()
         self.mask_img.setLevels(levels=(0, 1))
+
+        self.tri_pnts = TriangulationPoints()
+        self.tri_pnts.setVisible(False)
+        self.tri_lines_list = []
+
         self.probe_pnts = pg.ScatterPlotItem(pen=pg.mkPen(color=(128, 128, 128)), symbol='s', symbolSize=2, brush=None)
         self.manual_cell_pnts = pg.ScatterPlotItem(pen=(55, 55, 55), symbolBrush=(55, 55, 55), symbolPen=(55, 55, 55),
                                                    symbol='s', symbolSize=1)
