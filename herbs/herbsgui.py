@@ -3099,9 +3099,9 @@ class HERBS(QMainWindow, FORM_Main):
         # label_data = np.transpose(self.atlas_view.atlas_label, (1, 2, 0))[:, :, ::-1]
 
         for i in range(len(data)):
-            self.object_ctrl.add_object('merged drawing', object_data=[])
             info_dict = {'object_type': 'drawing', 'data': data[i], 'vis_color': self.object_ctrl.obj_list[-1].color}
-            self.registered_drawing_list.append(info_dict)
+            self.object_ctrl.add_object('merged drawing', object_data=info_dict)
+            # self.registered_drawing_list.append(info_dict)
             self.object_ctrl.obj_list[-1].sig_object_color_changed.connect(self.obj_color_changed)
             self.object_ctrl.obj_list[-1].eye_clicked.connect(self.obj_vis_changed)
 
@@ -3188,9 +3188,14 @@ class HERBS(QMainWindow, FORM_Main):
             return
         group_id = self.object_ctrl.obj_group_id[self.object_ctrl.current_obj_index]
         if 'probe' in current_type:
+            self.view3d.removeItem(self.virus_points_3d_list[group_id])
+            self.virus_points_3d_list[group_id].deleteLater()
+            del self.virus_points_3d_list[group_id]
             del self.registered_prob_list[group_id]
-
         elif 'cell' in current_type:
+            self.view3d.removeItem(self.cell_points_3d_list[group_id])
+            self.cell_points_3d_list[group_id].deleteLater()
+            del self.cell_points_3d_list[group_id]
             del self.registered_cell_list[group_id]
 
 
@@ -3211,14 +3216,14 @@ class HERBS(QMainWindow, FORM_Main):
             with open('data/atlas_path.txt') as f:
                 lines = f.readlines()
             atlas_folder = lines[0]
-        if os.path.exists(atlas_folder):
-            self.statusbar.showMessage('Loading Brain Atlas...')
         else:
             atlas_folder = str(QFileDialog.getExistingDirectory(self, "Select Atlas Folder"))
             with open('data/atlas_path.txt', 'w') as f:
                 f.write(atlas_folder)
 
-        if atlas_folder != '':
+        if os.path.exists(atlas_folder):
+            self.statusbar.showMessage('Loading Brain Atlas...')
+
             self.atlas_folder = atlas_folder
 
             with pg.BusyCursor():
@@ -3303,7 +3308,7 @@ class HERBS(QMainWindow, FORM_Main):
             if self.atlas_view.atlas_data is not None:
                 self.statusbar.showMessage('No new atlas is selected.')
             else:
-                self.statusbar.showMessage('No atlas is selected.')
+                self.statusbar.showMessage('No valid path for atlas.')
 
             # volume_data_3d = np.zeros((da_atlas.segmentation_data.shape + (4,)), dtype=np.ubyte)
             # volume_data_3d[:, :, :, 0] = da_atlas.atlas_data * 255 / np.max(da_atlas.atlas_data)
@@ -3439,24 +3444,17 @@ class HERBS(QMainWindow, FORM_Main):
     def save_triangulation_points(self):
         print('save triang pnts')
 
-    def save_probe_object(self):
-        if not self.registered_prob_list:
+    def save_merged_object(self, object_type):
+        if not self.object_ctrl.obj_list:
             return
+        otype = self.object_ctrl.obj_type
+        valid_index = [ind for ind in range(len(otype)) if object_type in otype[ind] and 'merged' in otype[ind]]
+        if not valid_index:
+            return
+        
 
-    def save_virus_object(self):
-        print('1')
 
-    def save_cell_object(self):
-        print('1')
 
-    def save_drawing_object(self):
-        print('1')
-
-    def save_contour_object(self):
-        print('1')
-
-    def save_objects(self):
-        print('1')
 
     def save_current_object(self):
         if self.object_ctrl.current_obj_index is None:
