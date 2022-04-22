@@ -467,17 +467,6 @@ class HERBS(QMainWindow, FORM_Main):
         self.project_matrix = None
         self.action_after_projection = {}
 
-        self.registered_probe_count = 1
-        self.registered_prob_list = []
-        self.registered_cell_count = 1
-        self.registered_cell_list = []
-        self.registered_virus_count = 1
-        self.registered_virus_list = []
-        self.registered_contour_count = 1
-        self.registered_contour_list = []
-        self.registered_drawing_count = 1
-        self.registered_drawing_list = []
-
         self.probe_lines_2d_list = []
 
         self.probe_lines_3d_list = []
@@ -2993,12 +2982,11 @@ class HERBS(QMainWindow, FORM_Main):
         label_data = np.transpose(self.atlas_view.atlas_label, (1, 2, 0))[:, :, ::-1]
 
         for i in range(len(data)):
-            self.object_ctrl.add_object('merged probe', object_data=[])
             info_dict = calculate_probe_info(data[i], label_data, self.atlas_view.label_info, self.atlas_view.vxsize_um,
                                              self.tip_length, self.channel_size, self.atlas_view.bregma3d)
+            self.object_ctrl.add_object('merged probe', object_data=info_dict)
 
-            info_dict['vis_color'] = self.object_ctrl.obj_list[-1].color
-            self.registered_prob_list.append(info_dict)
+            self.object_ctrl.obj_data[-1]['vis_color'] = self.object_ctrl.obj_list[-1].color
             self.object_ctrl.obj_list[-1].eye_clicked.connect(self.obj_vis_changed)
             self.object_ctrl.obj_list[-1].sig_clicked.connect(self.probe_info_on_click)
             self.object_ctrl.obj_list[-1].sig_object_color_changed.connect(self.obj_color_changed)
@@ -3020,7 +3008,7 @@ class HERBS(QMainWindow, FORM_Main):
         print(('obj clicked', index))
         self.object_ctrl.set_active_layer_to_current(index)
 
-        da_data = self.registered_prob_list[num]
+        da_data = self.object_ctrl.obj_data[self.object_ctrl.current_obj_index]
         self.probe_window = ProbeInfoWindow(num + 1, da_data)
         self.probe_window.exec()
 
@@ -3029,15 +3017,12 @@ class HERBS(QMainWindow, FORM_Main):
         if self.object_ctrl.virus_piece_count == 0:
             return
         data = self.object_ctrl.merge_object_pieces('virus')
-        print(data)
         label_data = np.transpose(self.atlas_view.atlas_label, (1, 2, 0))[:, :, ::-1]
 
         for i in range(len(data)):
-            self.object_ctrl.add_object('merged virus', object_data=[])
             info_dict = calculate_virus_info(data[i], label_data, self.atlas_view.label_info, self.atlas_view.bregma3d)
-
-            info_dict['vis_color'] = self.object_ctrl.obj_list[-1].color
-            self.registered_virus_list.append(info_dict)
+            self.object_ctrl.add_object('merged virus', object_data=info_dict)
+            self.object_ctrl.obj_data[-1]['vis_color'] = self.object_ctrl.obj_list[-1].color
             self.object_ctrl.obj_list[-1].eye_clicked.connect(self.obj_vis_changed)
             self.object_ctrl.obj_list[-1].sig_clicked.connect(self.virus_info_on_click)
             self.object_ctrl.obj_list[-1].sig_object_color_changed.connect(self.obj_color_changed)
@@ -3053,7 +3038,7 @@ class HERBS(QMainWindow, FORM_Main):
         print(('obj clicked', index))
         self.object_ctrl.set_active_layer_to_current(index)
 
-        da_data = self.registered_virus_list[num]
+        da_data = self.object_ctrl.obj_data[self.object_ctrl.current_obj_index]
         self.virus_window = VirusInfoWindow(num + 1, da_data)
         self.virus_window.exec()
 
@@ -3066,12 +3051,11 @@ class HERBS(QMainWindow, FORM_Main):
         label_data = np.transpose(self.atlas_view.atlas_label, (1, 2, 0))[:, :, ::-1]
 
         for i in range(len(data)):
-            self.object_ctrl.add_object('merged cell', object_data=[])
             info_dict = calculate_cells_info(data[i], label_data, self.atlas_view.label_info,
                                              self.atlas_view.bregma3d)
+            self.object_ctrl.add_object('merged cell', object_data=info_dict)
+            self.object_ctrl.obj_data[-1]['vis_color'] = self.object_ctrl.obj_list[-1].color
 
-            info_dict['vis_color'] = self.object_ctrl.obj_list[-1].color
-            self.registered_cell_list.append(info_dict)
             self.object_ctrl.obj_list[-1].sig_clicked.connect(self.cell_info_on_click)
             self.object_ctrl.obj_list[-1].sig_object_color_changed.connect(self.obj_color_changed)
             self.object_ctrl.obj_list[-1].eye_clicked.connect(self.obj_vis_changed)
@@ -3087,7 +3071,7 @@ class HERBS(QMainWindow, FORM_Main):
         print(('obj clicked', index))
         self.object_ctrl.set_active_layer_to_current(index)
 
-        da_data = self.registered_cell_list[num]
+        da_data = self.object_ctrl.obj_data[self.object_ctrl.current_obj_index]
         self.cell_window = CellsInfoWindow(num + 1, da_data)
         self.cell_window.exec()
 
@@ -3099,9 +3083,10 @@ class HERBS(QMainWindow, FORM_Main):
         # label_data = np.transpose(self.atlas_view.atlas_label, (1, 2, 0))[:, :, ::-1]
 
         for i in range(len(data)):
-            info_dict = {'object_type': 'drawing', 'data': data[i], 'vis_color': self.object_ctrl.obj_list[-1].color}
+            info_dict = {'object_type': 'drawing', 'data': data[i]}
             self.object_ctrl.add_object('merged drawing', object_data=info_dict)
-            # self.registered_drawing_list.append(info_dict)
+            self.object_ctrl.obj_data[-1]['vis_color'] = self.object_ctrl.obj_list[-1].color
+
             self.object_ctrl.obj_list[-1].sig_object_color_changed.connect(self.obj_color_changed)
             self.object_ctrl.obj_list[-1].eye_clicked.connect(self.obj_vis_changed)
 
@@ -3120,13 +3105,12 @@ class HERBS(QMainWindow, FORM_Main):
         if self.object_ctrl.contour_piece_count == 0:
             return
         data = self.object_ctrl.merge_object_pieces('contour')
-        print(data)
 
         for i in range(len(data)):
-            info_dict = {'object_type': 'contour', 'data': data[i], 'vis_color': self.object_ctrl.obj_list[-1].color}
+            info_dict = {'object_type': 'contour', 'data': data[i]}
             self.object_ctrl.add_object('merged contour', object_data=info_dict)
+            self.object_ctrl.obj_data[-1]['vis_color'] = self.object_ctrl.obj_list[-1].color
 
-            # self.registered_contour_list.append(info_dict)
             self.object_ctrl.obj_list[-1].sig_object_color_changed.connect(self.obj_color_changed)
             self.object_ctrl.obj_list[-1].eye_clicked.connect(self.obj_vis_changed)
 
@@ -3148,21 +3132,17 @@ class HERBS(QMainWindow, FORM_Main):
         color = ev[1]
         object_type = ev[2]
         group_id = ev[3]
+        self.object_ctrl.obj_data[group_id]['vis_color'] = color.name()
         if 'probe' in object_type:
             self.probe_lines_3d_list[group_id].setData(color=color)
-            self.registered_prob_list[group_id]['vis_color'] = color.name()
         elif 'virus' in object_type:
             self.virus_points_3d_list[group_id].setData(color=color)
-            self.registered_virus_list[group_id]['vis_color'] = color.name()
         elif 'contour' in object_type:
             self.contour_points_3d_list[group_id].setData(color=color)
-            self.registered_contour_list[group_id]['vis_color'] = color.name()
         elif 'drawing' in object_type:
             self.drawing_lines_3d_list[group_id].setData(color=color)
-            self.registered_drawing_list[group_id]['vis_color'] = color.name()
         else:
             self.cell_points_3d_list[group_id].setData(color=color)
-            self.registered_cell_list[group_id]['vis_color'] = color.name()
         # self.probe_lines_2d[group_id].setPen(color)
 
     def obj_vis_changed(self, ev):
@@ -3191,12 +3171,10 @@ class HERBS(QMainWindow, FORM_Main):
             self.view3d.removeItem(self.virus_points_3d_list[group_id])
             self.virus_points_3d_list[group_id].deleteLater()
             del self.virus_points_3d_list[group_id]
-            del self.registered_prob_list[group_id]
         elif 'cell' in current_type:
             self.view3d.removeItem(self.cell_points_3d_list[group_id])
             self.cell_points_3d_list[group_id].deleteLater()
             del self.cell_points_3d_list[group_id]
-            del self.registered_cell_list[group_id]
 
 
     def obj_line_width_changed(self):
@@ -3451,10 +3429,6 @@ class HERBS(QMainWindow, FORM_Main):
         valid_index = [ind for ind in range(len(otype)) if object_type in otype[ind] and 'merged' in otype[ind]]
         if not valid_index:
             return
-        
-
-
-
 
     def save_current_object(self):
         if self.object_ctrl.current_obj_index is None:
@@ -3462,21 +3436,10 @@ class HERBS(QMainWindow, FORM_Main):
             return
         file_name = QFileDialog.getSaveFileName(self, 'Save Current Object File', self.current_img_path, "JPEG (*.jpg)")
         if file_name[0] != '':
-            current_obj_type = self.object_ctrl.obj_type[self.object_ctrl.current_obj_index]
-            if 'merged' not in current_obj_type:
+            if 'merged' not in self.object_ctrl.obj_type[self.object_ctrl.current_obj_index]:
                 self.statusbar.showMessage('Only merged object can be saved ...')
                 return
-            group_id = self.object_ctrl.obj_group_id[self.object_ctrl.current_obj_index]
-            if 'probe' in current_obj_type:
-                da_data = self.registered_prob_list[group_id]
-            elif 'viurs' in current_obj_type:
-                da_data = self.registered_virus_list[group_id]
-            elif 'cell' in current_obj_type:
-                da_data = self.registered_cell_list[group_id]
-            elif 'contour' in current_obj_type:
-                da_data = self.registered_contour_list[group_id]
-            else:
-                da_data = self.registered_drawing_list[group_id]
+            da_data = self.object_ctrl.obj_data[self.object_ctrl.current_obj_index]
             with open(file_name[0], 'wb') as handle:
                 pickle.dump(da_data, handle, protocol=pickle.HIGHEST_PROTOCOL)
             self.statusbar.showMessage('Current merged object is saved successfully.')
