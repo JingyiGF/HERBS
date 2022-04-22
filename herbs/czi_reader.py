@@ -1,3 +1,4 @@
+import cv2
 from aicspylibczi import CziFile
 from pathlib import Path
 from os.path import dirname, realpath, join
@@ -91,9 +92,13 @@ class CZIReader(object):
 
         for scind in scene_index:
             if self.is_rgb:
-                mosaic_data = self.czi.read_mosaic(C=0, scale_factor=scale, region=self.scene_bbox[scind])
-                img = mosaic_data[0].copy()
+                if self.is_mosaic:
+                    image_data = self.czi.read_mosaic(C=0, scale_factor=scale, region=self.scene_bbox[scind])
+                else:
+                    image_data = self.czi.read_image(C=0)
+                img = image_data[0].copy()
                 img_data_temp = img.astype(np.uint8)
+                # img_data_temp = cv2.cvtColor(img_data_temp, cv2.)
                 self.data['scene %d' % scind] = img_data_temp
             else:
                 if self.n_channels != 1:

@@ -203,13 +203,24 @@ border-color: rgb(75, 78, 84);
      <addaction name="actionProcessed_Image"/>
      <addaction name="actionMask_Image"/>
     </widget>
+    <widget class="QMenu" name="menuSave_Object">
+     <property name="title">
+      <string>Save Object</string>
+     </property>
+     <addaction name="actionCurrent"/>
+     <addaction name="actionProbes"/>
+     <addaction name="actionVirus"/>
+     <addaction name="actionCells"/>
+     <addaction name="actionContours"/>
+     <addaction name="actionDrawings"/>
+    </widget>
     <addaction name="actionAtlas"/>
     <addaction name="actionGroup_Images"/>
     <addaction name="actionSingle_Image"/>
     <addaction name="separator"/>
     <addaction name="actionSave_Project"/>
     <addaction name="menuSave_Image"/>
-    <addaction name="actionSave_Data"/>
+    <addaction name="menuSave_Object"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="styleSheet">
@@ -392,11 +403,6 @@ selection-background-color: rgb(50, 50, 50);</string>
     <string>Save Project</string>
    </property>
   </action>
-  <action name="actionSave_Data">
-   <property name="text">
-    <string>Save Object</string>
-   </property>
-  </action>
   <action name="actionUndo">
    <property name="text">
     <string>Undo</string>
@@ -555,6 +561,36 @@ selection-background-color: rgb(50, 50, 50);</string>
   <action name="actionMask_Image">
    <property name="text">
     <string>Mask Image</string>
+   </property>
+  </action>
+  <action name="actionCurrent">
+   <property name="text">
+    <string>Current</string>
+   </property>
+  </action>
+  <action name="actionProbes">
+   <property name="text">
+    <string>Probes</string>
+   </property>
+  </action>
+  <action name="actionVirus">
+   <property name="text">
+    <string>Virus</string>
+   </property>
+  </action>
+  <action name="actionCells">
+   <property name="text">
+    <string>Cells</string>
+   </property>
+  </action>
+  <action name="actionContours">
+   <property name="text">
+    <string>Contours</string>
+   </property>
+  </action>
+  <action name="actionDrawings">
+   <property name="text">
+    <string>Drawings</string>
    </property>
   </action>
  </widget>

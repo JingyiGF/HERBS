@@ -157,6 +157,7 @@ class ImageView(QObject):
 
         self.current_img = copy.deepcopy(self.image_file.data['scene {}'.format(scene_ind)])
         if self.image_file.is_rgb:
+            print('rgb')
             self.current_mode = 'rgb'
             self.current_img = cv2.cvtColor(self.current_img, cv2.COLOR_BGR2RGBA)
         self.img_size = self.current_img.shape[:2]
@@ -164,7 +165,6 @@ class ImageView(QObject):
 
         scale_factor = np.max(np.ravel(self.img_size) / 80)
         self.tb_size = (int(self.img_size[1] / scale_factor), int(self.img_size[0] / scale_factor))
-        print('tb_size', self.tb_size)
 
         for i in range(self.max_num_channels):
             self.chn_widget_list[i].setVisible(False)
@@ -197,9 +197,7 @@ class ImageView(QObject):
                 self.channel_visible[i] = True
 
         # set data to curves
-        self.curve_widget.setEnabled(True)
-        self.curve_widget.set_data(self.current_img[:, :, :3], self.image_file.rgb_colors, self.image_file.level,
-                                   self.image_file.data_type)
+        self.update_curves()
 
         # set data to image stacks
         print(self.current_img.shape)
@@ -207,6 +205,14 @@ class ImageView(QObject):
         self.img_stacks.set_data(self.current_img, self.image_file.is_rgb)
         self.img_stacks.set_lut(self.color_lut_list, self.image_file.is_rgb)
         self.get_corner_and_lines()
+
+    def update_curves(self):
+        self.curve_widget.setEnabled(True)
+        if self.image_file.is_rgb:
+            img_layers = self.current_img[:, :, :3]
+        else:
+            img_layers = self.current_img
+        self.curve_widget.set_data(img_layers, self.image_file.rgb_colors, self.image_file.level, self.image_file.data_type)
 
     def scene_index_changed(self):
         scene_index = self.scene_slider.value()

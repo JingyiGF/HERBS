@@ -4,10 +4,6 @@ import tifffile
 import numpy as np
 
 
-# da_file_path = "/Users/jingyig/Work/Kavli/Data/HERBS_DATA/test_image_type/13234_PHALDAB_s3_g004_tiff_30_s3.tif"
-# img_data = tifffile.imread(da_file_path)
-
-
 class ImageReader(object):
     def __init__(self, image_file_path):
         self.is_czi = False

@@ -510,9 +510,11 @@ class HERBS(QMainWindow, FORM_Main):
         self.channel_number_in_banks = (384, 384, 192)
 
         self.image_mode = None
-        self.processing_img = None
         self.drawing_img = None
         self.cell_img = None
+
+        self.processing_img = None
+        self.overlay_img = None
 
         self.triangle_color = QColor(128, 128, 128, 255)
 
@@ -588,8 +590,10 @@ class HERBS(QMainWindow, FORM_Main):
         # --------------------------------------------------------
         # file menu related
         self.actionSingle_Image.triggered.connect(self.load_image)
-        self.actionProcessed_Image.triggered.connect(self.save_processing_image)
-        self.actionOverlay_Image.triggered.connect(self.save_overlay_image)
+        self.actionProcessed_Image.triggered.connect(lambda: self.save_image('Processed'))
+        self.actionOverlay_Image.triggered.connect(lambda: self.save_image('Overlay'))
+
+        self.actionCurrent.triggered.connect(self.save_current_object)
         # atlas menu related
         self.actionDownload.triggered.connect(self.download_waxholm_rat_atlas)
         self.actionAtlas_Processor.triggered.connect(self.process_raw_atlas_data)
@@ -1858,6 +1862,7 @@ class HERBS(QMainWindow, FORM_Main):
                 des_yrange = (histo_rect[1], histo_rect[1] + histo_rect[3])
                 img_wrap[des_yrange[0]:des_yrange[1], des_xrange[0]:des_xrange[1]] = resized_des
 
+            self.overlay_img = img_wrap
             self.image_view.img_stacks.overlay_img.setImage(img_wrap)
             res = cv2.resize(img_wrap, self.image_view.tb_size, interpolation=cv2.INTER_AREA)
             self.master_layers(res, layer_type='image-overlay')
@@ -1865,6 +1870,7 @@ class HERBS(QMainWindow, FORM_Main):
             self.tool_box.toh_btn.setIcon(self.tool_box.toh_btn_on_icon)
             self.tool_box.toa_btn.setEnabled(False)
         else:
+            self.overlay_img = None
             self.image_view.img_stacks.overlay_img.clear()
             layer_ind = [ind for ind in range(self.layer_ctrl.layer_count) if
                          self.layer_ctrl.layer_link[ind] == 'image-overlay']
@@ -1939,6 +1945,7 @@ class HERBS(QMainWindow, FORM_Main):
                 des_yrange = (atlas_rect[1], atlas_rect[1] + atlas_rect[3])
                 img_wrap[des_yrange[0]:des_yrange[1], des_xrange[0]:des_xrange[1]] = resized_des
 
+            self.overlay_img = img_wrap
             self.atlas_view.working_atlas.overlay_img.setImage(img_wrap)
             res = cv2.resize(img_wrap, self.atlas_view.slice_tb_size, interpolation=cv2.INTER_AREA)
             self.master_layers(res, layer_type='atlas-overlay')
@@ -1948,6 +1955,7 @@ class HERBS(QMainWindow, FORM_Main):
             self.register_method = 0
             self.tool_box.toh_btn.setEnabled(False)
         else:
+            self.overlay_img = None
             self.atlas_view.working_atlas.overlay_img.clear()
             layer_ind = np.where(np.ravel(self.layer_ctrl.layer_link) == 'atlas-overlay')[0][0]
             self.layer_ctrl.delete_layer(layer_ind)
@@ -3115,17 +3123,17 @@ class HERBS(QMainWindow, FORM_Main):
         print(data)
 
         for i in range(len(data)):
-            self.object_ctrl.add_object('merged contour', object_data=[])
-
             info_dict = {'object_type': 'contour', 'data': data[i], 'vis_color': self.object_ctrl.obj_list[-1].color}
+            self.object_ctrl.add_object('merged contour', object_data=info_dict)
 
-            self.registered_contour_list.append(info_dict)
+            # self.registered_contour_list.append(info_dict)
             self.object_ctrl.obj_list[-1].sig_object_color_changed.connect(self.obj_color_changed)
             self.object_ctrl.obj_list[-1].eye_clicked.connect(self.obj_vis_changed)
 
             contour_points = create_plot_points_in_3d(info_dict)
             self.contour_points_3d_list.append(contour_points)
             self.view3d.addItem(self.contour_points_3d_list[-1])
+
 
     # def add_3d_contour_pnts(self, data_dict):
     #     pos = np.asarray(data_dict['data'])
@@ -3181,6 +3189,7 @@ class HERBS(QMainWindow, FORM_Main):
         group_id = self.object_ctrl.obj_group_id[self.object_ctrl.current_obj_index]
         if 'probe' in current_type:
             del self.registered_prob_list[group_id]
+
         elif 'cell' in current_type:
             del self.registered_cell_list[group_id]
 
@@ -3410,27 +3419,29 @@ class HERBS(QMainWindow, FORM_Main):
     #
     # ------------------------------------------------------------------
     def save_image(self, image_type):
-        if image_type == 'processed':
+        if image_type == 'Processed':
             da_img = self.processing_img
-        elif image_type == 'overlay':
+            da_img = cv2.cvtColor(da_img, cv2.COLOR_RGB2BGR)
+        elif image_type == 'Overlay':
             da_img = self.overlay_img
-        if self.process_img is None:
+        else:
+            da_img = self.working_img_mask_data
+        if da_img is None:
             return
-        self.statusbar.showMessage('Save Processed Image ...')
-        path = QFileDialog.getSaveFileName(self, "Save Processed Image", self.current_img_path, "JPEG (*.jpg)")
-        print(path[0])
-        print(path)
+        self.statusbar.showMessage('Save {} Image ...'.format(image_type))
+        path = QFileDialog.getSaveFileName(self, "Save Image", self.current_img_path, "JPEG (*.jpg)")
         if path[0] != '':
-            cv2.imwrite(path, self.process_img)
-
-
-
+            cv2.imwrite(path[0], da_img)
+            self.statusbar.showMessage('{} Image is saved successfully ...'.format(image_type))
+        else:
+            self.statusbar.showMessage('No file name is given to save.')
 
     def save_triangulation_points(self):
         print('save triang pnts')
 
     def save_probe_object(self):
-        print('save_probe')
+        if not self.registered_prob_list:
+            return
 
     def save_virus_object(self):
         print('1')
@@ -3451,8 +3462,8 @@ class HERBS(QMainWindow, FORM_Main):
         if self.object_ctrl.current_obj_index is None:
             self.statusbar.showMessage('No object is created ...')
             return
-        file_name = QtGui.QFileDialog.getSaveFileName(self, 'Save Current Object File')
-        if file_name != '':
+        file_name = QFileDialog.getSaveFileName(self, 'Save Current Object File', self.current_img_path, "JPEG (*.jpg)")
+        if file_name[0] != '':
             current_obj_type = self.object_ctrl.obj_type[self.object_ctrl.current_obj_index]
             if 'merged' not in current_obj_type:
                 self.statusbar.showMessage('Only merged object can be saved ...')
@@ -3468,12 +3479,34 @@ class HERBS(QMainWindow, FORM_Main):
                 da_data = self.registered_contour_list[group_id]
             else:
                 da_data = self.registered_drawing_list[group_id]
-            with open('{}.pkl'.format(file_name), 'wb') as handle:
+            with open(file_name[0], 'wb') as handle:
                 pickle.dump(da_data, handle, protocol=pickle.HIGHEST_PROTOCOL)
             self.statusbar.showMessage('Current merged object is saved successfully.')
 
     def save_project(self):
-        print('1')
+        if self.overlay_img is None:
+            self.statusbar.showMessage('Project can be saved after overlay image is created.')
+            return
+        self.statusbar.showMessage('Saving Project ...')
+
+        file_name = QFileDialog.getSaveFileName(self, 'Save Project')
+        if file_name != '':
+            project_data = {'atlas_display': self.atlas_display,
+                            'slice_index': 1,
+                            'image_path': 1,
+                            'scene_index': 1,
+                            'scale_val': 1,
+                            'img_triang_pnt': 1,
+                            'atlas_triang_pnt': 1,
+                            'processed_img': self.processing_img,
+                            'overlay_img': self.overlay_img,
+                            'layers': 1,
+                            'objects': 1}
+
+            with open(file_name[0], 'wb') as handle:
+                pickle.dump(project_data, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            self.statusbar.showMessage('Project saved successfully.')
+
 
     # ------------------------------------------------------------------
     #
