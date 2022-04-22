@@ -240,7 +240,7 @@ class ChannelSelector(QWidget):
 
         self.vis_btn = QPushButton()
         self.vis_btn.setFixedSize(60, 30)
-        # self.vis_btn.setStyleSheet(channel_button_style)
+        self.vis_btn.setCheckable(True)
         self.vis_btn.clicked.connect(self.change_vis)
         self.color_combo = ColorCombo()
         self.color_combo.setFixedSize(60, 28)
@@ -257,7 +257,7 @@ class ChannelSelector(QWidget):
         self.index = index
 
     def change_vis(self):
-        if self.vis:
+        if self.vis_btn.isChecked():
             self.vis = False
             self.color_label.setVisible(True)
             self.color_combo.setVisible(False)

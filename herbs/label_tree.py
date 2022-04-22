@@ -64,6 +64,17 @@ QTreeView::item:selected {
     color: white;
 }
 
+QTreeView::indicator:unchecked {
+    border: 1px solid #656565;
+    border-radius: 5px;
+}
+
+QTreeView::indicator:checked {
+    border: 1px solid #656565;
+    border-radius: 5px;
+    image: url(icons/sidebar/tree_checked.svg);
+}
+
 QTreeView::branch {
         background: transparent;
 }

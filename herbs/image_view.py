@@ -158,7 +158,7 @@ class ImageView(QObject):
         self.current_img = copy.deepcopy(self.image_file.data['scene {}'.format(scene_ind)])
         if self.image_file.is_rgb:
             self.current_mode = 'rgb'
-            self.current_img = cv2.cvtColor(self.current_img, cv2.COLOR_BGR2RGB)
+            self.current_img = cv2.cvtColor(self.current_img, cv2.COLOR_BGR2RGBA)
         self.img_size = self.current_img.shape[:2]
         self.img_stacks.tri_pnts.set_range(self.img_size[1], self.img_size[0])
 
@@ -198,7 +198,7 @@ class ImageView(QObject):
 
         # set data to curves
         self.curve_widget.setEnabled(True)
-        self.curve_widget.set_data(self.current_img, self.image_file.rgb_colors, self.image_file.level,
+        self.curve_widget.set_data(self.current_img[:, :, :3], self.image_file.rgb_colors, self.image_file.level,
                                    self.image_file.data_type)
 
         # set data to image stacks
@@ -273,7 +273,6 @@ class ImageView(QObject):
                 self._set_data_to_img_stacks()
                 self.get_corner_and_lines()
 
-
     def channel_color_changed(self, col, ind):
         print(col)
         da_lut = make_color_lut(col)
@@ -284,10 +283,7 @@ class ImageView(QObject):
 
     def set_channel_visible(self, vis, ind):
         self.channel_visible[ind] = vis
-        if vis:
-            self.img_stacks.image_list[ind].setOpts(opacity=1)
-        else:
-            self.img_stacks.image_list[ind].setOpts(opacity=0)
+        self.img_stacks.image_list[ind].setVisible(vis)
 
     def image_curve_changed(self, table):
         if self.image_file is None:
@@ -411,30 +407,27 @@ class ImageView(QObject):
         if self.image_file is None or not self.image_file.is_rgb:
             return
         temp = self.current_img.copy()
+        scene_ind = self.scene_slider.value()
         if mode == 'gray':
             if self.current_mode != 'rgb':
-                return
-            da_img = cv2.cvtColor(temp, cv2.COLOR_RGB2GRAY)
+                temp = copy.deepcopy(self.image_file.data['scene {}'.format(scene_ind)])
+                temp = cv2.cvtColor(temp, cv2.COLOR_BGR2RGBA)
+            da_img = cv2.cvtColor(temp, cv2.COLOR_RGBA2GRAY)
         elif mode == 'hsv':
             if self.current_mode != 'rgb':
-                return
-            da_img = cv2.cvtColor(temp, cv2.COLOR_RGB2HSV)
+                temp = copy.deepcopy(self.image_file.data['scene {}'.format(scene_ind)])
+                temp = cv2.cvtColor(temp, cv2.COLOR_BGR2RGBA)
+            da_temp = cv2.cvtColor(temp, cv2.COLOR_RGBA2RGB)
+            da_img = cv2.cvtColor(da_temp, cv2.COLOR_RGB2HSV)
         else:
             scene_ind = self.scene_slider.value()
             temp = copy.deepcopy(self.image_file.data['scene {}'.format(scene_ind)])
-            da_img = cv2.cvtColor(temp, cv2.COLOR_BGR2RGB)
+            da_img = cv2.cvtColor(temp, cv2.COLOR_BGR2RGBA)
         self.current_img = da_img.copy()
         self.img_stacks.set_data(self.current_img, is_rgb=True)
         self.current_mode = mode
 
-    def hide_original_image(self):
-        if self.image_file is None or not self.image_file.is_rgb:
-            return
-        self.img_stacks.image_list[0].setVisible(False)
 
-    def show_original_image(self):
-        if self.image_file is None or not self.image_file.is_rgb:
-            return
-        self.img_stacks.image_list[0].setVisible(True)
+
 
 

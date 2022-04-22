@@ -1,13 +1,19 @@
 import urllib.request
-
+import numpy as np
+import time
 import os
 import sys
+from os.path import dirname, realpath, join
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 
+import shutil
 import queue
 import requests
+
+from .atlas_loader import process_atlas_raw_data
+from .uuuuuu import render_volume, render_small_volume
 
 
 class DownloadThread(QThread):
@@ -55,6 +61,7 @@ class AtlasDownloader(QDialog):
         self.segmentation_local = "WHS_SD_rat_atlas_v4.nii.gz"
 
         self.finish = [False, False, False, False]
+        self.process_finished = False
 
         self.label_bar = QProgressBar()
         self.label_bar.setMinimumWidth(400)
@@ -76,6 +83,12 @@ class AtlasDownloader(QDialog):
         self.download_btn. setMinimumWidth(100)
         self.download_btn.setText("Download")
 
+        self.process_btn = QPushButton()
+        self.process_btn.setMinimumWidth(100)
+        self.process_btn.setText("Process")
+
+        self.process_info = QLabel('The whole process takes around 40 min - 1 hour.')
+
         # ok button, used to close window
         ok_btn = QDialogButtonBox(QDialogButtonBox.Ok)
         ok_btn.accepted.connect(self.accept)
@@ -85,20 +98,31 @@ class AtlasDownloader(QDialog):
         layout.addWidget(self.mask_bar)
         layout.addWidget(self.segmentation_bar)
         layout.addWidget(self.download_btn)
-        layout.addWidget(ok_btn)
+        layout.addWidget(self.process_info)
+        layout.addWidget(self.process_btn)
+        # layout.addWidget(ok_btn)
 
         # Binding Button Event
         self.download_btn.clicked.connect(self.download_start)
+        self.process_btn.clicked.connect(self.process_start)
 
     # Download button event
     def download_start(self):
         self.saving_folder = str(QFileDialog.getExistingDirectory(self, "Select Folder to Save Atlas"))
 
         if self.saving_folder != '':
+            self.download_btn.setVisible(False)
+            target = os.path.join(self.saving_folder, 'atlas_labels.pkl')
+            if not os.path.exists(target):
+                shutil.copyfile(join(dirname(__file__), "data/atlas_labels.pkl"), target)
+
             self.start_thread(self.label_url, self.label_local, self.set_label_bar_value)
-            self.start_thread(self.data_url, self.data_local, self.set_data_bar_value)
+            time.sleep(0.1)
             self.start_thread(self.mask_url, self.mask_local, self.set_mask_bar_value)
+            time.sleep(0.1)
             self.start_thread(self.segmentation_url, self.segmentation_local, self.set_segmentation_bar_value)
+            time.sleep(0.1)
+            self.start_thread(self.data_url, self.data_local, self.set_data_bar_value)
 
     #
     def start_thread(self, url, local, func):
@@ -134,8 +158,26 @@ class AtlasDownloader(QDialog):
             self.finish[3] = True
             return
 
-    def accept(self) -> None:
+    def process_start(self):
+        # if not np.all(self.finish):
+        #     return
+
+        atlas_data, atlas_info, segmentation_data, boundary = \
+            process_atlas_raw_data(self.saving_folder, data_file=self.data_local,
+                                   segmentation_file=self.segmentation_local, mask_file=self.mask_local,
+                                   bregma_coordinates=(246, 653, 440), lambda_coordinates=(244, 442, 464),
+                                   return_file=True)
+        render_volume(atlas_data, self.saving_folder, factor=2, level=0.1)
+        render_small_volume(atlas_data, segmentation_data, self.saving_folder, factor=2, level=0.1)
+        self.process_btn.setVisible(False)
+
         self.close()
+
+    # def accept(self) -> None:
+    #     if self.process_finished:
+    #         self.close()
+    #     else:
+    #         return
 
 
 

@@ -165,12 +165,10 @@ class SliceStacks(pg.GraphicsLayoutWidget):
         self.virus_pnts = pg.ScatterPlotItem(pen=(133, 255, 117), symbolBrush=(133, 255, 117), symbolPen=(55, 55, 55),
                                              symbol='s', symbolSize=1)
 
-        self.probe_pnts = pg.ScatterPlotItem(pen=pg.mkPen(color=(128, 128, 128)), symbol='+', symbolSize=2, brush=None)
-        self.cell_pnts = pg.ScatterPlotItem(pen=QColor(238, 130, 238), symbol='d', symbolSize=2, brush=None)
+        self.probe_pnts = pg.ScatterPlotItem(pen=(0, 0, 255), brush=(0, 0, 255), symbol='s', size=5, hoverSize=8)
+        self.cell_pnts = pg.ScatterPlotItem(pen=(0, 255, 0), brush=(0, 255, 0), size=5, hoverSize=8)
         self.drawing_pnts = pg.ScatterPlotItem(pen='b', symbol='o', symbolSize=2, brush=None)
-        self.contour_pnts = pg.ScatterPlotItem(pen='b', symbol='o', symbolSize=2, brush=None)
-
-        self.temp_probe_line = pg.PlotDataItem(pen=pg.mkPen(color='r', width=1, style=Qt.DashLine))
+        self.contour_pnts = pg.ScatterPlotItem(pen=(188, 118, 254), brush=(188, 118, 254), size=5, hoverSize=8)
 
         self.v_line = pg.InfiniteLine(angle=90, movable=False)
         self.h_line = pg.InfiniteLine(angle=0, movable=False)
@@ -196,7 +194,6 @@ class SliceStacks(pg.GraphicsLayoutWidget):
 
         self.vb.addItem(self.mask_img)
         self.vb.addItem(self.virus_pnts)
-        self.vb.addItem(self.temp_probe_line)
         self.vb.addItem(self.probe_pnts)
         self.vb.addItem(self.cell_pnts)
         self.vb.addItem(self.drawing_pnts)

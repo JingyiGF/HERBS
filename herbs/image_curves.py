@@ -288,19 +288,16 @@ class CurveWidget(QWidget):
         self.gamma_spinbox.spin_val.valueChanged.connect(self.gamma_spinbox_changed)
 
         self.reset_btn = QPushButton('Reset')
-        self.reset_btn.setFont(QFont('Arial', 13))
-        self.reset_btn.setFixedHeight(27)
+        self.reset_btn.setStyleSheet('margin-bottom: 1px; border:None;')
+        self.reset_btn.setFixedHeight(25)
         self.reset_btn.clicked.connect(self.reset_pressed)
 
         self.line_type_combo = QComboBox()
+        self.line_type_combo.setFixedHeight(22)
         ltypes = ['gamma', 'linear', 'spline']
         self.line_type_combo.addItems(ltypes)
         self.line_type_combo.setCurrentText('gamma')
         self.line_type = 'gamma'
-        self.line_type_combo.setFixedHeight(24)
-        combo_list = QListView(self.line_type_combo)
-        combo_list.setStyleSheet(styles.text_combo_list_style)
-        self.line_type_combo.setView(combo_list)
         self.line_type_combo.currentTextChanged.connect(self.line_type_changed)
 
         top_wrap = QFrame()

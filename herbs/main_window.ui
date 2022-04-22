@@ -195,12 +195,20 @@ border-color: rgb(75, 78, 84);
     <property name="title">
      <string>File</string>
     </property>
+    <widget class="QMenu" name="menuSave_Image">
+     <property name="title">
+      <string>Save Image</string>
+     </property>
+     <addaction name="actionOverlay_Image"/>
+     <addaction name="actionProcessed_Image"/>
+     <addaction name="actionMask_Image"/>
+    </widget>
     <addaction name="actionAtlas"/>
     <addaction name="actionGroup_Images"/>
     <addaction name="actionSingle_Image"/>
     <addaction name="separator"/>
     <addaction name="actionSave_Project"/>
-    <addaction name="actionSave_Image"/>
+    <addaction name="menuSave_Image"/>
     <addaction name="actionSave_Data"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
@@ -248,9 +256,8 @@ border-color: rgb(75, 78, 84);</string>
     <addaction name="actionFlip_Horizontal"/>
     <addaction name="actionFlip_Vertical"/>
     <addaction name="separator"/>
-    <addaction name="actionCopy_Current_Image"/>
-    <addaction name="actionHide_Original_Image"/>
-    <addaction name="actionShow_Original_Image"/>
+    <addaction name="actionProcess_Image"/>
+    <addaction name="actionReset_Image"/>
    </widget>
    <widget class="QMenu" name="menuAtlas">
     <property name="styleSheet">
@@ -264,6 +271,8 @@ border-color: rgb(75, 78, 84);</string>
      <string>Atlas</string>
     </property>
     <addaction name="actionDownload"/>
+    <addaction name="separator"/>
+    <addaction name="actionAtlas_Processor"/>
     <addaction name="separator"/>
     <addaction name="actionLoad_Image_as_Atlas"/>
     <addaction name="actionSave_Current_Slice"/>
@@ -381,11 +390,6 @@ selection-background-color: rgb(50, 50, 50);</string>
   <action name="actionSave_Project">
    <property name="text">
     <string>Save Project</string>
-   </property>
-  </action>
-  <action name="actionSave_Image">
-   <property name="text">
-    <string>Save Image</string>
    </property>
   </action>
   <action name="actionSave_Data">
@@ -518,24 +522,39 @@ selection-background-color: rgb(50, 50, 50);</string>
     <string>RGB Mode</string>
    </property>
   </action>
-  <action name="actionCopy_Current_Image">
+  <action name="actionProcess_Image">
    <property name="text">
-    <string>Copy Current Image</string>
+    <string>Process Current Image</string>
    </property>
   </action>
-  <action name="actionHide_Original_Image">
+  <action name="actionReset_Image">
    <property name="text">
-    <string>Hide Original Image</string>
-   </property>
-  </action>
-  <action name="actionShow_Original_Image">
-   <property name="text">
-    <string>Show Original Image</string>
+    <string>Reset Current Image</string>
    </property>
   </action>
   <action name="actionLoad_Image_as_Atlas">
    <property name="text">
     <string>Load Image as Atlas ...</string>
+   </property>
+  </action>
+  <action name="actionAtlas_Processor">
+   <property name="text">
+    <string>Atlas Processor</string>
+   </property>
+  </action>
+  <action name="actionOverlay_Image">
+   <property name="text">
+    <string>Overlay Image</string>
+   </property>
+  </action>
+  <action name="actionProcessed_Image">
+   <property name="text">
+    <string>Processed Image</string>
+   </property>
+  </action>
+  <action name="actionMask_Image">
+   <property name="text">
+    <string>Mask Image</string>
    </property>
   </action>
  </widget>

@@ -5,6 +5,7 @@ import pandas as pd
 import cv2
 import pickle
 import csv
+import time
 import scipy.ndimage as ndi
 from numba import jit
 import colorsys
@@ -18,7 +19,7 @@ import tifffile
 from aicspylibczi import CziFile
 from pathlib import Path
 from os.path import dirname, realpath, join
-from scipy.interpolate import interp1d
+from scipy.interpolate import interp1d, splprep, splev
 
 
 def read_label(file):
@@ -223,33 +224,124 @@ def calculate_probe_info(data, label_data, label_info, vxsize_um, tip_length, ch
     start_pnt, end_pnt, avg, direction = line_fit(data)
     start_vox = start_pnt + bregma
     end_vox = end_pnt + bregma
-    print(start_pnt, end_pnt, avg, direction)
-    print('dir', direction)
     theta, phi = get_angles(direction)
     # print(theta, phi)
     new_start_vox, direction = correct_start_pnt(label_data, start_vox, direction)
-    print(direction)
     new_sp = new_start_vox - bregma
-    print('new_sp', new_sp)
     probe_length, chn_lines_labels, region_label, region_length, region_channels, new_ep = \
         get_probe_length(label_data, new_sp, end_pnt, direction, vxsize_um, tip_length, channel_size, bregma)
     # print(chn_lines_labels, region_label, region_length, region_channels, new_ep)
     enter_coords = new_sp * vxsize_um
-    print(enter_coords)
     label_names, label_acronym, label_color, chn_line_color = get_label_name(label_info, region_label, chn_lines_labels)
     # print(label_names, label_acronym, label_color, chn_line_color)
 
     merged_labels, merged_colors, block_count = block_same_label(chn_lines_labels, chn_line_color)
     # print(merged_labels, merged_colors, block_count)
 
-    da_dict = {'sp': start_pnt, 'ep': end_pnt, 'direction': direction, 'data': data, 'probe_length': probe_length,
-               'new_sp': new_sp, 'new_ep': new_ep, 'theta': theta, 'phi': phi, 'coords': enter_coords,
-               'enter_vox': new_start_vox,
+    da_dict = {'object_name': 'probe', 'data': data, 'sp': start_pnt, 'ep': end_pnt, 'direction': direction,
+               'probe_length': probe_length, 'new_sp': new_sp, 'new_ep': new_ep, 'theta': theta, 'phi': phi,
+               'coords': enter_coords, 'enter_vox': new_start_vox,
                'chn_lines_labels': merged_labels, 'chn_lines_color': merged_colors, 'block_count': block_count,
                'region_label': region_label, 'region_length': region_length, 'region_channels': region_channels,
                'label_name': label_names, 'label_acronym': label_acronym, 'label_color': label_color}
     return da_dict
-    
+
+
+def get_region_label(data, label_data, bregma):
+    region_label = []
+    for i in range(len(data)):
+        temp = data[i] + bregma
+        temp = temp.astype(int)
+        region_label.append(label_data[temp[0], temp[1], temp[2]])
+    return region_label
+
+
+def get_region_label_info(region_label, label_info):
+    unique_label = np.unique(region_label)
+    label_names = []
+    label_acronym = []
+    label_color = []
+    region_count = []
+    for i in range(len(unique_label)):
+        # print(unique_label[i])
+        if unique_label[i] == 0:
+            label_names.append(' ')
+            label_acronym.append(' ')
+            label_color.append((128, 128, 128))
+        else:
+            da_ind = np.where(label_info['index'] == unique_label[i])[0][0]
+            label_names.append(label_info['label'][da_ind])
+            label_acronym.append(label_info['abbrev'][da_ind])
+            label_color.append(label_info['color'][da_ind])
+
+        region_count.append(len(np.where(np.ravel(region_label) == unique_label[i])[0]))
+
+    return region_count, label_names, label_acronym, label_color
+
+
+def calculate_virus_info(data, label_data, label_info, bregma):
+    region_label = get_region_label(data, label_data, bregma)
+    region_count, label_names, label_acronym, label_color = get_region_label_info(region_label, label_info)
+
+    res_dict = {'object_name': 'virus', 'data': data, 'label_name': label_names,
+                'label_acronym': label_acronym, 'label_color': label_color}
+
+    return res_dict
+
+
+def calculate_cells_info(data, label_data, label_info, bregma):
+    region_label = get_region_label(data, label_data, bregma)
+    region_count, label_names, label_acronym, label_color = get_region_label_info(region_label, label_info)
+
+    res_dict = {'object_name': 'cell', 'data': data, 'label_name': label_names,
+                'label_acronym': label_acronym, 'label_color': label_color, 'region_count': region_count}
+    return res_dict
+
+
+def order_contour_pnt(pnt):
+    order_ind = []
+    x_min = np.min(pnt[:, 0])
+    left_ind = np.where(pnt[:, 0] == x_min)[0]
+    if len(left_ind) > 1:
+        low_ind = np.where(pnt[left_ind, :] == np.min(pnt[left_ind, :]))[0]
+        left_ind = left_ind[low_ind]
+    left_pnt = pnt[left_ind, :]
+    lower_inds = np.where(pnt[:, 1] <= left_pnt[1])[0]
+    lower_pnts = pnt[:, lower_inds]
+
+
+
+
+
+
+def calculate_contour_line(data):
+    data = np.asarray(data)
+    res = splprep([data[:, 0], data[:, 1], data[:, 2]], s=2)
+    tck = res[0]
+    x_knots, y_knots, z_knots = splev(tck[0], tck)
+    u_fine = np.linspace(0, 1, len(data))
+    x_fine, y_fine, z_fine = splev(u_fine, tck)
+    pnts = np.stack([x_fine, y_fine, z_fine], axis=1)
+    print(pnts)
+    return pnts
+
+
+def get_object_vis_color(color):
+    vis_color_r = color.red()
+    vis_color_g = color.green()
+    vis_color_b = color.blue()
+    vis_color = (vis_color_r / 255, vis_color_g / 255, vis_color_b / 255, 1)
+    return vis_color
+
+
+def create_plot_points_in_3d(data_dict):
+    pnts = data_dict['data']
+    print(pnts)
+    vis_color = get_object_vis_color(data_dict['vis_color'])
+    print(vis_color)
+    vis_points = gl.GLScatterPlotItem(pos=pnts, color=vis_color, size=3)
+    vis_points.setGLOptions('opaque')
+    return vis_points
 
 # def shift_left(xy, val):
 #     return xy - np.array([-val, 0])[None, :]
@@ -785,27 +877,28 @@ def get_bound_color(color, tol, level, mode):
 
 # ----------------------------------------------------------------------------------
 # ----------------------------------------------------------------------------------
-def render_volume(atlas_data, atlas_folder, atlas_name, factor=2, level=0.1):
-
+def render_volume(atlas_data, atlas_folder, factor=2, level=0.1):
     da_data = atlas_data.copy()
     img = np.ascontiguousarray(da_data[::factor, ::factor, ::factor])
     verts, faces = pg.isosurface(ndi.gaussian_filter(img.astype('float64'), (2, 2, 2)), np.max(da_data) * level)
 
     md = gl.MeshData(vertexes=verts * factor, faces=faces)
 
-    outfile = open(os.path.join(atlas_folder, '{}_atlas_meshdata.pkl'.format(atlas_name)), 'wb')
+    outfile = open(os.path.join(atlas_folder, 'atlas_meshdata.pkl'), 'wb')
     pickle.dump(md, outfile)
     outfile.close()
 
-    return md
+    return
 
 
-def render_small_volume(atlas_data, atlas_label, atlas_folder, atlas_name, factor=2, level=0.1):
+def render_small_volume(atlas_data, atlas_label, atlas_folder, factor=2, level=0.1):
     # small_verts_list = {}
     # small_faces_list = {}
     small_meshdata_list = {}
 
-    for id in np.unique(atlas_label):
+    all_unique_label = np.unique(atlas_label)
+
+    for id in all_unique_label:
         id = int(id)
         print(id)
         if id == 0:
@@ -821,7 +914,12 @@ def render_small_volume(atlas_data, atlas_label, atlas_folder, atlas_name, facto
 
         small_meshdata_list[str(id)] = md
 
-    outfile = open(os.path.join(atlas_folder, '{}_atlas_small_meshdata.pkl'.format(atlas_name)), 'wb')
+    outfile = open(os.path.join(atlas_folder, 'atlas_small_meshdata.pkl'), 'wb')
     pickle.dump(small_meshdata_list, outfile)
     outfile.close()
-    return small_meshdata_list
+    return
+
+
+
+
+

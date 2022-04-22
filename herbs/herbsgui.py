@@ -49,7 +49,8 @@ import warnings
 from .uuuuuu import *
 from .czi_reader import CZIReader
 
-from .atlas_downloader import *
+from .atlas_downloader import AtlasDownloader
+from .atlas_processor import AtlasProcessor
 from .atlas_loader import AtlasLoader
 from .atlas_view import AtlasView
 from .slice_stacks import *
@@ -72,6 +73,89 @@ QMainWindow {
     color: white;
     font-size: 12px;
 }
+
+/*---------------------- QComboBox -----------------------*/
+QComboBox {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    selection-background-color: transparent;
+    color: white;
+    background-color: #656565;
+    border: None;
+    border-radius: 5px;
+    padding: 0px 0px 0px 5px;
+    margin: 0px;
+}
+
+
+QComboBox:item {
+    background: #656565;
+    color: white;
+    height: 20px;
+    margin: 0px;
+    padding: 3px;
+}
+
+QComboBox:item:selected
+{
+    border: 3px solid #656565;
+    background: #232323;
+    margin: 0px;
+    color: white;
+    padding: 3px;
+}
+
+
+QComboBox:editable {
+    background: #656565;
+    margin: 0px;
+}
+
+QComboBox:!editable, QComboBox::drop-down:editable {
+     background: #656565;
+}
+
+QComboBox:!editable:on, QComboBox::drop-down:editable:on {
+    background: #656565;
+    margin: 0px;
+    padding: 0px;
+}
+
+QComboBox:on { /* shift the text when the popup opens */
+    margin: 0px;
+    padding: 0px;
+    color: white;
+    background-color: transparent;
+    selection-background-color: transparent;
+}
+
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 20px;
+    border-top: None;
+    border-bottom: None;
+    border-left-width: 1px;
+    border-left-color: transparent;
+    border-left-style: solid; /* just a single line */
+    border-top-right-radius: 3px; /* same radius as the QComboBox */
+    border-bottom-right-radius: 3px;
+    margin: 0px;
+}
+
+QComboBox::down-arrow {
+    image: url(icons/tdown.svg);
+    width: 13px;
+    height: 14px;
+    padding-right: 3px;
+}
+
+QComboBox::down-arrow:on { /* shift the arrow when popup is open */
+    top: 1px;
+    left: 1px;
+}
+
+
 
 /*---------------------- Slider -----------------------*/
 QSlider {
@@ -210,78 +294,7 @@ QDoubleSpinBox::down-arrow {
     height: 7px;
 }
 
-/*---------------------- QComboBox -----------------------*/
-QComboBox {
-    subcontrol-origin: padding;
-    subcontrol-position: top right;
-    selection-background-color: transparent;
-    color: white;
-    background-color: transparent;
-    border: None;
-    border-radius: 5px;
-    padding: 0px 0px 0px 5px;
-    margin: 0px;
-}
 
-QComboBox:item {
-    background: #323232;
-    color: white;
-    min-height: 10px;
-    margin: 0px;
-}
-
-QComboBox:item:selected
-{
-    border: None;
-    background: #232323;
-    margin: 0px;
-}
-
-
-QComboBox:editable {
-    background: transparent;
-}
-
-QComboBox:!editable, QComboBox::drop-down:editable {
-     background: #656565;
-}
-
-/* QComboBox gets the "on" state when the popup is open */
-QComboBox:!editable:on, QComboBox::drop-down:editable:on {
-    background: transparent;
-}
-
-QComboBox:on { /* shift the text when the popup opens */
-    padding: 3px;
-    color: white;
-    background-color: transparent;
-    selection-background-color: transparent;
-}
-
-QComboBox::drop-down {
-    subcontrol-origin: padding;
-    subcontrol-position: top right;
-    width: 20px;
-    border-top: None;
-    border-bottom: None;
-    border-left-width: 1px;
-    border-left-color: transparent;
-    border-left-style: solid; /* just a single line */
-    border-top-right-radius: 3px; /* same radius as the QComboBox */
-    border-bottom-right-radius: 3px;
-}
-
-QComboBox::down-arrow {
-    image: url(icons/tdown.svg);
-    width: 13px;
-    height: 14px;
-    padding-right: 3px;
-}
-
-QComboBox::down-arrow:on { /* shift the arrow when popup is open */
-    top: 1px;
-    left: 1px;
-}
 
 /*---------------------- QSplitter -----------------------*/
 QSplitter::handle {
@@ -401,6 +414,7 @@ class HERBS(QMainWindow, FORM_Main):
         self.small_histo_rect = None
 
         self.atlas_folder = None
+        self.current_img_path = None
 
         self.small_mesh_list = {}
         self.lasso_pnts = []
@@ -425,18 +439,21 @@ class HERBS(QMainWindow, FORM_Main):
         self.working_blob_data = []
 
         self.working_img_drawing_data = []
-        self.working_img_cell_data = []
-        self.working_img_cell_size = []
         self.working_img_probe_data = []
         self.working_img_virus_data = None
         self.working_img_contour_data = None
-        self.cell_count = 0
 
         self.working_atlas_probe = []
-        self.working_atlas_cell = []
         self.working_atlas_virus = []
         self.working_atlas_drawing = []
         self.working_atlas_contour = []
+
+        self.working_img_cell_data = []
+        self.working_atlas_cell = []
+        self.cell_count = [0 for i in range(5)]
+        self.cell_size = []
+        self.cell_symbol = []
+        self.cell_layer_index = []
 
         self.working_atlas_text = []
         self.working_img_text = []
@@ -452,18 +469,22 @@ class HERBS(QMainWindow, FORM_Main):
 
         self.registered_probe_count = 1
         self.registered_prob_list = []
+        self.registered_cell_count = 1
+        self.registered_cell_list = []
+        self.registered_virus_count = 1
+        self.registered_virus_list = []
+        self.registered_contour_count = 1
+        self.registered_contour_list = []
+        self.registered_drawing_count = 1
+        self.registered_drawing_list = []
 
-
-        self.register_cell_list = []
-        self.registered_probe_pnts_list = []
-        self.registered_probe_lines_list = []
-        self.registered_virus_dict = {}
-        self.registered_boundary_dict = {}
-
-        self.probe_data_dicts = []
-        self.prob_list = []
-        self.probe_lines_3d_list = []
         self.probe_lines_2d_list = []
+
+        self.probe_lines_3d_list = []
+        self.virus_points_3d_list = []
+        self.cell_points_3d_list = []
+        self.contour_points_3d_list = []
+        self.drawing_lines_3d_list = []
 
         self.previous_checked_label = []
         self.atlas_display = 'coronal'
@@ -489,13 +510,18 @@ class HERBS(QMainWindow, FORM_Main):
         self.channel_number_in_banks = (384, 384, 192)
 
         self.image_mode = None
-        self.process_img = None
+        self.processing_img = None
+        self.drawing_img = None
+        self.cell_img = None
 
         self.triangle_color = QColor(128, 128, 128, 255)
+
+
 
         # ---------------------
         self.tool_box = ToolBox()
         self.toolbar_wrap_action_dict = {}
+        self.cell_base_symbol = ['+', '+', 'x', 't', 's']
 
         # ---------------------------- load controls, views, panels
         self.layer_ctrl = LayersControl()
@@ -503,20 +529,26 @@ class HERBS(QMainWindow, FORM_Main):
         self.layer_ctrl.sig_visible_changed.connect(self.layers_visible_changed)
 
         self.object_ctrl = ObjectControl()
+        self.object_ctrl.sig_delete_object.connect(self.object_deleted)
         self.object_ctrl.add_object_btn.clicked.connect(self.make_object_pieces)
         self.object_ctrl.merge_probe_btn.clicked.connect(self.merge_probes)
+        self.object_ctrl.merge_virus_btn.clicked.connect(self.merge_virus)
+        self.object_ctrl.merge_cell_btn.clicked.connect(self.merge_cells)
+        self.object_ctrl.merge_contour_btn.clicked.connect(self.merge_contour)
+        self.object_ctrl.merge_drawing_btn.clicked.connect(self.merge_drawings)
         self.object_ctrl.line_width_slider.valueChanged.connect(self.obj_line_width_changed)
-        # self.object_ctrl.merge_virus_btn.clicked.connect(self.merge_virus)
-        # self.object_ctrl.merge_bnd_btn.clicked.connect(self.merge_bnds)
+
 
         self.image_view = ImageView()
         self.image_view.sig_image_changed.connect(self.update_histo_tri_onside_data)
         self.image_view.img_stacks.sig_mouse_clicked.connect(self.img_stacks_clicked)
         self.image_view.img_stacks.sig_mouse_hovered.connect(self.img_stacks_hovered)
+        self.image_view.img_stacks.sig_key_pressed.connect(self.img_stacks_key_pressed)
         self.image_view.img_stacks.tri_pnts.mouseDragged.connect(self.hist_window_tri_pnts_moving)
         self.image_view.img_stacks.tri_pnts.mouseClicked.connect(self.hist_window_tri_pnts_clicked)
         self.image_view.img_stacks.lasso_path.sigPointsClicked.connect(self.lasso_points_clicked)
-        self.image_view.img_stacks.sig_key_pressed.connect(self.img_stacks_key_pressed)
+        self.image_view.img_stacks.cell_pnts.sigClicked.connect(self.img_cell_pnts_clicked)
+        self.image_view.img_stacks.probe_pnts.sigClicked.connect(self.img_probe_pnts_clicked)
         self.image_view.img_stacks.drawing_pnts.sigClicked.connect(self.img_drawing_pnts_clicked)
         # self.image_view.img_stacks.drawing_img.setLookupTable(lut=self.tool_box.base_lut)
 
@@ -532,21 +564,35 @@ class HERBS(QMainWindow, FORM_Main):
         self.atlas_view.himg.sig_mouse_hovered.connect(self.horizontal_slice_stacks_hovered)
         # clicked
         self.atlas_view.cimg.sig_mouse_clicked.connect(self.atlas_stacks_clicked)
-        # drawing clicked
-        self.atlas_view.cimg.drawing_pnts.sigClicked.connect(self.atlas_drawing_pnts_clicked)
-        self.atlas_view.simg.drawing_pnts.sigClicked.connect(self.atlas_drawing_pnts_clicked)
-        self.atlas_view.himg.drawing_pnts.sigClicked.connect(self.atlas_drawing_pnts_clicked)
+        self.atlas_view.simg.sig_mouse_clicked.connect(self.atlas_stacks_clicked)
+        self.atlas_view.himg.sig_mouse_clicked.connect(self.atlas_stacks_clicked)
         # triangle points moving and clicked
         self.atlas_view.cimg.tri_pnts.mouseDragged.connect(self.atlas_window_tri_pnts_moving)
         self.atlas_view.cimg.tri_pnts.mouseClicked.connect(self.atlas_window_tri_pnts_clicked)
+        self.atlas_view.himg.tri_pnts.mouseDragged.connect(self.atlas_window_tri_pnts_moving)
+        self.atlas_view.himg.tri_pnts.mouseClicked.connect(self.atlas_window_tri_pnts_clicked)
+        self.atlas_view.simg.tri_pnts.mouseDragged.connect(self.atlas_window_tri_pnts_moving)
+        self.atlas_view.simg.tri_pnts.mouseClicked.connect(self.atlas_window_tri_pnts_clicked)
+        # probe clicked
+        self.atlas_view.cimg.probe_pnts.sigClicked.connect(self.atlas_probe_pnts_clicked)
+        self.atlas_view.simg.probe_pnts.sigClicked.connect(self.atlas_probe_pnts_clicked)
+        self.atlas_view.himg.probe_pnts.sigClicked.connect(self.atlas_probe_pnts_clicked)
+        # contour clicked
+        self.atlas_view.cimg.contour_pnts.sigClicked.connect(self.atlas_contour_pnts_clicked)
+        self.atlas_view.simg.contour_pnts.sigClicked.connect(self.atlas_contour_pnts_clicked)
+        self.atlas_view.himg.contour_pnts.sigClicked.connect(self.atlas_contour_pnts_clicked)
+
 
         # --------------------------------------------------------
         #                 connect all menu actions
         # --------------------------------------------------------
         # file menu related
         self.actionSingle_Image.triggered.connect(self.load_image)
+        self.actionProcessed_Image.triggered.connect(self.save_processing_image)
+        self.actionOverlay_Image.triggered.connect(self.save_overlay_image)
         # atlas menu related
         self.actionDownload.triggered.connect(self.download_waxholm_rat_atlas)
+        self.actionAtlas_Processor.triggered.connect(self.process_raw_atlas_data)
 
         self.actionCoronal_Window.triggered.connect(self.show_only_coronal_window)
         self.actionSagital_Window.triggered.connect(self.show_only_sagital_window)
@@ -565,9 +611,8 @@ class HERBS(QMainWindow, FORM_Main):
         self.action180.triggered.connect(self.image_view.image_180_rotate)
         self.action90_Clockwise.triggered.connect(self.image_view.image_90_rotate)
         self.action90_Counter_Clockwise.triggered.connect(self.image_view.image_90_counter_rotate)
-        self.actionCopy_Current_Image.triggered.connect(self.make_copy_of_current_image)
-        self.actionHide_Original_Image.triggered.connect(self.image_view.hide_original_image)
-        self.actionShow_Original_Image.triggered.connect(self.image_view.show_original_image)
+        self.actionProcess_Image.triggered.connect(self.turn_current_to_process)
+        self.actionReset_Image.triggered.connect(self.reset_current_image)
 
         self.init_tool_bar()
         self.init_side_bar()
@@ -936,13 +981,20 @@ class HERBS(QMainWindow, FORM_Main):
     #                  Menu Bar ---- Image ----- related
     #
     # ------------------------------------------------------------------
-    def make_copy_of_current_image(self):
+    def turn_current_to_process(self):
         if self.image_view.image_file is None or not self.image_view.image_file.is_rgb:
             return
-        self.process_img = self.image_view.current_img.copy()
-        self.image_view.img_stacks.processing_image.setImage(self.process_img)
-        res = cv2.resize(self.process_img, self.image_view.tb_size, interpolation=cv2.INTER_AREA)
-        self.master_layers(res, layer_type='img-copy')
+        self.processing_img = self.image_view.current_img.copy()
+        # self.image_view.img_stacks.image_list[0].setImage(self.processing_img)
+        res = cv2.resize(self.processing_img[:, :, :3], self.image_view.tb_size, interpolation=cv2.INTER_AREA)
+        self.master_layers(res, layer_type='Image')
+
+    def reset_current_image(self):
+        if self.image_view.image_file is None or not self.image_view.image_file.is_rgb:
+            return
+        self.image_view.img_stacks.image_list[0].setImage(self.image_view.current_img)
+        self.processing_img = None
+        print('delete img-copy layer')
 
     # ------------------------------------------------------------------
     #
@@ -953,6 +1005,10 @@ class HERBS(QMainWindow, FORM_Main):
         download_waxholm_rat_window = AtlasDownloader()
         download_waxholm_rat_window.exec()
 
+    def process_raw_atlas_data(self):
+        process_atlas_window = AtlasProcessor()
+        process_atlas_window.exec()
+
     # ------------------------------------------------------------------
     #
     #                      ToolBar layout and connections
@@ -961,7 +1017,7 @@ class HERBS(QMainWindow, FORM_Main):
     def init_tool_bar(self):
         self.toolbar.setStyleSheet(toolbar_style)
         # -------------- ToolBar layout and functions -------------- #
-        self.tool_box.add_atlas.triggered.connect(lambda: self.load_atlas('WHS'))
+        self.tool_box.add_atlas.triggered.connect(self.load_atlas)
         self.tool_box.add_image_stack.triggered.connect(self.load_image)
         #     add_cell_act = QAction(QIcon('icons/neuron.png'), 'upload recorded cell activities', self)
         self.tool_box.vis2.triggered.connect(self.show_2_windows)
@@ -990,6 +1046,7 @@ class HERBS(QMainWindow, FORM_Main):
         self.tool_box.triang_vis_btn.clicked.connect(self.vis_tri_lines_btn_clicked)
         self.tool_box.triang_match_bnd.clicked.connect(self.matching_tri_bnd)
         # cell related
+        self.tool_box.cell_color_btn.sigColorChanged.connect(self.change_cell_color)
         self.tool_box.cell_radar_btn.clicked.connect(self.cell_detect_btn_clicked)
         self.tool_box.cell_selector_btn.clicked.connect(self.cell_select_btn_clicked)
         self.tool_box.cell_aim_btn.clicked.connect(self.cell_aim_btn_clicked)
@@ -1003,9 +1060,12 @@ class HERBS(QMainWindow, FORM_Main):
         self.tool_box.pencil_color_btn.sigColorChanged.connect(self.change_pencil_color)
         self.tool_box.pencil_size_valt.textChanged.connect(self.change_pencil_size)
         # probe_related
+        self.tool_box.probe_color_btn.sigColorChanged.connect(self.probe_color_changed)
         self.tool_box.probe_type1.toggled.connect(lambda: self.probe_type_changed(0))
         self.tool_box.probe_type2.toggled.connect(lambda: self.probe_type_changed(1))
         self.tool_box.probe_type3.toggled.connect(lambda: self.probe_type_changed(2))
+        # eraser_related
+        self.tool_box.eraser_color_btn.sigColorChanged.connect(self.probe_color_changed)
 
         self.toolbar.addAction(self.tool_box.add_atlas)
         self.toolbar.addAction(self.tool_box.add_image_stack)
@@ -1049,6 +1109,7 @@ class HERBS(QMainWindow, FORM_Main):
             self.toolbar_wrap_action_dict[da_key].setVisible(False)
 
         self.np_onside = int(self.tool_box.bound_pnts_num.text())
+
 
     # ------------------------------------------------------------------
     #              ToolBar checkable btn clicked
@@ -1165,11 +1226,8 @@ class HERBS(QMainWindow, FORM_Main):
 
         composition_label = QLabel('Composition: ')
         self.composition_combo = QComboBox()
+        self.composition_combo.setFixedHeight(22)
         self.composition_combo.addItems(['opaque', 'translucent', 'additive'])
-        self.composition_combo.setFixedHeight(24)
-        combo_list = QListView(self.composition_combo)
-        combo_list.setStyleSheet(self.styles.text_combo_list_style)
-        self.composition_combo.setView(combo_list)
         self.composition_combo.currentIndexChanged.connect(self.composition_3d_changed)
 
         label_container_layout.addWidget(show_3d_button)
@@ -1219,8 +1277,6 @@ class HERBS(QMainWindow, FORM_Main):
         layer_btm_layout.setContentsMargins(0, 0, 0, 0)
         layer_btm_layout.setSpacing(5)
         layer_btm_layout.setAlignment(Qt.AlignRight)
-        # layer_btm_layout.addWidget(self.lcontrols.vis_ai_layer_btn)
-        # layer_btm_layout.addWidget(self.lcontrols.vis_hi_layer_btn)
         layer_btm_layout.addWidget(self.layer_ctrl.add_layer_btn)
         layer_btm_layout.addWidget(self.layer_ctrl.delete_layer_btn)
 
@@ -1309,6 +1365,11 @@ class HERBS(QMainWindow, FORM_Main):
             self.channel_size = None
             self.channel_number_in_banks = None
 
+    def probe_color_changed(self, ev):
+        probe_color = ev.color()
+        self.image_view.img_stacks.probe_pnts.setPen(pg.mkPen(color=probe_color))
+        self.atlas_view.working_atlas.probe_pnts.setPen(pg.mkPen(color=probe_color))
+
     # ------------------------------------------------------------------
     #
     #               ToolBar moving btn related
@@ -1346,9 +1407,9 @@ class HERBS(QMainWindow, FORM_Main):
 
     def moving_layers(self, tx, ty):
         shift_mat = np.float32([[1, 0, tx], [0, 1, ty]])
-        n_working_layer = len(self.layer_ctrl.current_layer_ind)
+        n_working_layer = len(self.layer_ctrl.current_layer_id)
         for i in range(n_working_layer):
-            da_ind = self.layer_ctrl.current_layer_ind[i]
+            da_ind = self.layer_ctrl.current_layer_id[i]
             da_link = self.layer_ctrl.layer_link[i]
             da_img_widget, da_pnt_widget = self.check_layers(da_link)
             if da_img_widget is not None:
@@ -1363,22 +1424,22 @@ class HERBS(QMainWindow, FORM_Main):
                 da_img_widget.setData(pos=da_data)
 
     def moving_left_btn_clicked(self):
-        if not self.layer_ctrl.current_layer_ind:
+        if not self.layer_ctrl.current_layer_id:
             return
         self.moving_layers(-self.tool_box.moving_px, 0)
 
     def moving_right_btn_clicked(self):
-        if not self.layer_ctrl.current_layer_ind:
+        if not self.layer_ctrl.current_layer_id:
             return
         self.moving_layers(self.tool_box.moving_px, 0)
 
     def moving_up_btn_clicked(self):
-        if not self.layer_ctrl.current_layer_ind:
+        if not self.layer_ctrl.current_layer_id:
             return
         self.moving_layers(0, -self.tool_box.moving_px)
 
     def moving_down_btn_clicked(self):
-        if not self.layer_ctrl.current_layer_ind:
+        if not self.layer_ctrl.current_layer_id:
             return
         self.moving_layers(0, self.tool_box.moving_px)
 
@@ -1412,9 +1473,24 @@ class HERBS(QMainWindow, FORM_Main):
 
     # ------------------------------------------------------------------
     #
+    #               ToolBar eraser btn related
+    #
+    # ------------------------------------------------------------------
+    def change_eraser_color(self, ev):
+        eraser_color = ev.color()
+        self.image_view.img_stacks.circle_follow.setPen(pg.mkPen(color=eraser_color))
+        self.atlas_view.working_atlas.circle_follow.setPen(pg.mkPen(color=eraser_color))
+
+    # ------------------------------------------------------------------
+    #
     #               ToolBar loc btn related
     #
     # ------------------------------------------------------------------
+    def change_cell_color(self, ev):
+        cell_color = ev.color()
+        self.image_view.img_stacks.cell_pnts.setPen(color=cell_color)
+        self.image_view.img_stacks.cell_pnts.setBrush(color=cell_color)
+
     def cell_select_btn_clicked(self):
         if self.tool_box.cell_aim_btn.isChecked():
             self.tool_box.cell_aim_btn.setChecked(False)
@@ -1426,15 +1502,10 @@ class HERBS(QMainWindow, FORM_Main):
     def cell_detect_btn_clicked(self):
         if self.working_blob_data is None:
             return
-        temp = self.image_view.current_img.copy()
         if self.image_view.current_mode == 'hsv':
             return
-        if self.image_view.current_mode == 'rgb':
-            temp = cv2.cvtColor(temp, cv2.COLOR_RGB2GRAY)
 
         locs = np.asarray(self.working_blob_data).astype(int)
-        da_colors = temp[locs[:, 1], locs[:, 0]]
-
         da_width = np.max(locs[:, 0]) - np.min(locs[:, 0]) + 1
         da_height = np.max(locs[:, 1]) - np.min(locs[:, 1]) + 1
         small_img = np.zeros((da_height, da_width), 'uint8')
@@ -1445,7 +1516,6 @@ class HERBS(QMainWindow, FORM_Main):
         da_moment = cv2.moments(cnt)
         center_x = int(da_moment["m10"] / da_moment["m00"])
         center_y = int(da_moment["m01"] / da_moment["m00"])
-
         da_area = cv2.contourArea(cnt)
         da_perimeter = cv2.arcLength(cnt, True)
 
@@ -1453,8 +1523,6 @@ class HERBS(QMainWindow, FORM_Main):
 
         params = cv2.SimpleBlobDetector_Params()
         # Change thresholds
-        params.minThreshold = np.min(da_colors)
-        params.maxThreshold = np.max(da_colors)
         params.filterByArea = True
         params.minArea = da_area - 1
         params.maxArea = da_area + 1
@@ -1465,24 +1533,48 @@ class HERBS(QMainWindow, FORM_Main):
         params.filterByInertia = True
         params.minInertiaRatio = 0.01
 
+        temp = self.image_view.current_img.copy()
+        if self.image_view.image_file.is_rgb:
+            if self.image_view.current_mode == 'rgb':
+                temp = cv2.cvtColor(temp, cv2.COLOR_RGB2GRAY)
+                layer_ind = 0
+        else:
+            da_layer = [ind for ind in range(4) if self.image_view.channel_visible[ind]]
+            n_layers = len(da_layer)
+            if n_layers == 0:
+                return
+            if n_layers > 1:
+                return
+            temp = temp[:, :, da_layer[0]]
+            layer_ind = da_layer[0] + 1
+
+        da_colors = temp[locs[:, 1], locs[:, 0]]
+        params.minThreshold = np.min(da_colors)
+        params.maxThreshold = np.max(da_colors)
+
         if int(opencv_ver[0]) < 3:
             detector = cv2.SimpleBlobDetector(params)
         else:
             detector = cv2.SimpleBlobDetector_create(params)
 
         keypoints = detector.detect(temp)
-
         n_keypoints = len(keypoints)
+        if n_keypoints == 0:
+            return
+
         for i in range(n_keypoints):
             x = keypoints[i].pt[0]
             y = keypoints[i].pt[1]
             size = keypoints[i].size
             self.working_img_cell_data.append([x, y])
-            self.working_img_cell_size.append(size)
-        self.cell_count = self.cell_count + n_keypoints
-        self.tool_box.cell_count_val.setText(str(self.cell_count))
+            self.cell_layer_index.append(layer_ind)
+            self.cell_symbol.append(self.cell_base_symbol[layer_ind])
+            self.cell_size.append(size)
+        self.cell_count[layer_ind] = self.cell_count[layer_ind] + n_keypoints
+        self.tool_box.cell_count_val_list[layer_ind].setText(str(self.cell_count[layer_ind]))
 
-        self.image_view.img_stacks.cell_pnts.setData(pos=np.asarray(self.working_img_cell_data))
+        self.image_view.img_stacks.cell_pnts.setData(pos=np.asarray(self.working_img_cell_data), symbol=self.cell_symbol)
+
         self.working_blob_data = []
         self.image_view.img_stacks.blob_pnts.clear()
 
@@ -1511,37 +1603,37 @@ class HERBS(QMainWindow, FORM_Main):
         self.master_layers(res, layer_type='img-virus')
         self.working_img_mask_data = None
         self.image_view.img_stacks.mask_img.clear()
-        layer_ind = [ind for ind in range(self.layer_ctrl.layer_count) if
-                     self.layer_ctrl.layer_link[ind] == 'img-mask']
+
+        layer_ind = np.where(np.ravel(self.layer_ctrl.layer_link) == 'img-mask')[0][0]
         self.layer_ctrl.delete_layer(layer_ind)
 
     def get_contour_img(self):
-        if self.working_img_mask_data is not None:
-            temp = self.working_img_mask_data.astype('uint8')
-            contour_img = np.zeros(temp.shape, 'uint8')
-            ct, hc = cv2.findContours(image=temp, mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_NONE)
-            for j in range(len(ct)):
-                da_contour = ct[j].copy()
-                da_shp = da_contour.shape
-                da_contour = np.reshape(da_contour, (da_shp[0], da_shp[2]))
-                contour_img[da_contour[:, 1], da_contour[:, 0]] = 1
-            self.working_img_contour_data = contour_img.copy()
-            # self.working_img_contour_data = cv2.Canny(self.working_img_mask_data.astype('uint8'), 100, 200)
-            self.image_view.img_stacks.contour_img.setImage(self.working_img_contour_data)
-            wand_color = self.tool_box.magic_color_btn.color()
-            wand_color = np.ravel(wand_color.getRgb())
-            print(wand_color)
-            lut = self.tool_box.base_lut.copy()
-            lut[1] = wand_color
-            self.image_view.img_stacks.contour_img.setLookupTable(lut)
+        if self.working_img_mask_data is None:
+            return
+        temp = self.working_img_mask_data.astype('uint8')
+        contour_img = np.zeros(temp.shape, 'uint8')
+        ct, hc = cv2.findContours(image=temp, mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_NONE)
+        for j in range(len(ct)):
+            da_contour = ct[j].copy()
+            da_shp = da_contour.shape
+            da_contour = np.reshape(da_contour, (da_shp[0], da_shp[2]))
+            contour_img[da_contour[:, 1], da_contour[:, 0]] = 1
+        self.working_img_contour_data = contour_img.copy()
+        # self.working_img_contour_data = cv2.Canny(self.working_img_mask_data.astype('uint8'), 100, 200)
+        self.image_view.img_stacks.contour_img.setImage(self.working_img_contour_data)
+        wand_color = self.tool_box.magic_color_btn.color()
+        wand_color = np.ravel(wand_color.getRgb())
+        print(wand_color)
+        lut = self.tool_box.base_lut.copy()
+        lut[1] = wand_color
+        self.image_view.img_stacks.contour_img.setLookupTable(lut)
 
-            res = cv2.resize(self.working_img_contour_data, self.image_view.tb_size, interpolation=cv2.INTER_AREA)
-            self.master_layers(res, layer_type='img-contour')
-            self.working_img_mask_data = None
-            self.image_view.img_stacks.mask_img.clear()
-            layer_ind = [ind for ind in range(self.layer_ctrl.layer_count) if
-                         self.layer_ctrl.layer_link[ind] == 'img-mask']
-            self.layer_ctrl.delete_layer(layer_ind)
+        res = cv2.resize(self.working_img_contour_data, self.image_view.tb_size, interpolation=cv2.INTER_AREA)
+        self.master_layers(res, layer_type='img-contour')
+        self.working_img_mask_data = None
+        self.image_view.img_stacks.mask_img.clear()
+        layer_ind = np.where(np.ravel(self.layer_ctrl.layer_link) == 'img-mask')[0][0]
+        self.layer_ctrl.delete_layer(layer_ind)
 
     # ------------------------------------------------------------------
     #
@@ -1785,16 +1877,17 @@ class HERBS(QMainWindow, FORM_Main):
 
     #
     def transfer_to_atlas_clicked(self):
-        if self.image_view.image_file is None:
-            return
-        if self.atlas_view.atlas_data is None:
+        if self.image_view.image_file is None or self.atlas_view.atlas_data is None:
             return
         if self.atlas_view.atlas_label is None:
             return
         print('to A clicked')
         if not self.h2a_transferred:
             if self.image_view.image_file.is_rgb:
-                self.input_img = self.image_view.current_img.copy()
+                if self.processing_img is not None:
+                    self.input_img = self.processing_img.copy()
+                else:
+                    self.input_img = self.image_view.current_img.copy()
             else:
                 czi_img = self.image_view.current_img.copy()
                 channel_hsv = self.image_view.image_file.hsv_colors
@@ -1856,7 +1949,7 @@ class HERBS(QMainWindow, FORM_Main):
             self.tool_box.toh_btn.setEnabled(False)
         else:
             self.atlas_view.working_atlas.overlay_img.clear()
-            layer_ind = [ind for ind in range(self.layer_ctrl.layer_count) if self.layer_ctrl.layer_link[ind] == 'atlas-overlay']
+            layer_ind = np.where(np.ravel(self.layer_ctrl.layer_link) == 'atlas-overlay')[0][0]
             self.layer_ctrl.delete_layer(layer_ind)
             self.h2a_transferred = False
             self.tool_box.toa_btn.setIcon(self.tool_box.toa_btn_off_icon)
@@ -1906,19 +1999,14 @@ class HERBS(QMainWindow, FORM_Main):
         if self.working_img_virus_data is not None:
             input_virus_img = self.working_img_virus_data.copy()
             res_pnts = self.transfer_vox_to_pnt(input_virus_img, tri_vet_inds)
-            self.working_atlas_virus = res_pnts
+            self.working_atlas_virus = res_pnts.tolist()
             self.atlas_view.working_atlas.virus_pnts.setData(pos=np.asarray(self.working_atlas_virus))
 
         if self.working_img_contour_data is not None:
             input_contour_img = self.working_img_contour_data.copy()
             res_pnts = self.transfer_vox_to_pnt(input_contour_img, tri_vet_inds)
-            self.working_atlas_contour = res_pnts
+            self.working_atlas_contour = res_pnts.tolist()
             self.atlas_view.working_atlas.contour_pnts.setData(pos=np.asarray(self.working_atlas_contour))
-
-        if self.working_img_cell_data:
-            res_pnts = self.transfer_pnt(np.asarray(self.working_img_cell_data), tri_vet_inds)
-            self.working_atlas_cell = res_pnts
-            self.atlas_view.working_atlas.cell_pnts.setData(pos=np.asarray(self.working_atlas_cell))
 
         if self.working_img_probe_data:
             res_pnts = self.transfer_pnt(np.asarray(self.working_img_probe_data), tri_vet_inds)
@@ -1929,9 +2017,14 @@ class HERBS(QMainWindow, FORM_Main):
 
         if self.working_img_drawing_data:
             res_pnts = self.transfer_pnt(np.asarray(self.working_img_drawing_data), tri_vet_inds)
-            self.working_atlas_drawing = res_pnts
+            self.working_atlas_drawing = res_pnts.tolist()
             self.atlas_view.working_atlas.drawing_pnts.setData(pos=np.asarray(self.working_atlas_drawing))
 
+        if self.working_img_cell_data:
+            res_pnts = self.transfer_pnt(np.asarray(self.working_img_cell_data), tri_vet_inds)
+            self.working_atlas_cell = res_pnts.tolist()
+            self.atlas_view.working_atlas.cell_pnts.setData(pos=np.asarray(self.working_atlas_cell),
+                                                            symbol=self.cell_symbol)
 
     # ------------------------------------------------------------------
     # ------------------------------------------------------------------
@@ -1945,16 +2038,11 @@ class HERBS(QMainWindow, FORM_Main):
         print('image_changed')
         self.reset_corners_hist()
         self.working_img_mask_data = np.zeros(self.image_view.img_size).astype('uint8')
-        self.process_img = None
-        self.image_view.img_stacks.processing_image.clear()
-
-    def make_pencil_path(self, loc, img):
-        x = int(loc[1] - 0.5 * self.pencil_size)
-        y = int(loc[0] - 0.5 * self.pencil_size)
-        xr = (x, x + self.pencil_size)
-        yr = (y, y + self.pencil_size)
-        img[xr[0]:xr[1], yr[0]:yr[1]] = 1
-        return img
+        if self.processing_img is not None:
+            self.processing_img = None
+            print('delete img-copy layer')
+        self.drawing_img = np.zeros(self.image_view.img_size).astype('uint8')
+        self.cell_img = np.zeros(self.image_view.img_size).astype('uint8')
 
     def img_stacks_clicked(self, pos):
         x = pos[0]
@@ -1964,30 +2052,30 @@ class HERBS(QMainWindow, FORM_Main):
             return
         # ------------------------- pencil
         if self.tool_box.checkable_btn_dict['pencil_btn'].isChecked():
+
+            if len(self.working_img_drawing_data) > 1:
+                start_pnt = np.ravel(self.working_img_drawing_data[-1]).astype(int)
+                end_pnt = np.ravel([x, y]).astype(int)
+                cv2.line(self.drawing_img, start_pnt, end_pnt, 255, 2)
             self.working_img_drawing_data.append([x, y])
             self.image_view.img_stacks.drawing_pnts.setData(np.asarray(self.working_img_drawing_data))
-            if len(self.working_img_drawing_data) < 2:
-                img = np.zeros(self.image_view.img_size).astype('uint8')
-            else:
-                img = self.image_view.img_stacks.drawing_img.image.copy()
-            loc = np.ravel(self.working_img_drawing_data[-1]).astype(int)
-            img = self.make_pencil_path(loc, img)
-            # self.image_view.img_stacks.drawing_img.setImage(img, autoLevels=False)
             if self.is_pencil_allowed:
                 self.is_pencil_allowed = False
             else:
                 self.is_pencil_allowed = True
+            res = cv2.resize(self.drawing_img, self.image_view.tb_size, interpolation=cv2.INTER_AREA)
+            self.master_layers(res, layer_type='img-drawing')
         # ------------------------- eraser
         elif self.tool_box.checkable_btn_dict['eraser_btn'].isChecked():
             r = self.tool_box.eraser_size_slider.value()
             mask_img = np.zeros(self.image_view.img_size, dtype=np.uint8)
             cv2.circle(mask_img, center=(int(x), int(y)), radius=r, color=255, thickness=-1)
             mask_img = 255 - mask_img
-            if not self.layer_ctrl.layer_index or len(self.layer_ctrl.current_layer_ind) > 1:
+            if not self.layer_ctrl.layer_id or len(self.layer_ctrl.current_layer_id) > 1:
                 print('check')
                 return
             else:
-                da_ind = np.where(np.ravel(self.layer_ctrl.layer_index) == self.layer_ctrl.current_layer_ind[0])[0]
+                da_ind = np.where(np.ravel(self.layer_ctrl.layer_id) == self.layer_ctrl.current_layer_id[0])[0]
                 da_link = self.layer_ctrl.layer_link[da_ind[0]]
                 if da_link == 'img-mask':
                     temp = self.working_img_mask_data.astype(np.uint8)
@@ -1995,8 +2083,24 @@ class HERBS(QMainWindow, FORM_Main):
                     res = cv2.resize(dst, self.image_view.tb_size, interpolation=cv2.INTER_AREA)
                     self.image_view.img_stacks.mask_img.setImage(dst)
                     self.working_img_mask_data = dst
-                if da_link == 'img-copy':
-                    print('do something')
+                elif da_link == 'img-contour':
+                    temp = self.working_img_contour_data.astype(np.uint8)
+                    dst = cv2.bitwise_and(temp, temp, mask=mask_img)
+                    res = cv2.resize(dst, self.image_view.tb_size, interpolation=cv2.INTER_AREA)
+                    self.image_view.img_stacks.contour_img.setImage(dst)
+                    self.working_img_contour_data = dst
+                elif da_link == 'img-virus':
+                    temp = self.working_img_virus_data.astype(np.uint8)
+                    dst = cv2.bitwise_and(temp, temp, mask=mask_img)
+                    res = cv2.resize(dst, self.image_view.tb_size, interpolation=cv2.INTER_AREA)
+                    self.image_view.img_stacks.virus_img.setImage(dst)
+                    self.working_img_virus_data = dst
+                elif da_link == 'Image':
+                    temp = self.processing_img.copy()
+                    dst = cv2.bitwise_and(temp, temp, mask=mask_img)
+                    res = cv2.resize(dst, self.image_view.tb_size, interpolation=cv2.INTER_AREA)
+                    self.image_view.img_stacks.image_list[0].setImage(dst)
+                    self.processing_img = dst
                 else:
                     return
                 self.layer_ctrl.layer_list[da_ind[0]].set_thumbnail_data(res)
@@ -2005,12 +2109,15 @@ class HERBS(QMainWindow, FORM_Main):
             tol_val = float(self.tool_box.magic_tol_val.text())
             white_img = np.ones(self.image_view.img_size).astype('uint8')
             if self.image_view.image_file.is_rgb:
-                src_img = self.image_view.current_img.copy()
+                if self.processing_img is None:
+                    src_img = self.image_view.current_img.copy()
+                else:
+                    src_img = self.processing_img.copy()
                 da_color = src_img[int(y), int(x)]
                 lower_val, upper_val = get_bound_color(da_color, tol_val, self.image_view.image_file.level,
                                                        self.image_view.current_mode)
                 if self.image_view.current_mode != 'gray':
-                    mask_img = cv2.inRange(src_img, tuple(lower_val), tuple(upper_val))
+                    mask_img = cv2.inRange(src_img[:, :, :3], tuple(lower_val), tuple(upper_val))
                 else:
                     mask_img = white_img.copy()
                     ret, thresh = cv2.threshold(src_img, lower_val, upper_val, cv2.THRESH_BINARY)
@@ -2022,9 +2129,10 @@ class HERBS(QMainWindow, FORM_Main):
                         continue
                     temp = self.image_view.current_img[:, :, i]
                     selected_color = temp[int(y), int(x)]
-                    lower_range = selected_color - tol_val
-                    upper_range = selected_color + tol_val
-                    ret, thresh = cv2.threshold(temp, lower_range, upper_range, cv2.THRESH_BINARY)
+                    print(selected_color)
+                    lower_val, upper_val = get_bound_color(selected_color, tol_val, self.image_view.image_file.level,
+                                                           'gray')
+                    ret, thresh = cv2.threshold(temp, lower_val, upper_val, cv2.THRESH_BINARY)
                     mask_img = cv2.bitwise_and(mask_img, mask_img, mask=thresh.astype(np.uint8))
             modifiers = QApplication.keyboardModifiers()
             if modifiers == Qt.ShiftModifier:
@@ -2083,15 +2191,30 @@ class HERBS(QMainWindow, FORM_Main):
         # ------------------------- loc -- cell
         elif self.tool_box.checkable_btn_dict['loc_btn'].isChecked():
             if self.tool_box.cell_selector_btn.isChecked():
+                if self.image_view.image_file.is_rgb:
+                    layer_ind = 0
+                else:
+                    # only one layer is allowed to work on
+                    da_layer = [ind for ind in range(4) if self.image_view.channel_visible[ind]]
+                    n_layers = len(da_layer)
+                    if n_layers == 0:
+                        return
+                    if n_layers > 1:
+                        return
+                    layer_ind = da_layer[0] + 1
+
                 self.working_img_cell_data.append([x, y])
-                self.working_img_cell_size.append(1)
-                self.image_view.img_stacks.cell_pnts.setData(pos=np.asarray(self.working_img_cell_data))
-                self.cell_count += 1
-                self.tool_box.cell_count_val.setText(str(self.cell_count))
-                locs = np.asarray(self.working_img_cell_data).astype(int)
-                temp = np.zeros(self.image_view.img_size[:2], 'uint8')
-                temp[locs[:, 1], locs[:, 0]] = 1
-                res = cv2.resize(temp, self.image_view.tb_size, interpolation=cv2.INTER_AREA)
+                self.cell_size.append(1)
+                self.cell_symbol.append(self.cell_base_symbol[layer_ind])
+                self.cell_layer_index.append(layer_ind)
+                self.cell_count[layer_ind] += 1
+                self.tool_box.cell_count_val_list[layer_ind].setText(str(self.cell_count[layer_ind]))
+
+                self.image_view.img_stacks.cell_pnts.setData(pos=np.asarray(self.working_img_cell_data),
+                                                             symbol=self.cell_symbol)
+
+                self.cell_img[int(y), int(x)] = 255
+                res = cv2.resize(self.cell_img, self.image_view.tb_size, interpolation=cv2.INTER_AREA)
                 self.master_layers(res, layer_type='img-cells')
             if self.tool_box.cell_aim_btn.isChecked():
                 self.working_blob_data.append([x, y])
@@ -2104,7 +2227,7 @@ class HERBS(QMainWindow, FORM_Main):
             mask = np.zeros(self.image_view.img_size, dtype="uint8")
             locs = np.asarray(self.working_img_probe_data).astype(int)
             mask[locs[:, 1], locs[:, 0]] = 255
-            res = cv2.resize(mask.T, self.image_view.tb_size, interpolation=cv2.INTER_AREA)
+            res = cv2.resize(mask, self.image_view.tb_size, interpolation=cv2.INTER_AREA)
             self.master_layers(res, layer_type='img-probes')
         else:
             return
@@ -2133,19 +2256,20 @@ class HERBS(QMainWindow, FORM_Main):
                     self.vis_eraser_symbol(False)
         if self.tool_box.checkable_btn_dict['pencil_btn'].isChecked():
             if self.is_pencil_allowed:
-                self.working_img_drawing_data.append([x, y])
-                self.image_view.img_stacks.drawing_pnts.setData(np.asarray(self.working_img_drawing_data))
-                img = self.image_view.img_stacks.drawing_img.image.copy()
-                loc = np.ravel(self.working_img_drawing_data[-1]).astype(int)
-                img = self.make_pencil_path(loc, img)
-                self.image_view.img_stacks.drawing_img.setImage(img, autoLevels=False)
-        self.statusbar.showMessage('Histological image coordinates: {}, {}'.format(x, y))
+                start_pnt = np.ravel(self.working_img_drawing_data[-1]).astype(int)
+                end_pnt = np.ravel([x, y]).astype(int)
+                cv2.line(self.drawing_img, start_pnt, end_pnt, 255, 2)
+                if abs(self.working_img_drawing_data[-1][0] - x) > 1 or abs(self.working_img_drawing_data[-1][1] - y) > 1:
+                    self.working_img_drawing_data.append([x, y])
+                    self.image_view.img_stacks.drawing_pnts.setData(np.asarray(self.working_img_drawing_data))
+
+        self.statusbar.showMessage('Histological image coordinates: {}, {}'.format(round(x, 3), round(y, 3)))
 
     def img_stacks_key_pressed(self, action):
         print(action)
-        if not self.layer_ctrl.current_layer_ind or len(self.layer_ctrl.current_layer_ind) > 1:
+        if not self.layer_ctrl.current_layer_id or len(self.layer_ctrl.current_layer_id) > 1:
             return
-        da_ind = np.where(np.ravel(self.layer_ctrl.layer_index) == self.layer_ctrl.current_layer_ind[0])[0]
+        da_ind = np.where(np.ravel(self.layer_ctrl.layer_id) == self.layer_ctrl.current_layer_id[0])[0]
         da_link = self.layer_ctrl.layer_link[da_ind[0]]
 
         if action == 'delete':
@@ -2169,20 +2293,25 @@ class HERBS(QMainWindow, FORM_Main):
                     self.image_view.img_stacks.mask_img.setImage(dst)
                     self.working_img_mask_data = dst
                     res = cv2.resize(self.working_img_mask_data, self.image_view.tb_size, interpolation=cv2.INTER_AREA)
-                elif da_link == 'img-copy':
-                    print('do something')
+                elif da_link == 'Image':
+                    dst = cv2.bitwise_and(self.processing_img, self.processing_img, mask=mask)
+                    self.image_view.img_stacks.image_list[0].setImage(dst)
+                    self.processing_img = dst
+                    res = cv2.resize(dst, self.image_view.tb_size, interpolation=cv2.INTER_AREA)
                 else:
                     return
-                self.layer_ctrl.layer_list[da_ind[0]].set_thumbnail_data(res)
             else:
-                if self.working_img_mask_data is None or da_link != 'img-copy':
+                if self.working_img_mask_data is None or da_link != 'Image':
                     return
                 mask = self.working_img_mask_data.copy()
-                temp_img = self.image_view.img_stacks.processing_image.image.copy()
-                new_img = np.zeros((self.image_view.img_size[0], self.image_view.img_size[1], 4), 'uint8')
-                new_img[:, :, :3] = temp_img
-                new_img[:, :, 3] = mask
-                self.image_view.img_stacks.processing_image.setImage(new_img)
+                mask = 255 - mask
+                temp = self.processing_img.copy()
+                dst = cv2.bitwise_and(temp, temp, mask=mask)
+                self.image_view.img_stacks.image_list[0].setImage(dst)
+                self.processing_img = dst
+                res = cv2.resize(dst, self.image_view.tb_size, interpolation=cv2.INTER_AREA)
+
+            self.layer_ctrl.layer_list[da_ind[0]].set_thumbnail_data(res)
 
     def hist_window_tri_pnts_moving(self, ev_obj):
         ev = ev_obj[0]
@@ -2240,9 +2369,19 @@ class HERBS(QMainWindow, FORM_Main):
         del self.working_img_pnts[clicked_ind]
         self.image_view.img_stacks.drawing_pnts.setData(np.asarray(self.working_img_drawing_data))
 
-    def img_manual_cell_pnts_clicked(self, points, ev):
-        if not self.tool_box.checkable_btn_dict['eraser_btn'].isChecked() or not self.working_img_man:
+    def img_cell_pnts_clicked(self, points, ev):
+        if not self.tool_box.checkable_btn_dict['eraser_btn'].isChecked() or not self.working_img_cell_data:
             return
+        clicked_ind = ev[0].index()
+        layer_ind = self.cell_layer_index[clicked_ind]
+        self.cell_count[layer_ind] -= 1
+        self.tool_box.cell_count_val_list[layer_ind].setText(str(self.cell_count[layer_ind]))
+        del self.working_img_cell_data[clicked_ind]
+        del self.cell_symbol[clicked_ind]
+        del self.cell_size[clicked_ind]
+        del self.cell_layer_index[clicked_ind]
+        self.image_view.img_stacks.cell_pnts.setData(pos=np.asarray(self.working_img_cell_data),
+                                                     symbol=self.cell_symbol)
 
     def hist_window_tri_pnts_clicked(self, ev):
         if not self.tool_box.checkable_btn_dict['eraser_btn'].isChecked() or not self.histo_tri_data:
@@ -2345,9 +2484,7 @@ class HERBS(QMainWindow, FORM_Main):
         # print('atlas clicked')
         x = pos[0]
         y = pos[1]
-        if self.atlas_view.atlas_data is None:
-            return
-        if self.num_windows == 4:
+        if self.atlas_view.atlas_data is None or self.num_windows == 4:
             return
         if self.tool_box.checkable_btn_dict['triang_btn'].isChecked():
             self.inactive_lasso()
@@ -2362,14 +2499,14 @@ class HERBS(QMainWindow, FORM_Main):
             self.atlas_view.working_atlas.vb.addItem(self.working_atlas_text[-1])
             if self.tool_box.triang_vis_btn.isChecked():
                 self.update_atlas_tri_lines()
-        if self.tool_box.checkable_btn_dict['probe_btn'].isChecked():
+        elif self.tool_box.checkable_btn_dict['probe_btn'].isChecked():
             self.inactive_lasso()
             self.working_atlas_probe.append([x, y])
             self.atlas_view.working_atlas.probe_pnts.setData(pos=np.asarray(self.working_atlas_probe))
             if not self.atlas_view.working_atlas.probe_pnts.isVisible():
                 self.atlas_view.working_atlas.probe_pnts.setVisible(True)
         # ------------------------- magic wand -- mask
-        if self.tool_box.checkable_btn_dict['magic_wand_btn'].isChecked():
+        elif self.tool_box.checkable_btn_dict['magic_wand_btn'].isChecked():
             self.inactive_lasso()
             if not self.h2a_transferred:
                 return
@@ -2405,6 +2542,8 @@ class HERBS(QMainWindow, FORM_Main):
             self.atlas_view.working_atlas.mask_img.setImage(self.working_atlas_mask)
             res = cv2.resize(self.working_atlas_mask, self.image_view.tb_size, interpolation=cv2.INTER_AREA)
             self.master_layers(res, layer_type='atlas-mask')
+        else:
+            return
 
     #
     def atlas_window_tri_pnts_moving(self, ev_obj):
@@ -2492,6 +2631,25 @@ class HERBS(QMainWindow, FORM_Main):
             self.working_atlas_text[i].setPos(self.atlas_tri_data[pnt_id][0], self.atlas_tri_data[pnt_id][1])
         if self.tool_box.triang_vis_btn.isChecked():
             self.update_atlas_tri_lines()
+
+    def atlas_probe_pnts_clicked(self, points, ev):
+        if self.num_windows == 4:
+            return
+        if not self.tool_box.checkable_btn_dict['eraser_btn'].isChecked() or not self.working_atlas_probe:
+            return
+        clicked_ind = ev[0].index()
+        del self.working_atlas_probe[clicked_ind]
+        self.atlas_view.working_atlas.probe_pnts.setData(pos=np.asarray(self.working_atlas_probe))
+
+    def atlas_contour_pnts_clicked(self, points, ev):
+        print('test contour points')
+        if self.num_windows == 4:
+            return
+        if not self.tool_box.checkable_btn_dict['eraser_btn'].isChecked() or not self.working_atlas_contour:
+            return
+        clicked_ind = ev[0].index()
+        del self.working_atlas_contour[clicked_ind]
+        self.atlas_view.working_atlas.contour_pnts.setData(pos=np.asarray(self.working_atlas_contour))
 
 
 
@@ -2585,12 +2743,6 @@ class HERBS(QMainWindow, FORM_Main):
 
 
 
-    def atlas_drawing_pnts_clicked(self, points, ev):
-        if not self.tool_box.eraser_btn.isChecked() or not self.working_atlas_pnts:
-            return
-        clicked_ind = ev[0].index()
-        del self.working_atlas_drawing[clicked_ind]
-        self.atlas_view.working_atlas.drawing_pnts.setData(pos=np.asarray(self.working_atlas_drawing))
 
 
 
@@ -2624,17 +2776,12 @@ class HERBS(QMainWindow, FORM_Main):
             self.layer_ctrl.layer_list[-1].set_thumbnail_data(res)
         else:
             print(self.layer_ctrl.layer_link)
-            print(layer_type)
             da_ind = np.where(np.ravel(self.layer_ctrl.layer_link) == layer_type)[0]
             self.layer_ctrl.layer_list[da_ind[0]].set_thumbnail_data(res)
 
-    def layers_opacity_changed(self, val):
-        if not self.layer_ctrl.current_layer_ind or len(self.layer_ctrl.current_layer_ind) > 1:
-            return
-        da_ind = np.where(np.ravel(self.layer_ctrl.layer_index) == self.layer_ctrl.current_layer_ind[0])[0]
-        if len(da_ind) == 0:
-            return
-        da_link = self.layer_ctrl.layer_list[da_ind[0]].get_link()
+    def layers_opacity_changed(self, ev):
+        da_link = ev[0]
+        val = ev[1]
         if 'img' in da_link:
             respond_widget = self.image_view.img_stacks
         elif 'atlas' in da_link:
@@ -2756,54 +2903,38 @@ class HERBS(QMainWindow, FORM_Main):
         if data_tobe_registered:
             processing_data = np.asarray(data_tobe_registered)
             data = self.get_3d_pnts(processing_data)
-            self.object_ctrl.add_object_piece(object_name='probe - piece', object_data=data)
+            self.object_ctrl.add_object(object_type='probe - piece', object_data=data)
             self.working_atlas_probe = []
-            # self.atlas_view.working_atlas.probe_pnts.setPointsVisible(False)
-            # self.atlas_view.working_atlas.probe_pnts.clear()
 
     def make_virus_piece(self):
-        if self.a2h_transferred:
+        if self.h2a_transferred:
+            if not self.working_atlas_virus:
+                return
+            processing_pnt = np.asarray(self.working_atlas_virus)
+        else:
             if self.working_img_virus_data is None:
                 return
             inds = np.where(self.working_img_virus_data != 0)
             processing_pnt = np.vstack([inds[0], inds[1]]).T
-        else:
-            if not self.working_atlas_virus:
-                return
-            processing_pnt = self.working_atlas_virus.copy()
 
         data = self.get_3d_pnts(processing_pnt)
-        self.object_ctrl.add_object_piece(object_name='virus - piece', object_data=data)
+        self.object_ctrl.add_object(object_type='virus - piece', object_data=data)
         self.working_atlas_virus = []
-        # self.atlas_view.working_atlas.probe_pnts.setPointsVisible(False)
-        # self.atlas_view.working_atlas.probe_pnts.clear()
 
     def make_contour_piece(self):
-        if self.a2h_transferred:
+        if self.h2a_transferred:
+            if not self.working_atlas_contour:
+                return
+            processing_pnt = np.asarray(self.working_atlas_contour)
+        else:
             if self.working_img_contour_data is None:
                 return
             inds = np.where(self.working_img_contour_data != 0)
             processing_pnt = np.vstack([inds[0], inds[1]]).T
-        else:
-            if not self.working_atlas_contour:
-                return
-            processing_pnt = self.working_atlas_contour.copy()
 
         data = self.get_3d_pnts(processing_pnt)
-        self.object_ctrl.add_object_piece(object_name='contour - piece', object_data=data)
+        self.object_ctrl.add_object(object_type='contour - piece', object_data=data)
         self.working_atlas_contour = []
-
-    def make_cell_piece(self):
-        if self.a2h_transferred:
-            data_tobe_registered = self.working_img_cell_data
-        else:
-            data_tobe_registered = self.working_atlas_cell
-        if not data_tobe_registered:
-            return
-        processing_data = np.asarray(data_tobe_registered)
-        data = self.get_3d_pnts(processing_data)
-        self.object_ctrl.add_object_piece(object_name='cell - piece', object_data=data)
-        self.working_atlas_cell = []
 
     def make_drawing_piece(self):
         if self.a2h_transferred:
@@ -2814,8 +2945,29 @@ class HERBS(QMainWindow, FORM_Main):
             return
         processing_data = np.asarray(data_tobe_registered)
         data = self.get_3d_pnts(processing_data)
-        self.object_ctrl.add_object_piece(object_name='drawing - piece', object_data=data)
+        self.object_ctrl.add_object(object_type='drawing - piece', object_data=data)
         self.working_atlas_drawing = []
+
+    def make_cell_piece(self):
+        if self.a2h_transferred:
+            data_tobe_registered = self.working_img_cell_data
+        else:
+            data_tobe_registered = self.working_atlas_cell
+        if not data_tobe_registered:
+            return
+        processing_data = np.asarray(data_tobe_registered)
+        data = self.get_3d_pnts(processing_data)
+        print(data)
+        for i in range(5):
+            if i == 0:
+                object_type = 'cell - piece'
+            else:
+                object_type = 'cell {} - piece'.format(i)
+            if self.cell_count[i] != 0:
+                piece_data = data[np.where(np.ravel(self.cell_layer_index) == i)[0], :]
+                print(piece_data)
+                self.object_ctrl.add_object(object_type=object_type, object_data=piece_data)
+        self.working_atlas_cell = []
 
     def make_object_pieces(self):
         self.make_probe_piece()
@@ -2824,37 +2976,35 @@ class HERBS(QMainWindow, FORM_Main):
         self.make_drawing_piece()
         self.make_contour_piece()
 
+    # probe related functions
     def merge_probes(self):
-        # check none type, should not run when there is none type
-        data = self.object_ctrl.merge_probe_pieces()
+        if self.object_ctrl.probe_piece_count == 0:
+            return
+        data = self.object_ctrl.merge_object_pieces('probe')
         print(data)
         label_data = np.transpose(self.atlas_view.atlas_label, (1, 2, 0))[:, :, ::-1]
 
         for i in range(len(data)):
-            self.object_ctrl.add_merged_object('merged probe', object_data=[])
+            self.object_ctrl.add_object('merged probe', object_data=[])
             info_dict = calculate_probe_info(data[i], label_data, self.atlas_view.label_info, self.atlas_view.vxsize_um,
                                              self.tip_length, self.channel_size, self.atlas_view.bregma3d)
 
-            info_dict['probe_color'] = self.object_ctrl.obj_list[-1].color.name()
+            info_dict['vis_color'] = self.object_ctrl.obj_list[-1].color
             self.registered_prob_list.append(info_dict)
+            self.object_ctrl.obj_list[-1].eye_clicked.connect(self.obj_vis_changed)
             self.object_ctrl.obj_list[-1].sig_clicked.connect(self.probe_info_on_click)
             self.object_ctrl.obj_list[-1].sig_object_color_changed.connect(self.obj_color_changed)
 
             self.add_3d_probe_lines(info_dict)
 
-    #
     def add_3d_probe_lines(self, data_dict):
-        sp = data_dict['new_sp']
-        ep = data_dict['new_ep']
-        print(sp, ep)
-        pos = np.stack([sp, ep], axis=0)
-        print(pos)
-        probe_line = gl.GLLinePlotItem(pos=pos, color=data_dict['probe_color'], width=3, mode='line_strip')
+        pos = np.stack([data_dict['new_sp'], data_dict['new_ep']], axis=0)
+        vis_color = get_object_vis_color(data_dict['vis_color'])
+        probe_line = gl.GLLinePlotItem(pos=pos, color=vis_color, width=3, mode='line_strip')
         probe_line.setGLOptions('opaque')
         self.probe_lines_3d_list.append(probe_line)
         self.view3d.addItem(self.probe_lines_3d_list[-1])
 
-    #
     def probe_info_on_click(self, ev):
         print(ev)
         index = ev[0]
@@ -2866,14 +3016,174 @@ class HERBS(QMainWindow, FORM_Main):
         self.probe_window = ProbeInfoWindow(num + 1, da_data)
         self.probe_window.exec()
 
+    # virus related functions
+    def merge_virus(self):
+        if self.object_ctrl.virus_piece_count == 0:
+            return
+        data = self.object_ctrl.merge_object_pieces('virus')
+        print(data)
+        label_data = np.transpose(self.atlas_view.atlas_label, (1, 2, 0))[:, :, ::-1]
+
+        for i in range(len(data)):
+            self.object_ctrl.add_object('merged virus', object_data=[])
+            info_dict = calculate_virus_info(data[i], label_data, self.atlas_view.label_info, self.atlas_view.bregma3d)
+
+            info_dict['vis_color'] = self.object_ctrl.obj_list[-1].color
+            self.registered_virus_list.append(info_dict)
+            self.object_ctrl.obj_list[-1].eye_clicked.connect(self.obj_vis_changed)
+            self.object_ctrl.obj_list[-1].sig_clicked.connect(self.virus_info_on_click)
+            self.object_ctrl.obj_list[-1].sig_object_color_changed.connect(self.obj_color_changed)
+
+            virus_points = create_plot_points_in_3d(info_dict)
+            self.virus_points_3d_list.append(virus_points)
+            self.view3d.addItem(self.virus_points_3d_list[-1])
+
+    def virus_info_on_click(self, ev):
+        print(ev)
+        index = ev[0]
+        num = ev[-1]
+        print(('obj clicked', index))
+        self.object_ctrl.set_active_layer_to_current(index)
+
+        da_data = self.registered_virus_list[num]
+        self.virus_window = VirusInfoWindow(num + 1, da_data)
+        self.virus_window.exec()
+
+    # cell related functions
+    def merge_cells(self):
+        if self.object_ctrl.cell_piece_count == 0:
+            return
+        data = self.object_ctrl.merge_object_pieces('cell')
+        print(data)
+        label_data = np.transpose(self.atlas_view.atlas_label, (1, 2, 0))[:, :, ::-1]
+
+        for i in range(len(data)):
+            self.object_ctrl.add_object('merged cell', object_data=[])
+            info_dict = calculate_cells_info(data[i], label_data, self.atlas_view.label_info,
+                                             self.atlas_view.bregma3d)
+
+            info_dict['vis_color'] = self.object_ctrl.obj_list[-1].color
+            self.registered_cell_list.append(info_dict)
+            self.object_ctrl.obj_list[-1].sig_clicked.connect(self.cell_info_on_click)
+            self.object_ctrl.obj_list[-1].sig_object_color_changed.connect(self.obj_color_changed)
+            self.object_ctrl.obj_list[-1].eye_clicked.connect(self.obj_vis_changed)
+
+            cell_points = create_plot_points_in_3d(info_dict)
+            self.cell_points_3d_list.append(cell_points)
+            self.view3d.addItem(self.cell_points_3d_list[-1])
+
+    def cell_info_on_click(self, ev):
+        print(ev)
+        index = ev[0]
+        num = ev[-1]
+        print(('obj clicked', index))
+        self.object_ctrl.set_active_layer_to_current(index)
+
+        da_data = self.registered_cell_list[num]
+        self.cell_window = CellsInfoWindow(num + 1, da_data)
+        self.cell_window.exec()
+
+    # drawing related functions
+    def merge_drawings(self):
+        if self.object_ctrl.drawing_piece_count == 0:
+            return
+        data = self.object_ctrl.merge_object_pieces('drawing')
+        # label_data = np.transpose(self.atlas_view.atlas_label, (1, 2, 0))[:, :, ::-1]
+
+        for i in range(len(data)):
+            self.object_ctrl.add_object('merged drawing', object_data=[])
+            info_dict = {'object_type': 'drawing', 'data': data[i], 'vis_color': self.object_ctrl.obj_list[-1].color}
+            self.registered_drawing_list.append(info_dict)
+            self.object_ctrl.obj_list[-1].sig_object_color_changed.connect(self.obj_color_changed)
+            self.object_ctrl.obj_list[-1].eye_clicked.connect(self.obj_vis_changed)
+
+            self.add_3d_drawing_lines(info_dict)
+
+    def add_3d_drawing_lines(self, data_dict):
+        pos = np.asarray(data_dict['data'])
+        vis_color = get_object_vis_color(data_dict['vis_color'])
+        drawing_line = gl.GLLinePlotItem(pos=pos, color=vis_color, width=3, mode='line_strip')
+        drawing_line.setGLOptions('opaque')
+        self.drawing_lines_3d_list.append(drawing_line)
+        self.view3d.addItem(self.drawing_lines_3d_list[-1])
+
+    # contour related functions
+    def merge_contour(self):
+        if self.object_ctrl.contour_piece_count == 0:
+            return
+        data = self.object_ctrl.merge_object_pieces('contour')
+        print(data)
+
+        for i in range(len(data)):
+            self.object_ctrl.add_object('merged contour', object_data=[])
+
+            info_dict = {'object_type': 'contour', 'data': data[i], 'vis_color': self.object_ctrl.obj_list[-1].color}
+
+            self.registered_contour_list.append(info_dict)
+            self.object_ctrl.obj_list[-1].sig_object_color_changed.connect(self.obj_color_changed)
+            self.object_ctrl.obj_list[-1].eye_clicked.connect(self.obj_vis_changed)
+
+            contour_points = create_plot_points_in_3d(info_dict)
+            self.contour_points_3d_list.append(contour_points)
+            self.view3d.addItem(self.contour_points_3d_list[-1])
+
+    # def add_3d_contour_pnts(self, data_dict):
+    #     pos = np.asarray(data_dict['data'])
+    #     vis_color = get_object_vis_color(data_dict['vis_color'])
+    #     contour_line = gl.GLLinePlotItem(pos=pos, color=vis_color, width=3, mode='line_strip')
+    #     contour_line.setGLOptions('opaque')
+    #     self.contour_lines_3d_list.append(contour_line)
+    #     self.view3d.addItem(self.contour_lines_3d_list[-1])
+
     def obj_color_changed(self, ev):
         id = ev[0]
         color = ev[1]
-        object_name = ev[2]
+        object_type = ev[2]
         group_id = ev[3]
-        self.probe_lines_3d_list[group_id].setData(color=color)
+        if 'probe' in object_type:
+            self.probe_lines_3d_list[group_id].setData(color=color)
+            self.registered_prob_list[group_id]['vis_color'] = color.name()
+        elif 'virus' in object_type:
+            self.virus_points_3d_list[group_id].setData(color=color)
+            self.registered_virus_list[group_id]['vis_color'] = color.name()
+        elif 'contour' in object_type:
+            self.contour_points_3d_list[group_id].setData(color=color)
+            self.registered_contour_list[group_id]['vis_color'] = color.name()
+        elif 'drawing' in object_type:
+            self.drawing_lines_3d_list[group_id].setData(color=color)
+            self.registered_drawing_list[group_id]['vis_color'] = color.name()
+        else:
+            self.cell_points_3d_list[group_id].setData(color=color)
+            self.registered_cell_list[group_id]['vis_color'] = color.name()
         # self.probe_lines_2d[group_id].setPen(color)
-        self.registered_prob_list[group_id]['probe_color'] = color.name()
+
+    def obj_vis_changed(self, ev):
+        id = ev[0]
+        object_type = ev[1]
+        vis = ev[2]
+        group_id = ev[3]
+        if 'probe' in object_type:
+            self.probe_lines_3d_list[group_id].setVisible(vis)
+        elif 'virus' in object_type:
+            self.virus_points_3d_list[group_id].setVisible(vis)
+        elif 'contour' in object_type:
+            self.contour_points_3d_list[group_id].setVisible(vis)
+        elif 'drawing' in object_type:
+            self.drawing_lines_3d_list[group_id].setVisible(vis)
+        else:
+            self.cell_points_3d_list[group_id].setVisible(vis)
+        # self.probe_lines_2d[group_id].setPen(color)
+
+    def object_deleted(self):
+        current_type = self.object_ctrl.obj_type[self.object_ctrl.current_obj_index]
+        if 'merged' not in current_type:
+            return
+        group_id = self.object_ctrl.obj_group_id[self.object_ctrl.current_obj_index]
+        if 'probe' in current_type:
+            del self.registered_prob_list[group_id]
+        elif 'cell' in current_type:
+            del self.registered_cell_list[group_id]
+
 
     def obj_line_width_changed(self):
         val = self.object_ctrl.line_width_slider.value()
@@ -2885,22 +3195,31 @@ class HERBS(QMainWindow, FORM_Main):
     #                       Atlas Loader
     #
     # ------------------------------------------------------------------
-    def load_atlas(self, atlas_name):
-        atlas_folder = str(QFileDialog.getExistingDirectory(self, "Select Atlas Folder"))
+    def load_atlas(self):
+        self.statusbar.showMessage('Select folder to load Brain Atlas...')
+
+        if os.path.exists('data/atlas_path.txt'):
+            with open('data/atlas_path.txt') as f:
+                lines = f.readlines()
+            atlas_folder = lines[0]
+        if os.path.exists(atlas_folder):
+            self.statusbar.showMessage('Loading Brain Atlas...')
+        else:
+            atlas_folder = str(QFileDialog.getExistingDirectory(self, "Select Atlas Folder"))
+            with open('data/atlas_path.txt', 'w') as f:
+                f.write(atlas_folder)
 
         if atlas_folder != '':
-            self.statusbar.showMessage('Loading Atlas...')
             self.atlas_folder = atlas_folder
+
             with pg.BusyCursor():
-                da_atlas = AtlasLoader(atlas_folder, atlas_name=atlas_name,
-                                       data_file='WHS_SD_rat_T2star_v1.01.nii.gz',
-                                       segmentation_file='WHS_SD_rat_atlas_v4.nii.gz',
-                                       mask_file='WHS_SD_rat_brainmask_v1.01.nii.gz',
-                                       bregma_coordinates=(246, 653, 440),
-                                       lambda_coordinates=(244, 442, 464))
-            if da_atlas.atlas_data is None or da_atlas.segmentation_data is None:
-                self.statusbar.showMessage('Something went wrong with atlas, please check your atlas data.')
+                da_atlas = AtlasLoader(atlas_folder)
+
+            if not da_atlas.success:
+                self.statusbar.showMessage(da_atlas.msg)
                 return
+            else:
+                self.statusbar.showMessage('Atlas loaded successfully.')
 
             atlas_data = np.transpose(da_atlas.atlas_data, [2, 0, 1])[::-1, :, :]
             segmentation_data = np.transpose(da_atlas.segmentation_data, [2, 0, 1])[::-1, :, :]
@@ -2916,21 +3235,23 @@ class HERBS(QMainWindow, FORM_Main):
             self.atlas_view.working_cut_changed(self.atlas_display)
             self.reset_corners_atlas()
 
-            self.statusbar.showMessage('Atlas Loaded.')
+            self.statusbar.showMessage('Successfully set atlas data to view. Checking rendering for 3D visualisation...')
 
+            # load mesh data
+            pre_made_meshdata_path = os.path.join(atlas_folder, 'atlas_meshdata.pkl')
+            pre_made_small_meshdata_path = os.path.join(atlas_folder, 'atlas_small_meshdata.pkl')
 
-            pre_made_meshdata_path = os.path.join(atlas_folder, '{}_atlas_meshdata.pkl'.format(atlas_name))
+            if not os.path.exists(pre_made_meshdata_path) or not os.path.exists(pre_made_small_meshdata_path):
+                self.statusbar.showMessage(
+                    'Brain mesh is not found! Please pre-process the atlas.')
 
-            if os.path.exists(pre_made_meshdata_path):
+            try:
                 infile = open(pre_made_meshdata_path, 'rb')
                 self.meshdata = pickle.load(infile)
                 infile.close()
-
-            else:
-                self.statusbar.showMessage('Brain mesh is not found! Mesh is constructing in 3D view....')
-                with pg.BusyCursor():
-                    self.meshdata = render_volume(da_atlas.atlas_data, self.atlas_folder,
-                                                  atlas_name, factor=2, level=0.01)
+            except ValueError:
+                self.statusbar.showMessage('Please re-process mesh for the whole brain.')
+                return
 
             self.atlas_view.mesh.setMeshData(meshdata=self.meshdata)
             self.mesh_origin = np.ravel(da_atlas.atlas_info[3]['Bregma'])
@@ -2938,28 +3259,15 @@ class HERBS(QMainWindow, FORM_Main):
 
             self.statusbar.showMessage('Brain mesh is Loaded.')
 
-            # volume_data_3d = np.zeros((da_atlas.segmentation_data.shape + (4,)), dtype=np.ubyte)
-            # volume_data_3d[:, :, :, 0] = da_atlas.atlas_data * 255 / np.max(da_atlas.atlas_data)
-            # volume_data_3d[:, :, :, 1] = volume_data_3d[:, :, :, 0]
-            # volume_data_3d[:, :, :, 2] = volume_data_3d[:, :, :, 0]
-            # vis_inds = np.where(da_atlas.atlas_data != 0)
-            # volume_data_3d[vis_inds[0], vis_inds[1], vis_inds[2], 3] = 128
-            #
-            # v = gl.GLVolumeItem(volume_data_3d, sliceDensity=1, smooth=False, glOptions='translucent')
-            # v.translate(-self.mesh_origin[0], -self.mesh_origin[1], -self.mesh_origin[2])
-            # self.view3d.addItem(v)
+            return
 
-
-            pre_made_small_meshdata_path = os.path.join(atlas_folder, 'WHS_atlas_small_meshdata.pkl')
-            if os.path.exists(pre_made_small_meshdata_path):
+            try:
                 infile = open(pre_made_small_meshdata_path, 'rb')
                 self.small_meshdata_list = pickle.load(infile)
                 infile.close()
-            else:
-                self.statusbar.showMessage('Brain region mesh is not found! Rendering in 3D view....')
-                with pg.BusyCursor():
-                    self.small_meshdata_list = render_small_volume(da_atlas.atlas_data, da_atlas.segmentation_data,
-                                                                   self.atlas_folder, atlas_name, factor=2, level=0.01)
+            except ValueError:
+                self.statusbar.showMessage('Please re-process meshes for each brain region.')
+                return
 
             for id in np.unique(da_atlas.segmentation_data):
                 id = int(id)
@@ -2981,9 +3289,23 @@ class HERBS(QMainWindow, FORM_Main):
 
             self.sidebar.setCurrentIndex(0)
 
-            self.statusbar.showMessage('Brain region mesh is Loaded.')
+            self.statusbar.showMessage('Brain region mesh is Loaded.  Atlas loaded successfully.')
+        else:
+            if self.atlas_view.atlas_data is not None:
+                self.statusbar.showMessage('No new atlas is selected.')
+            else:
+                self.statusbar.showMessage('No atlas is selected.')
 
-        self.statusbar.showMessage('Atlas loaded successfully.')
+            # volume_data_3d = np.zeros((da_atlas.segmentation_data.shape + (4,)), dtype=np.ubyte)
+            # volume_data_3d[:, :, :, 0] = da_atlas.atlas_data * 255 / np.max(da_atlas.atlas_data)
+            # volume_data_3d[:, :, :, 1] = volume_data_3d[:, :, :, 0]
+            # volume_data_3d[:, :, :, 2] = volume_data_3d[:, :, :, 0]
+            # vis_inds = np.where(da_atlas.atlas_data != 0)
+            # volume_data_3d[vis_inds[0], vis_inds[1], vis_inds[2], 3] = 128
+            #
+            # v = gl.GLVolumeItem(volume_data_3d, sliceDensity=1, smooth=False, glOptions='translucent')
+            # v.translate(-self.mesh_origin[0], -self.mesh_origin[1], -self.mesh_origin[2])
+            # self.view3d.addItem(v)
 
     # ------------------------------------------------------------------
     #
@@ -3013,12 +3335,14 @@ class HERBS(QMainWindow, FORM_Main):
         dlg.setFileMode(QFileDialog.ExistingFiles)
         image_file_path = dlg.getOpenFileName(self, "Select Histological Image File", str(Path.home()), filter)
 
-        self.image_file_type = image_file_path[0][-4:].lower()
+        image_file_type = image_file_path[0][-4:].lower()
         if image_file_path[0] != '':
+            self.current_img_path = image_file_path[0]
+            self.current_img_name = os.path.basename(os.path.realpath(image_file_path[0]))
             with pg.BusyCursor():
                 with warnings.catch_warnings():
                     warnings.filterwarnings("error")
-                    if self.image_file_type == '.czi':
+                    if image_file_type == '.czi':
                         image_file = CZIReader(image_file_path[0])
                         scale = self.image_view.scale_slider.value()
                         scale = 0.01 if scale == 0 else scale * 0.01
@@ -3026,8 +3350,17 @@ class HERBS(QMainWindow, FORM_Main):
                             image_file.read_data(scale, scene_index=None)
                         else:
                             image_file.read_data(scale, scene_index=0)
+                        if image_file.is_rgb:
+                            self.tool_box.cell_count_label_list[-1].setVisible(True)
+                            self.tool_box.cell_count_val_list[-1].setVisible(True)
+                        else:
+                            for i in range(image_file.n_channels):
+                                self.tool_box.cell_count_label_list[i+1].setVisible(True)
+                                self.tool_box.cell_count_val_list[i+1].setVisible(True)
                     else:
                         image_file = ImageReader(image_file_path[0])
+                        self.tool_box.cell_count_label_list[0].setVisible(True)
+                        self.tool_box.cell_count_val_list[0].setVisible(True)
                 self.image_view.set_data(image_file)
                 self.reset_corners_hist()
             self.layerpanel.setEnabled(True)
@@ -3038,6 +3371,9 @@ class HERBS(QMainWindow, FORM_Main):
                 self.show_only_image_window()
             else:
                 self.show_2_windows()
+
+            self.drawing_img = np.zeros(self.image_view.img_size, 'uint8')
+            self.cell_img = np.zeros(self.image_view.img_size, 'uint8')
 
             self.image_view.img_stacks.mask_img.setLookupTable(self.tool_box.base_lut)
             self.image_view.img_stacks.virus_img.setLookupTable(self.tool_box.base_lut)
@@ -3051,11 +3387,12 @@ class HERBS(QMainWindow, FORM_Main):
 
     # load multiple images
     def load_images(self):
+        self.statusbar.showMessage('Selecte folder to load multiple images, files can not be .czi format ...')
         images_folder = str(QFileDialog.getExistingDirectory(self, "Select Images Folder"))
         if images_folder != '':
             # image_files_list = os.listdir(images_folder)
             # image_files_list = natsorted(image_files_list)
-            self.statusbar.showMessage('Image files loading ...')
+
             with pg.BusyCursor():
                 with warnings.catch_warnings():
                     warnings.filterwarnings("error")
@@ -3066,6 +3403,113 @@ class HERBS(QMainWindow, FORM_Main):
             self.statusbar.showMessage('Image files loaded.')
         else:
             return
+
+    # ------------------------------------------------------------------
+    #
+    #                       Saving Files
+    #
+    # ------------------------------------------------------------------
+    def save_image(self, image_type):
+        if image_type == 'processed':
+            da_img = self.processing_img
+        elif image_type == 'overlay':
+            da_img = self.overlay_img
+        if self.process_img is None:
+            return
+        self.statusbar.showMessage('Save Processed Image ...')
+        path = QFileDialog.getSaveFileName(self, "Save Processed Image", self.current_img_path, "JPEG (*.jpg)")
+        print(path[0])
+        print(path)
+        if path[0] != '':
+            cv2.imwrite(path, self.process_img)
+
+
+
+
+    def save_triangulation_points(self):
+        print('save triang pnts')
+
+    def save_probe_object(self):
+        print('save_probe')
+
+    def save_virus_object(self):
+        print('1')
+
+    def save_cell_object(self):
+        print('1')
+
+    def save_drawing_object(self):
+        print('1')
+
+    def save_contour_object(self):
+        print('1')
+
+    def save_objects(self):
+        print('1')
+
+    def save_current_object(self):
+        if self.object_ctrl.current_obj_index is None:
+            self.statusbar.showMessage('No object is created ...')
+            return
+        file_name = QtGui.QFileDialog.getSaveFileName(self, 'Save Current Object File')
+        if file_name != '':
+            current_obj_type = self.object_ctrl.obj_type[self.object_ctrl.current_obj_index]
+            if 'merged' not in current_obj_type:
+                self.statusbar.showMessage('Only merged object can be saved ...')
+                return
+            group_id = self.object_ctrl.obj_group_id[self.object_ctrl.current_obj_index]
+            if 'probe' in current_obj_type:
+                da_data = self.registered_prob_list[group_id]
+            elif 'viurs' in current_obj_type:
+                da_data = self.registered_virus_list[group_id]
+            elif 'cell' in current_obj_type:
+                da_data = self.registered_cell_list[group_id]
+            elif 'contour' in current_obj_type:
+                da_data = self.registered_contour_list[group_id]
+            else:
+                da_data = self.registered_drawing_list[group_id]
+            with open('{}.pkl'.format(file_name), 'wb') as handle:
+                pickle.dump(da_data, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            self.statusbar.showMessage('Current merged object is saved successfully.')
+
+    def save_project(self):
+        print('1')
+
+    # ------------------------------------------------------------------
+    #
+    #                       Load Files
+    #
+    # ------------------------------------------------------------------
+    def load_project(self):
+        print('1')
+
+    # load triangulation points
+    def load_triangulation_points(self):
+        filter = "Pickle File (*.pkl)"
+        dlg = QFileDialog()
+        dlg.setFileMode(QFileDialog.ExistingFiles)
+        pnt_path = dlg.getOpenFileName(self, "Load Triangulation Points", str(Path.home()), filter)
+
+        if pnt_path[0] != '':
+            infile = open(pnt_path[0], 'rb')
+            pnt_dict = pickle.load(infile)
+            infile.close()
+
+    # load object
+    def load_object(self):
+        filter = "Pickle File (*.pkl)"
+        dlg = QFileDialog()
+        dlg.setFileMode(QFileDialog.ExistingFiles)
+        object_file_path = dlg.getOpenFileName(self, "Load Object File", str(Path.home()), filter)
+
+        if object_file_path[0] != '':
+            infile = open(object_file_path[0], 'rb')
+            object_dict = pickle.load(infile)
+            infile.close()
+
+
+
+
 
 
 def main():

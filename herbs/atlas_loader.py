@@ -10,7 +10,11 @@ import nibabel as nib
 import numpy as np
 import pandas as pd
 import cv2
-from .uuuuuu import make_contour_img
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtWidgets import *
+
+from .uuuuuu import make_contour_img, render_volume, render_small_volume
 
 
 def _make_label(label_file_path, excel_file_path):
@@ -46,7 +50,6 @@ def _make_label(label_file_path, excel_file_path):
     file = open(label_file_path, 'rb')
     lines = file.readlines()
     file.close()
-
 
     for i in range(len(lines)):
         da_line = lines[i].decode()
@@ -108,152 +111,188 @@ def _make_label(label_file_path, excel_file_path):
     label['parent'] = parent
     label['level_indicator'] = np.ravel(level)
 
-    outfile = open('WHS_atlas_labels.pkl', 'wb')
+    outfile = open('atlas_labels.pkl', 'wb')
     pickle.dump(label, outfile)
     outfile.close()
 
 
-# atlas_folder = '/Users/jingyig/Work/Kavli/WaxholmRat/'
+def process_atlas_raw_data(atlas_folder, data_file=None, segmentation_file=None, mask_file=None,
+                           bregma_coordinates=None, lambda_coordinates=None, return_file=False):
+
+    atlas_path = os.path.join(atlas_folder, data_file)
+    segmentation_path = os.path.join(atlas_folder, segmentation_file)
+    mask_path = os.path.join(atlas_folder, mask_file)
+
+    if os.path.exists(mask_path):
+        mask = nib.load(mask_path)
+        mask_data = mask.get_fdata()[:, :, :, 0]
+    else:
+        mask_data = None
+
+    if not os.path.exists(atlas_path) or not os.path.exists(segmentation_path):
+        return
+
+    # pre-process atlas
+    atlas = nib.load(atlas_path)
+    atlas_header = atlas.header
+    pixdim = atlas_header.get('pixdim')[1]
+    atlas_data = atlas.get_fdata()
+    new_atlas_data = atlas_data.copy()
+    if mask_data is not None:
+        # make atlas with mask
+        new_atlas_data = new_atlas_data - np.min(new_atlas_data)
+        for i in range(len(mask_data)):
+            new_atlas_data[i][mask_data[i] == 0] = 0
+        new_atlas_data = new_atlas_data / np.max(new_atlas_data)
+
+    # voxel size in um
+    vxsize = 1e3 * pixdim
+
+    atlas_info = [
+        {'name': 'anterior', 'values': np.arange(atlas_data.shape[0]) * vxsize, 'units': 'um'},
+        {'name': 'dorsal', 'values': np.arange(atlas_data.shape[1]) * vxsize, 'units': 'um'},
+        {'name': 'right', 'values': np.arange(atlas_data.shape[2]) * vxsize, 'units': 'um'},
+        {'vxsize': vxsize, 'pixdim': pixdim,
+         'Bregma': [bregma_coordinates[0], bregma_coordinates[1], bregma_coordinates[2]],
+         'Lambda': [lambda_coordinates[0], lambda_coordinates[1], lambda_coordinates[2]]}
+    ]
+
+    atlas = {'data': new_atlas_data, 'info': atlas_info}
+
+    atlas_data = atlas['data']
+    atlas_info = atlas['info']
+
+    outfile = open(os.path.join(atlas_folder, 'atlas_pre_made.pkl'), 'wb')
+    pickle.dump(atlas, outfile)
+    outfile.close()
+
+    # pre-process segmentation
+    segmentation = nib.load(segmentation_path)
+    segmentation_data = segmentation.get_fdata()
+    if mask_data is not None:
+        # make segmentation with mask
+        for i in range(len(mask_data)):
+            segmentation_data[i][mask_data[i] == 0] = 0
+        segmentation_data = segmentation_data.astype('int')
+
+    segment = {'data': segmentation_data}
+
+    outfile = open(os.path.join(atlas_folder, 'segment_pre_made.pkl'), 'wb')
+    pickle.dump(segment, outfile)
+    outfile.close()
+
+    sagital_contour_img = np.zeros(atlas_data.shape, 'i')
+    coronal_contour_img = np.zeros(atlas_data.shape, 'i')
+    horizontal_contour_img = np.zeros(atlas_data.shape, 'i')
+
+    # pre-process boundary
+    for i in range(len(segmentation_data)):
+        da_slice = segmentation_data[i, :, :].copy()
+        contour_img = make_contour_img(da_slice)
+        sagital_contour_img[i, :, :] = contour_img
+
+    for i in range(segmentation_data.shape[1]):
+        da_slice = segmentation_data[:, i, :].copy()
+        contour_img = make_contour_img(da_slice)
+        coronal_contour_img[:, i, :] = contour_img
+
+    for i in range(segmentation_data.shape[2]):
+        da_slice = segmentation_data[:, :, i].copy()
+        contour_img = make_contour_img(da_slice)
+        horizontal_contour_img[:, :, i] = contour_img
+
+    boundary = {'s_contour': sagital_contour_img,
+                'c_contour': coronal_contour_img,
+                'h_contour': horizontal_contour_img}
+
+    bnd = {'data': boundary}
+
+    outfile_ct = open(os.path.join(atlas_folder, 'contour_pre_made.pkl'), 'wb')
+    pickle.dump(bnd, outfile_ct)
+    outfile_ct.close()
+
+    if return_file:
+        return atlas_data, atlas_info, segmentation_data, boundary
+    else:
+        return
+
+
+# AtlasMeshProcessor(atlas_folder, atlas_data, segmentation_data, mesh_data_factor, level)
+
+
+
+
+class AtlasMeshProcessor(object):
+    def __init__(self, atlas_folder, atlas_data, segmentation_data, factor, level):
+        meshdata = render_volume(atlas_data, atlas_folder, factor=factor, level=level)
+
+        small_meshdata_list = render_small_volume(atlas_data, segmentation_data, atlas_folder,
+                                                  factor=factor, level=level)
+
+
 class AtlasLoader(object):
-    def __init__(self, atlas_folder, atlas_name,
-                 data_file=None, segmentation_file=None, mask_file=None,
-                 bregma_coordinates=None, lambda_coordinates=None):
-        pre_made_atlas_path = os.path.join(atlas_folder, '{}_atlas_pre_made.pkl'.format(atlas_name))
-        pre_made_segment_path = os.path.join(atlas_folder, '{}_segment_pre_made.pkl'.format(atlas_name))
-        pre_made_boundary_path = os.path.join(atlas_folder, '{}_contour_pre_made.pkl'.format(atlas_name))
+    def __init__(self, atlas_folder):
+        pre_made_atlas_path = os.path.join(atlas_folder, 'atlas_pre_made.pkl')
+        pre_made_segment_path = os.path.join(atlas_folder, 'segment_pre_made.pkl')
+        pre_made_boundary_path = os.path.join(atlas_folder, 'contour_pre_made.pkl')
 
-        pre_made_label_info_path = 'data/{}_atlas_labels.pkl'.format(atlas_name)
+        pre_made_label_info_path = os.path.join(atlas_folder, 'atlas_labels.pkl')
 
-        if os.path.exists(pre_made_label_info_path):
-            infile = open(pre_made_label_info_path, 'rb')
-            self.label_info = pickle.load(infile)
-            infile.close()
+        chk1 = os.path.exists(pre_made_label_info_path)
+        chk2 = os.path.exists(pre_made_atlas_path)
+        chk3 = os.path.exists(pre_made_segment_path)
+        chk4 = os.path.exists(pre_made_boundary_path)
+
+        if not np.all([chk1, chk2, chk3, chk4]):
+            self.msg = 'Please pre-process the raw data of your desire atlas.'
+            self.success = False
         else:
-            self.label_info = None
+            # laod label info
+            try:
+                infile = open(pre_made_label_info_path, 'rb')
+                self.label_info = pickle.load(infile)
+                infile.close()
+                self.success = True
+            except ValueError:
+                self.msg = 'Please give the label information file. If you do not have one, ' \
+                           'the maintainers are more than happy to help you to process one.'
+                self.success = False
+            # load atlas
+            try:
+                infile_atlas = open(pre_made_atlas_path, 'rb')
+                atlas = pickle.load(infile_atlas)
+                infile_atlas.close()
 
-        if os.path.exists(pre_made_atlas_path) and os.path.exists(pre_made_segment_path):
-            infile_atlas = open(pre_made_atlas_path, 'rb')
-            atlas = pickle.load(infile_atlas)
-            infile_atlas.close()
-
-            self.atlas_data = atlas['data']
-            self.atlas_info = atlas['info']
-
-            infile_seg = open(pre_made_segment_path, 'rb')
-            segment = pickle.load(infile_seg)
-            infile_seg.close()
-
-            self.segmentation_data = segment['data']
-        else:
-            if mask_file is None:
-                mask_data = None
-            else:
-                mask_path = os.path.join(atlas_folder, mask_file)
-                if os.path.exists(mask_path):
-                    mask = nib.load(mask_path)
-                    mask_data = mask.get_fdata()[:, :, :, 0]
-                else:
-                    mask_data = None
-
-            if data_file is None:
-                new_atlas_data = None
-                atlas_info = None
-            else:
-                atlas_path = os.path.join(atlas_folder, data_file)
-                if os.path.exists(atlas_path):
-                    atlas = nib.load(atlas_path)
-                    atlas_header = atlas.header
-                    pixdim = atlas_header.get('pixdim')[1]
-                    atlas_data = atlas.get_fdata()
-                    if mask_data is not None:
-                        # make atlas with mask
-                        new_atlas_data = atlas_data.copy()
-                        new_atlas_data = new_atlas_data - np.min(new_atlas_data)
-                        for i in range(len(mask_data)):
-                            new_atlas_data[i][mask_data[i] == 0] = 0
-                        new_atlas_data = new_atlas_data / np.max(new_atlas_data)
-
-                    # voxel size in um
-                    vxsize = 1e3 * pixdim
-
-                    atlas_info = [
-                        {'name': 'anterior', 'values': np.arange(atlas_data.shape[0]) * vxsize, 'units': 'um'},
-                        {'name': 'dorsal', 'values': np.arange(atlas_data.shape[1]) * vxsize, 'units': 'um'},
-                        {'name': 'right', 'values': np.arange(atlas_data.shape[2]) * vxsize, 'units': 'um'},
-                        {'vxsize': vxsize, 'pixdim': pixdim,
-                         'Bregma': [bregma_coordinates[0], bregma_coordinates[1], bregma_coordinates[2]],
-                         'Lambda': [lambda_coordinates[0], lambda_coordinates[1], lambda_coordinates[2]]}
-                    ]
-
-                    atlas = {'data': new_atlas_data, 'info': atlas_info}
-
-                    outfile = open(os.path.join(atlas_folder, '{}_atlas_pre_made.pkl'.format(atlas_name)), 'wb')
-                    pickle.dump(atlas, outfile)
-                    outfile.close()
-                else:
-                    new_atlas_data = None
-                    atlas_info = None
-
-                self.atlas_data = new_atlas_data
-                self.atlas_info = atlas_info
-
-            if segmentation_file is None:
-                self.segmentation_data = None
-            else:
+                self.atlas_data = atlas['data']
+                self.atlas_info = atlas['info']
                 # load segmentation
-                segmentation_path = os.path.join(atlas_folder, segmentation_file)
-                segmentation = nib.load(segmentation_path)
-                segmentation_data = segmentation.get_fdata()
-                if mask_data is not None:
-                    # make segmentation with mask
-                    for i in range(len(mask_data)):
-                        segmentation_data[i][mask_data[i] == 0] = 0
-                    self.segmentation_data = segmentation_data.astype('int')
+                infile_seg = open(pre_made_segment_path, 'rb')
+                segment = pickle.load(infile_seg)
+                infile_seg.close()
 
-                segment = {'data': segmentation_data}
+                self.segmentation_data = segment['data']
+                self.success = True
+            except ValueError:
+                self.msg = 'Please re-process atlas and label segmentation file.'
+                self.success = False
 
-                outfile = open(os.path.join(atlas_folder, '{}_segment_pre_made.pkl'.format(atlas_name)), 'wb')
-                pickle.dump(segment, outfile)
-                outfile.close()
+            # load boundary
+            try:
+                infile = open(pre_made_boundary_path, 'rb')
+                bnd = pickle.load(infile)
+                infile.close()
 
-        # load boundary
-        if os.path.exists(pre_made_boundary_path):
-            infile = open(pre_made_boundary_path, 'rb')
-            bnd = pickle.load(infile)
-            infile.close()
+                self.boundary = bnd['data']
+                self.success = True
+            except ValueError:
+                self.msg = 'Please re-process boundary file.'
+                self.success = False
 
-            self.boundary = bnd['data']
-        else:
-            if self.segmentation_data is None:
-                self.boundary = None
-            else:
-                sagital_contour_img = np.zeros(self.atlas_data.shape, 'i')
-                coronal_contour_img = np.zeros(self.atlas_data.shape, 'i')
-                horizontal_contour_img = np.zeros(self.atlas_data.shape, 'i')
 
-                for i in range(len(self.segmentation_data)):
-                    da_slice = self.segmentation_data[i, :, :].copy()
-                    contour_img = make_contour_img(da_slice)
-                    sagital_contour_img[i, :, :] = contour_img
 
-                for i in range(self.segmentation_data.shape[1]):
-                    da_slice = self.segmentation_data[:, i, :].copy()
-                    contour_img = make_contour_img(da_slice)
-                    coronal_contour_img[:, i, :] = contour_img
 
-                for i in range(self.segmentation_data.shape[2]):
-                    da_slice = self.segmentation_data[:, :, i].copy()
-                    contour_img = make_contour_img(da_slice)
-                    horizontal_contour_img[:, :, i] = contour_img
 
-                self.boundary = {'s_contour': sagital_contour_img,
-                                 'c_contour': coronal_contour_img,
-                                 'h_contour': horizontal_contour_img}
-
-                bnd = {'data': self.boundary}
-
-                outfile_ct = open(os.path.join(atlas_folder, '{}_contour_pre_made.pkl'.format(atlas_name)), 'wb')
-                pickle.dump(bnd, outfile_ct)
-                outfile_ct.close()
-
+class AtlasMeshLoader(object):
+    def __init__(self, atlas_folder):
+        pre_made_meshdata_path = os.path.join(atlas_folder, 'atlas_meshdata.pkl')
 

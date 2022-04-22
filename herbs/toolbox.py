@@ -160,11 +160,8 @@ class ToolBox(QObject):
         self.magic_tol_val.setText('0')
 
         self.magic_wand_kernel = QComboBox()
-        self.magic_wand_kernel.setFixedSize(QSize(100, 22))
+        self.magic_wand_kernel.setFixedSize(QSize(150, 22))
         self.magic_wand_kernel.addItems(["Kernel", "Rectangular", "Elliptical", "Cross-shaped"])
-        combo_list = QListView(self.magic_wand_kernel)
-        combo_list.setStyleSheet(styles.text_combo_list_style)
-        self.magic_wand_kernel.setView(combo_list)
 
         magic_wand_ksize_label = QLabel('Size:')
         self.magic_wand_ksize = QLineEdit()
@@ -238,15 +235,17 @@ class ToolBox(QObject):
         pencil_layout.setSpacing(10)
         pencil_layout.addWidget(pencil_color_label)
         pencil_layout.addWidget(self.pencil_color_btn)
+        pencil_layout.addSpacing(15)
         pencil_layout.addWidget(pencil_size_label)
         pencil_layout.addWidget(self.pencil_size_slider)
         pencil_layout.addWidget(self.pencil_size_valt)
         pencil_layout.addStretch(1)
 
         # for eraser_btn, eraser wrap
-        # eraser_color_label = QLabel('Color:')
-        # self.eraser_color_btn = pg.ColorButton(padding=0)
-        # self.eraser_color_btn.setFixedSize(60, 15)
+        eraser_color_label = QLabel('Color:')
+        self.eraser_color_btn = pg.ColorButton(padding=0)
+        self.eraser_color_btn.setColor('red')
+        self.eraser_color_btn.setFixedSize(60, 15)
         eraser_size_label = QLabel('Size:')
         self.eraser_size_slider = QSlider(Qt.Horizontal)
         self.eraser_size_slider.setFixedWidth(100)
@@ -266,9 +265,9 @@ class ToolBox(QObject):
         eraser_layout = QHBoxLayout(self.eraser_wrap)
         eraser_layout.setContentsMargins(0, 0, 0, 0)
         eraser_layout.setSpacing(10)
-        # eraser_layout.addWidget(eraser_color_label)
-        # eraser_layout.addWidget(self.eraser_color_btn)
-        # eraser_layout.setSpacing(10)
+        eraser_layout.addWidget(eraser_color_label)
+        eraser_layout.addWidget(self.eraser_color_btn)
+        eraser_layout.addSpacing(15)
         eraser_layout.addWidget(eraser_size_label)
         eraser_layout.addWidget(self.eraser_size_slider)
         eraser_layout.addWidget(self.eraser_size_valt)
@@ -306,6 +305,7 @@ class ToolBox(QObject):
         # for probe_btn, probe wrap
         probe_color_label = QLabel('Color:')
         self.probe_color_btn = pg.ColorButton(padding=0)
+        self.probe_color_btn.setColor(QColor(0, 0, 255))
         self.probe_color_btn.setFixedSize(60, 15)
         probe_type_label = QLabel('Type:')
         self.probe_type1 = QRadioButton("Neuropixel 1.0")
@@ -377,8 +377,22 @@ class ToolBox(QObject):
         triang_layout.addStretch(1)
 
         # cell count wrap
-        cell_count_label = QLabel('Count: ')
-        self.cell_count_val = QLabel('0')
+        cell_color_label = QLabel('Color:')
+        self.cell_color_btn = pg.ColorButton(padding=0)
+        self.cell_color_btn.setColor(QColor(0, 255, 0))
+        self.cell_color_btn.setFixedSize(60, 15)
+
+        self.cell_count_label_list = [QLabel('Count: ')]
+        self.cell_count_val_list = [QLabel('0')]
+
+        for i in range(4):
+            self.cell_count_label_list.append(QLabel('Count {}: '.format(i+1)))
+            self.cell_count_val_list.append(QLabel('0'))
+
+        for i in range(5):
+            self.cell_count_label_list[i].setVisible(False)
+            self.cell_count_val_list[i].setVisible(False)
+
         self.cell_selector_btn = QPushButton()
         self.cell_selector_btn.setToolTip('select cells manually')
         self.cell_selector_btn.setCheckable(True)
@@ -404,15 +418,22 @@ class ToolBox(QObject):
         self.cell_count_wrap = QFrame()
         cell_layout = QHBoxLayout(self.cell_count_wrap)
         cell_layout.setContentsMargins(0, 0, 0, 0)
-        cell_layout.setSpacing(10)
+        cell_layout.setSpacing(5)
+        cell_layout.addWidget(cell_color_label)
+        cell_layout.addWidget(self.cell_color_btn)
+        cell_layout.addSpacing(15)
         cell_layout.addWidget(self.cell_selector_btn)
-        cell_layout.setSpacing(10)
+        cell_layout.addSpacing(10)
         cell_layout.addWidget(self.cell_aim_btn)
-        cell_layout.setSpacing(10)
+        cell_layout.addSpacing(10)
         cell_layout.addWidget(self.cell_radar_btn)
-        cell_layout.setSpacing(10)
-        cell_layout.addWidget(cell_count_label)
-        cell_layout.addWidget(self.cell_count_val)
+        cell_layout.addSpacing(10)
+        cell_layout.addWidget(self.cell_count_label_list[0])
+        cell_layout.addWidget(self.cell_count_val_list[0])
+        for i in range(1, 5):
+            cell_layout.addWidget(self.cell_count_label_list[i])
+            cell_layout.addWidget(self.cell_count_val_list[i])
+            cell_layout.addSpacing(10)
         cell_layout.addStretch(1)
 
         # separator
@@ -432,12 +453,10 @@ class ToolBox(QObject):
         # probe style
         # self.probe_style =
 
+
         # ---------------------------- define all cursor shape
         # self.eraser_cursor = QCursor(QPixmap('icons/eraser_cursor.png'), hotX=7, hotY=27)
 
-
-    def probe_style_changed(self):
-        print('2')
 
     def change_pencil_slider(self):
         val = self.pencil_size_slider.value()
@@ -454,6 +473,8 @@ class ToolBox(QObject):
 
     def moving_dist_changed(self):
         self.moving_px = self.moving_valt.value()
+
+
 
 
 

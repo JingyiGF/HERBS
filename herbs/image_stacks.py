@@ -75,17 +75,18 @@ class ImageStacks(pg.GraphicsLayoutWidget):
         self.vb.setAcceptHoverEvents(True)
         # self.vb.enableAutoRange(enable=False)
 
-        self.img1 = ClickableImage()
-        self.img1.mouseClicked.connect(self.mouse_clicked)
-        self.img1.mouseHovered.connect(self.mouse_hovered)
+        self.base_layer = ClickableImage()
+        self.base_layer.mouseClicked.connect(self.mouse_clicked)
+        self.base_layer.mouseHovered.connect(self.mouse_hovered)
+
+        self.img1 = pg.ImageItem()
+        self.img1.setCompositionMode(QtGui.QPainter.CompositionMode.CompositionMode_Plus)
         self.img2 = pg.ImageItem()
         self.img2.setCompositionMode(QtGui.QPainter.CompositionMode.CompositionMode_Plus)
         self.img3 = pg.ImageItem()
         self.img3.setCompositionMode(QtGui.QPainter.CompositionMode.CompositionMode_Plus)
         self.img4 = pg.ImageItem()
         self.img4.setCompositionMode(QtGui.QPainter.CompositionMode.CompositionMode_Plus)
-
-        self.processing_image = pg.ImageItem()
 
         self.circle_follow = pg.PlotDataItem(pen=pg.mkPen('r', width=2, style=Qt.DashLine))
         self.lasso_path = pg.PlotDataItem(pen=pg.mkPen(color='r', width=3, style=Qt.DashLine),
@@ -103,64 +104,56 @@ class ImageStacks(pg.GraphicsLayoutWidget):
         self.tri_pnts.setVisible(False)
         self.tri_lines_list = []
 
-        self.probe_pnts = pg.ScatterPlotItem(pen=pg.mkPen(color=(128, 128, 128)), symbol='s', symbolSize=2, brush=None)
-        self.manual_cell_pnts = pg.ScatterPlotItem(pen=(55, 55, 55), symbolBrush=(55, 55, 55), symbolPen=(55, 55, 55),
-                                                   symbol='s', symbolSize=1)
-        self.auto_cell_pnts = pg.ScatterPlotItem(pen=(55, 55, 55), symbolBrush=(55, 55, 55), symbolPen=(55, 55, 55),
-                                                   symbol='s', symbolSize=1)
-        self.blob_pnts = pg.ScatterPlotItem(pen=(55, 55, 55), symbolBrush=(55, 55, 55), symbolPen=(55, 55, 55),
-                                            symbol='s', symbolSize=1)
+        self.probe_pnts = pg.ScatterPlotItem(pen=(0, 0, 255), brush=(0, 0, 255), symbol='s', size=5, hoverSize=8)
+        self.cell_pnts = pg.ScatterPlotItem(pen=(0, 255, 0), brush=(0, 255, 0), size=5, hoverSize=8)
+        self.blob_pnts = pg.ScatterPlotItem(pen=(55, 55, 55), brush=(55, 55, 55), symbol='s', size=5)
         self.drawing_pnts = pg.PlotDataItem(pen=pg.mkPen(color=(128, 128, 128), width=3), brush=None)
-
-        self.drawing_img = pg.ImageItem()
-        self.drawing_img.setLevels(levels=(0, 1))
 
         self.contour_img = pg.ImageItem()
         self.contour_img.setLevels(levels=(0, 1))
-        self.contour_pnts = pg.ScatterPlotItem()
+        # self.contour_pnts = pg.ScatterPlotItem()
         self.virus_img = pg.ImageItem()
         self.virus_img.setLevels(levels=(0, 1))
-        self.virus_pnts = pg.ScatterPlotItem(pen=(133, 255, 117), symbolBrush=(133, 255, 117), symbolPen=(55, 55, 55),
-                                             symbol='s', symbolSize=1)
+        # self.virus_pnts = pg.ScatterPlotItem(pen=(133, 255, 117), symbolBrush=(133, 255, 117), symbolPen=(55, 55, 55),
+        #                                      symbol='s', symbolSize=1)
 
         self.image_list = [self.img1, self.img2, self.img3, self.img4]
 
+        self.vb.addItem(self.base_layer)
         for i in range(4):
             self.vb.addItem(self.image_list[i])
             self.image_list[i].setVisible(False)
-
-        self.vb.addItem(self.tri_pnts)
-        self.vb.addItem(self.circle_follow)
-        self.vb.addItem(self.lasso_path)
-
-        self.vb.addItem(self.processing_image)
 
         self.vb.addItem(self.overlay_img)
         self.vb.addItem(self.overlay_contour)
 
         self.vb.addItem(self.mask_img)
 
+        self.vb.addItem(self.tri_pnts)
+        self.vb.addItem(self.circle_follow)
+        self.vb.addItem(self.lasso_path)
+
         self.vb.addItem(self.virus_img)
-        self.vb.addItem(self.virus_pnts)
+        self.vb.addItem(self.contour_img)
+        # self.vb.addItem(self.virus_pnts)
 
         self.vb.addItem(self.probe_pnts)
 
-        self.vb.addItem(self.manual_cell_pnts)
-        self.vb.addItem(self.auto_cell_pnts)
+        self.vb.addItem(self.cell_pnts)
         self.vb.addItem(self.blob_pnts)
 
-        self.vb.addItem(self.drawing_img)
         self.vb.addItem(self.drawing_pnts)
 
-        self.vb.addItem(self.contour_img)
-        self.vb.addItem(self.contour_pnts)
+
+        # self.vb.addItem(self.contour_pnts)
 
     def set_data(self, data, is_rgb=False, scale=None):
         self.data = data
         if scale is not None:
             self.resetTransform()
             self.scale(*scale)
-        # for i in range(len(self.data)):
+        base_img = np.zeros(data.shape[:2], 'uint8')
+        self.base_layer.setImage(base_img)
         if is_rgb:
             print(is_rgb)
             self.image_list[0].setImage(self.data.astype('uint8'), autoLevels=False)
@@ -186,7 +179,7 @@ class ImageStacks(pg.GraphicsLayoutWidget):
                 self.image_list[i].setOpts(opacity=0)
 
     def boundingRect(self):
-        return self.image_list[0].boundingRect()
+        return self.base_layer.boundingRect()
 
 
     def mouse_hovered(self, event):

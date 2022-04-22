@@ -40,11 +40,146 @@ QPushButton:hover {
 '''
 
 
+eye_button_style = '''
+    border-left: None;
+    border-right: 1px solid gray;
+    border-top: None;
+    border-bottom: None;
+    border-radius: 0px;
+    background: transparent;
+'''
+
+text_btn_style = '''
+QPushButton {
+    background: transparent;
+    border:1px solid yellow;
+    border-radius:0px;
+    text-align:left; 
+    padding-left: 5px; 
+    padding-right: 0px;
+    padding-top: 0px;
+    padding-bottom: 0px;
+    color:rgb(240, 240, 240);
+    margin: 0px;
+    height: 40px;
+    width: 220px;
+}
+
+
+QPushButton:disabled {
+    color: rgb(190, 190, 190);
+}
+'''
+
+
+line_edit_style = '''
+QLineEdit {
+    background: transparent;
+    border: 1px solid green;
+    border-radius:0px;
+    text-align:left; 
+    color: white; 
+    padding-left: 5px;    
+    margin: 0px;
+    height: 40px;
+    width: 220px; 
+}
+'''
+
+
+class CellsInfoWindow(QDialog):
+    def __init__(self, group_id, data):
+        super().__init__()
+
+        self.setWindowTitle("Cell Information Window")
+
+        layout = QVBoxLayout()
+        self.label = QLabel("Cell % d " % group_id)
+        label_style = 'QLabel {background-color: ' + QColor(data['vis_color']).name() + '; font-size: 20px}'
+        self.label.setStyleSheet(label_style)
+
+        sec_group = QGroupBox('Total Count: {}'.format(len(data['data'])))
+        slayout = QGridLayout(sec_group)
+        lb1 = QLabel('Brain Region')
+        lb2 = QLabel('Acronym')
+        lb3 = QLabel('Color')
+        lb4 = QLabel('Count')
+        slayout.addWidget(lb1, 0, 0, 1, 1)
+        slayout.addWidget(lb2, 0, 1, 1, 1)
+        slayout.addWidget(lb3, 0, 2, 1, 1)
+        slayout.addWidget(lb4, 0, 3, 1, 1)
+
+        for i in range(len(data['label_name'])):
+            slayout.addWidget(QLabel(data['label_name'][i]), i + 1, 0, 1, 1)
+            slayout.addWidget(QLabel(data['label_acronym'][i]), i + 1, 1, 1, 1)
+            clb = QLabel()
+            da_color = QColor(data['label_color'][i][0], data['label_color'][i][1], data['label_color'][i][2],
+                              255).name()
+            clb.setStyleSheet('QLabel {background-color: ' + da_color + '; width: 20px; height: 20px}')
+            slayout.addWidget(clb, i + 1, 2, 1, 1)
+            slayout.addWidget(QLabel(str(data['region_count'][i])), i + 1, 3, 1, 1)
+
+        # ok button, used to close window
+        ok_btn = QDialogButtonBox(QDialogButtonBox.Ok)
+        ok_btn.accepted.connect(self.accept)
+
+        # add widget to layout
+        layout.addWidget(self.label)
+        layout.addWidget(sec_group)
+        layout.addWidget(ok_btn)
+        self.setLayout(layout)
+
+    def accept(self) -> None:
+        self.close()
+
+    def set_probe_color(self, color):
+        self.label.setStyleSheet('QLabel {background-color: ' + color + ';}')
+
+
 class VirusInfoWindow(QDialog):
-    def __init__(self, num, probe_color, theta, phi, r, label_name, label_ano, values, channels, colors):
+    def __init__(self, group_id, data):
         super().__init__()
 
         self.setWindowTitle("Virus Information Window")
+
+        layout = QVBoxLayout()
+        self.label = QLabel("Virus % d " % group_id)
+        label_style = 'QLabel {background-color: ' + QColor(data['vis_color']).name() + '; font-size: 20px}'
+        self.label.setStyleSheet(label_style)
+
+        sec_group = QGroupBox()
+        slayout = QGridLayout(sec_group)
+        lb1 = QLabel('Brain Region')
+        lb2 = QLabel('Acronym')
+        lb3 = QLabel('Color')
+        slayout.addWidget(lb1, 0, 0, 1, 1)
+        slayout.addWidget(lb2, 0, 1, 1, 1)
+        slayout.addWidget(lb3, 0, 2, 1, 1)
+
+        for i in range(len(data['label_name'])):
+            slayout.addWidget(QLabel(data['label_name'][i]), i + 1, 0, 1, 1)
+            slayout.addWidget(QLabel(data['label_acronym'][i]), i + 1, 1, 1, 1)
+            clb = QLabel()
+            da_color = QColor(data['label_color'][i][0], data['label_color'][i][1], data['label_color'][i][2],
+                              255).name()
+            clb.setStyleSheet('QLabel {background-color: ' + da_color + '; width: 20px; height: 20px}')
+            slayout.addWidget(clb, i + 1, 2, 1, 1)
+
+        # ok button, used to close window
+        ok_btn = QDialogButtonBox(QDialogButtonBox.Ok)
+        ok_btn.accepted.connect(self.accept)
+
+        # add widget to layout
+        layout.addWidget(self.label)
+        layout.addWidget(sec_group)
+        layout.addWidget(ok_btn)
+        self.setLayout(layout)
+
+    def accept(self) -> None:
+        self.close()
+
+    def set_probe_color(self, color):
+        self.label.setStyleSheet('QLabel {background-color: ' + color + ';}')
 
 
 class ProbeInfoWindow(QDialog):
@@ -53,17 +188,10 @@ class ProbeInfoWindow(QDialog):
 
         self.setWindowTitle("Probe Information Window")
 
-        # 'sp': start_pnt, 'ep': end_pnt, 'direction': direction, 'data': data,
-        # 'new_sp': new_sp, 'new_ep': new_ep, 'theta': theta, 'phi': phi,
-        # 'chn_lines_labels': chn_lines_labels, 'chn_lines_color': chn_line_color,
-        # 'region_label': region_label, 'region_length': region_length, 'region_channels': region_channels,
-        # 'label_name': label_names, 'label_acronym': label_acronym, 'label_color': label_color
-
-
         layout = QGridLayout()
         self.label = QLabel("Probe % d " % group_id)
-        self.label.setStyleSheet('QLabel {background-color: ' + data['probe_color'] + ';}')
-        self.label.setFont(QFont('Arial', 20))
+        label_style = 'QLabel {background-color: ' + QColor(data['vis_color']).name() + '; font-size: 20px}'
+        self.label.setStyleSheet(label_style)
 
         ang_label = QLabel()
         ang_pixmap = QPixmap('icons/angle_illustration.png')
@@ -183,77 +311,64 @@ class ProbeInfoWindow(QDialog):
         self.label.setStyleSheet('QLabel {background-color: ' + color + ';}')
 
 
-
 class SinglePiece(QWidget):
     sig_clicked = pyqtSignal(object)
     sig_name_changed = pyqtSignal(object)
 
-    def __init__(self, parent=None, index=0, object_name='probes', object_icon=None, group_index=0):
+    def __init__(self, parent=None, index=0, object_type='probes', object_icon=None, group_index=0):
         QWidget.__init__(self, parent=parent)
 
-        self.uncheck_style = 'background-color:rgb(83, 83, 83);'
-        self.check_style = 'background-color:rgb(107, 107, 107);'
+        self.inactive_style = 'QFrame{background-color:rgb(83, 83, 83); border: 1px solid rgb(128, 128, 128);}'
+        self.active_style = 'QFrame{background-color:rgb(107, 107, 107); border: 1px solid rgb(128, 128, 128);}'
 
-        self.setStyleSheet('border: 1px solid rgb(71, 71, 71)')
         self.id = index
-        self.object_name = object_name
+        self.object_name = object_type
+        self.object_type = object_type
         self.active = True
         self.group_id = group_index
 
         self.tbnail = QPushButton()
         self.tbnail.setIcon(object_icon)
         self.tbnail.setIconSize(QSize(20, 20))
+        self.tbnail.clicked.connect(self.on_click)
 
         self.text_btn = QDoubleButton()
-        self.text_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
-        self.text_btn.setStyleSheet('border:None; text-align:left; padding-left:5px; color:rgb(240, 240, 240);')
-        self.text_btn.clicked.connect(self.on_click)
-        self.text_btn.doubleClicked.connect(self.on_doubleclick)
-
-        # self.l_line_edit = LineEditEntered()
-        # self.l_line_edit.setStyleSheet('border:None; color:white; padding-left:5px; background-color:rgb(83, 83, 83);')
-        # # self.l_line_edit.setText(self.text_btn.text())
-        # self.l_line_edit.setFixedWidth(100)
-        # self.l_line_edit.sig_return_pressed.connect(self.enter_pressed)
+        self.text_btn.setStyleSheet(text_btn_style)
+        self.text_btn.setFixedSize(QSize(240, 40))
+        self.text_btn.left_clicked.connect(self.on_click)
+        self.text_btn.double_clicked.connect(self.on_doubleclick)
 
         self.l_line_edit = QLineEdit()
-        self.l_line_edit.setStyleSheet('border:None; color:white; padding-left:5px; background-color:rgb(83, 83, 83);')
-        # self.l_line_edit.setText(self.text_btn.text())
-        self.l_line_edit.setFixedWidth(120)
+        self.l_line_edit.setStyleSheet(line_edit_style)
+        self.l_line_edit.setFixedWidth(240)
         self.l_line_edit.editingFinished.connect(self.enter_pressed)
+        self.l_line_edit.setVisible(False)
 
-        self.empty_btn = QPushButton()
-        self.empty_btn.setStyleSheet('border:None;')
-        self.empty_btn.setFixedWidth(100)
-        self.empty_btn.clicked.connect(self.on_click)
+        self.inner_frame = QFrame()
+        self.inner_frame.setStyleSheet(self.active_style)
+        self.inner_layout = QHBoxLayout(self.inner_frame)
+        self.inner_layout.setContentsMargins(0, 0, 0, 0)
+        self.inner_layout.setSpacing(0)
+        self.inner_layout.setAlignment(Qt.AlignVCenter)
+        self.inner_layout.addWidget(self.tbnail)
+        self.inner_layout.addSpacing(5)
+        self.inner_layout.addWidget(self.text_btn)
+        self.inner_layout.addWidget(self.l_line_edit)
+        self.inner_layout.addStretch()
 
-        self.inner_frame = QFrameClickable()
-        self.inner_frame.setStyleSheet('background-color:rgb(83, 83, 83);')
-        self.inner_layout = QGridLayout(self.inner_frame)
-        self.inner_layout.setContentsMargins(10, 0, 0, 0)
-        self.inner_layout.setSpacing(5)
-        self.inner_layout.addWidget(self.tbnail, 0, 0, 1, 1)
-        self.inner_layout.addWidget(self.text_btn, 0, 1, 1, 1)
-        self.inner_layout.addWidget(self.l_line_edit, 0, 1, 1, 1)
-        self.inner_layout.addWidget(self.empty_btn, 0, 2, 1, 1)
-        self.inner_frame.clicked.connect(self.on_click)
+        outer_layout = QHBoxLayout()
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+        outer_layout.setSpacing(0)
+        outer_layout.setAlignment(Qt.AlignVCenter)
+        outer_layout.addWidget(self.inner_frame)
 
-        self.outer_layout = QHBoxLayout()
-        self.outer_layout.setContentsMargins(0, 0, 0, 0)
-        self.outer_layout.setSpacing(0)
-        self.outer_layout.setAlignment(Qt.AlignLeft)
-        self.outer_layout.addWidget(self.inner_frame)
-
-        self.l_line_edit.hide()
-
-        self.setLayout(self.outer_layout)
+        self.setLayout(outer_layout)
         self.setFixedHeight(40)
         # self.show()
 
     @pyqtSlot()
     def on_click(self):
         print("Click")
-        # self.inner_frame.setStyleSheet('background-color:rgb(107, 107, 107); ')
         self.set_checked(True)
         self.sig_clicked.emit((self.id, self.object_name, self.group_id))
 
@@ -261,7 +376,6 @@ class SinglePiece(QWidget):
     @pyqtSlot()
     def on_doubleclick(self):
         print("Doubleclick")
-        # self.inner_frame.setStyleSheet('background-color:rgb(107, 107, 107); ')
         self.l_line_edit.setText(self.text_btn.text())
         self.l_line_edit.setVisible(True)
         self.text_btn.setVisible(False)
@@ -286,13 +400,10 @@ class SinglePiece(QWidget):
 
     def set_checked(self, check):
         self.active = check
-        if self.inner_frame.isEnabled():
-            if not self.active:
-                self.inner_frame.setStyleSheet(self.uncheck_style)
-            else:
-                self.inner_frame.setStyleSheet(self.check_style)
+        if not self.active:
+            self.inner_frame.setStyleSheet(self.inactive_style)
         else:
-            pass
+            self.inner_frame.setStyleSheet(self.active_style)
 
 
 class RegisteredObject(QWidget):
@@ -300,34 +411,32 @@ class RegisteredObject(QWidget):
     eye_clicked = pyqtSignal(object)
     sig_clicked = pyqtSignal(object)
 
-    def __init__(self, parent=None, index=0, object_name='probes', object_icon=None, group_index=0):
+    def __init__(self, parent=None, index=0, object_type='merged probes', object_icon=None, group_index=0):
         QWidget.__init__(self, parent=parent)
 
-        self.uncheck_style = 'background-color:rgb(83, 83, 83);'
-        self.check_style = 'background-color:rgb(107, 107, 107);'
+        self.inactive_style = 'QFrame{background-color:rgb(83, 83, 83); border: 1px solid rgb(128, 128, 128);}'
+        self.active_style = 'QFrame{background-color:rgb(107, 107, 107); border: 1px solid rgb(128, 128, 128);}'
+
         self.color = QColor(randint(0, 255), randint(0, 255), randint(0, 255), 255)
         self.icon_back = 'border:1px solid black; background-color: {}'.format(self.color.name())
 
-        self.setStyleSheet('border: 1px solid rgb(71, 71, 71)')
         self.id = index
-        self.object_name = object_name
+        self.object_type = object_type
+        self.object_name = object_type
         self.active = True
         self.vis = True
         self.group_id = group_index
 
-        self.eye_button = QToolButton()
-        self.eye_button.setStyleSheet('border:None;')
+        self.eye_button = QPushButton()
+        self.eye_button.setFixedSize(QSize(40, 40))
+        self.eye_button.setStyleSheet(eye_button_style)
         self.eye_button.setCheckable(True)
         eye_icon = QIcon()
         eye_icon.addPixmap(QPixmap("icons/layers/eye_on.png"), QIcon.Normal, QIcon.Off)
         eye_icon.addPixmap(QPixmap("icons/layers/eye_off.png"), QIcon.Normal, QIcon.On)
         self.eye_button.setIcon(eye_icon)
+        self.eye_button.setIconSize(QSize(20, 20))
         self.eye_button.clicked.connect(self.eye_on_click)
-
-        left_frame = QFrame()
-        left_frame.setStyleSheet('background-color:rgb(83, 83, 83); border-right: 1px solid rgb(71, 71, 71)')
-        left_layout = QHBoxLayout(left_frame)
-        left_layout.addWidget(self.eye_button)
 
         self.tbnail = QPushButton()
         self.tbnail.setStyleSheet(self.icon_back)
@@ -336,29 +445,32 @@ class RegisteredObject(QWidget):
         self.tbnail.clicked.connect(self.change_object_color)
 
         self.text_btn = QPushButton(self.object_name)
-        self.text_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
-        self.text_btn.setStyleSheet('border:None; text-align:left; padding-left:5px; color:rgb(240, 240, 240);')
+        self.text_btn.setStyleSheet(text_btn_style)
+        self.text_btn.setFixedHeight(40)
+        # self.text_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
         self.text_btn.clicked.connect(self.on_click)
 
-        self.inner_frame = QFrameClickable()
-        self.inner_frame.setStyleSheet('background-color:rgb(83, 83, 83);')
-        self.inner_layout = QGridLayout(self.inner_frame)
-        self.inner_layout.setContentsMargins(10, 0, 0, 0)
-        self.inner_layout.setSpacing(5)
-        self.inner_layout.addWidget(self.tbnail, 0, 0, 1, 1)
-        self.inner_layout.addWidget(self.text_btn, 0, 1, 1, 1)
-        # self.inner_frame.clicked.connect(self.frame_on_click)
+        self.inner_frame = QFrame()
+        self.inner_frame.setStyleSheet(self.active_style)
+        self.inner_layout = QHBoxLayout(self.inner_frame)
+        self.inner_layout.setContentsMargins(0, 0, 0, 0)
+        self.inner_layout.setSpacing(0)
+        self.inner_layout.setAlignment(Qt.AlignVCenter)
+        self.inner_layout.addWidget(self.eye_button)
+        self.inner_layout.addSpacing(5)
+        self.inner_layout.addWidget(self.tbnail)
+        self.inner_layout.addSpacing(5)
+        self.inner_layout.addWidget(self.text_btn)
+        self.inner_layout.addStretch()
 
-        self.outer_layout = QHBoxLayout()
-        self.outer_layout.setContentsMargins(0, 0, 0, 0)
-        self.outer_layout.setSpacing(0)
-        self.outer_layout.setAlignment(Qt.AlignLeft)
-        self.outer_layout.addWidget(left_frame)
-        self.outer_layout.addWidget(self.inner_frame)
+        outer_layout = QHBoxLayout()
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+        outer_layout.setSpacing(0)
+        outer_layout.setAlignment(Qt.AlignVCenter)
+        outer_layout.addWidget(self.inner_frame)
 
-        self.setLayout(self.outer_layout)
+        self.setLayout(outer_layout)
         self.setFixedHeight(40)
-        # self.show()
 
     def change_object_color(self):
         color = QColorDialog.getColor()
@@ -369,67 +481,51 @@ class RegisteredObject(QWidget):
             self.sig_object_color_changed.emit((self.id, self.color, self.object_name, self.group_id))
 
     def eye_on_click(self):
-        if self.vis:
+        if self.eye_button.isChecked():
             self.vis = False
         else:
             self.vis = True
-        self.set_checked(self.vis)
+        self.tbnail.setEnabled(self.vis)
+        self.text_btn.setEnabled(self.vis)
+        # self.l_line_edit.setEnabled(self.vis)
         self.eye_clicked.emit((self.id, self.object_name, self.vis, self.group_id))
-        if self.inner_frame.isEnabled():
-            self.tbnail.setEnabled(False)
-            self.text_btn.setEnabled(False)
-        else:
-            self.tbnail.setEnabled(True)
-            self.text_btn.setEnabled(True)
 
-    @pyqtSlot()
+    def set_checked(self, check):
+        self.active = check
+        if not self.active:
+            self.inner_frame.setStyleSheet(self.inactive_style)
+        else:
+            self.inner_frame.setStyleSheet(self.active_style)
+
     def on_click(self):
         print("Click")
-        # self.inner_frame.setStyleSheet('background-color:rgb(107, 107, 107); ')
         self.set_checked(True)
         self.sig_clicked.emit((self.id, self.object_name, self.group_id))
-
-    # @pyqtSlot()
-    # def frame_on_click(self):
-    #     print("Frame Click")
-    #     # self.inner_frame.setStyleSheet('background-color:rgb(107, 107, 107); ')
-    #     self.set_checked(True)
-    #     self.sig_clicked.emit((self.id, self.object_name, self.group_id))
 
     def is_checked(self):
         return self.active
 
-    def set_checked(self, check):
-        self.active = check
-        if self.inner_frame.isEnabled():
-            if not self.active:
-                self.inner_frame.setStyleSheet(self.uncheck_style)
-            else:
-                self.inner_frame.setStyleSheet(self.check_style)
-        else:
-            pass
-
 
 class ObjectControl(QObject):
     """
-
+    only pieces' name can be changed, the merged can not, so far
     """
 
     class SignalProxy(QObject):
         sigOpacityChanged = pyqtSignal(object)
         sigVisChanged = pyqtSignal(object)
+        sigDeleteObject = pyqtSignal()
 
     def __init__(self, parent=None):
 
         self._sigprox = ObjectControl.SignalProxy()
         self.sig_opacity_changed = self._sigprox.sigOpacityChanged
         self.sig_visible_changed = self._sigprox.sigVisChanged
+        self.sig_delete_object = self._sigprox.sigDeleteObject
 
         QObject.__init__(self)
 
-        styles = Styles()
-
-        self.current_obj_ind = None
+        self.current_obj_index = None
 
         self.obj_count = 0
 
@@ -445,15 +541,12 @@ class ObjectControl(QObject):
         self.reg_virus_count = 0
         self.reg_contour_count = 0
 
-        self.obj_list = []
-        self.obj_index = []
-        self.obj_name = []
-        self.obj_data = []
-
-        self.piece_list = []
-        self.piece_index = []
-        self.piece_name = []
-        self.piece_data = []
+        self.obj_list = []  # widgets
+        self.obj_id = []  # identity
+        self.obj_name = []  # names, initially the same as type, can be changed freely
+        self.obj_type = []  # type
+        self.obj_data = []  # data
+        self.obj_group_id = []  # group identity
 
         self.probe_icon = QIcon('icons/sidebar/probe.svg')
         self.virus_icon = QIcon('icons/sidebar/virus.svg')
@@ -467,10 +560,6 @@ class ObjectControl(QObject):
         combo_value = ['Multiply', 'Overlay', 'SourceOver']
         self.obj_blend_combo.addItems(combo_value)
         self.obj_blend_combo.setCurrentText('Multiply')
-        self.obj_blend_combo.setFixedHeight(24)
-        combo_list = QListView(self.obj_blend_combo)
-        combo_list.setStyleSheet(styles.text_combo_list_style)
-        self.obj_blend_combo.setView(combo_list)
 
         obj_opacity_label = QLabel('Opacity:')
         self.obj_opacity_slider = QSlider(Qt.Horizontal)
@@ -590,248 +679,221 @@ class ObjectControl(QObject):
         self.sig_opacity_changed.emit(da_val)
 
     def obj_piece_name_changed(self, ev):
-        id = ev[0]
+        clicked_id = ev[0]
         name = ev[1]
-        cind = np.where(np.ravel(self.obj_index) == id)[0][0]
-        self.obj_name[cind] = name
+        clicked_index = np.where(np.ravel(self.obj_id) == clicked_id)[0][0]
+        self.current_obj_index = clicked_index
+        self.obj_name[clicked_index] = name
 
     def delete_object_btn_clicked(self):
-        if self.current_obj_ind is None:
+        if self.current_obj_index is None:
             return
-        ind2del = np.where(np.asarray(self.obj_index) == self.current_obj_ind)[0][0]
-        if 'probe' in self.obj_name[self.current_obj_ind]:
-            self.probe_piece_count -= 1
-        elif 'virus' in self.obj_name[self.current_obj_ind]:
-            self.virus_piece_count -= 1
-        elif 'cell' in self.obj_name[self.current_obj_ind]:
-            self.cell_piece_count -= 1
-        elif 'contour' in self.obj_name[self.current_obj_ind]:
-            self.contour_piece_count -= 1
+        obj_type = self.obj_type[self.current_obj_index]
+        if 'probe' in obj_type:
+            if 'merged' in obj_type:
+                self.reg_probe_count -= 1
+            else:
+                self.probe_piece_count -= 1
+        elif 'virus' in obj_type:
+            if 'merged' in obj_type:
+                self.reg_virus_count -= 1
+            else:
+                self.virus_piece_count -= 1
+        elif 'cell' in obj_type:
+            if 'merged' in obj_type:
+                self.reg_cell_count -= 1
+            else:
+                self.cell_piece_count -= 1
+        elif 'contour' in obj_type:
+            if 'merged' in obj_type:
+                self.reg_contour_count -= 1
+            else:
+                self.contour_piece_count -= 1
         else:
-            self.drawing_piece_count -= 1
-        self.delete_objects(ind2del)
+            if 'merged' in obj_type:
+                self.reg_drawing_count -= 1
+            else:
+                self.drawing_piece_count -= 1
+        self.delete_objects(self.current_obj_index)
+        self.sig_delete_object.emit()
 
     def obj_clicked(self, ev):
         index = ev[0]
         self.set_active_layer_to_current(index)
 
-    def set_active_layer_to_current(self, ind):
-        if self.current_obj_ind != ind:
-            id2unactive = np.where(np.ravel(self.obj_index) == self.current_obj_ind)[0][0]
-            self.obj_list[id2unactive].set_checked(False)
-            id2active = np.where(np.ravel(self.obj_index) == ind)[0][0]
-            self.obj_list[id2active].set_checked(True)
-            self.current_obj_ind = ind
+    def set_active_layer_to_current(self, clicked_id):
+        previous_obj_id = self.obj_id[self.current_obj_index]
+        if previous_obj_id != clicked_id:
+            active_index = np.where(np.ravel(self.obj_id) == clicked_id)[0][0]
+            self.current_obj_index = active_index
+            # self.obj_list[active_index].set_checked(True)
+            inactive_id = np.where(np.ravel(self.obj_id) == previous_obj_id)[0][0]
+            self.obj_list[inactive_id].set_checked(False)
+        else:
+            return
 
-    def delete_objects(self, inds):
-        inds = np.ravel(inds)
-        del_ind = np.sort(inds)[::-1]
-        real_del_ind = [self.obj_index[ind] for ind in del_ind]
+    # delete a object
+    def delete_objects(self, delete_index):
+        del_ind = np.ravel(delete_index)
+        if len(del_ind) > 1:
+            del_ind = np.sort(delete_index)[::-1]
+
+        current_obj_id = self.obj_id[self.current_obj_index]
         for da_ind in del_ind:
             self.layer_layout.removeWidget(self.obj_list[da_ind])
             self.obj_list[da_ind].deleteLater()
             del self.obj_list[da_ind]
-            del self.obj_index[da_ind]
+            del self.obj_id[da_ind]
             del self.obj_name[da_ind]
+            del self.obj_group_id[da_ind]
+            del self.obj_type[da_ind]
             del self.obj_data[da_ind]
-        if self.current_obj_ind in real_del_ind:
+        if self.current_obj_index in del_ind:
             if self.obj_list:
                 self.obj_list[-1].set_checked(True)
-                self.current_obj_ind = self.obj_index[-1]
+                self.current_obj_index = len(self.obj_list) - 1
             else:
-                self.current_obj_ind = None
+                self.current_obj_index = None
+        else:
+            active_index = np.where(np.ravel(self.obj_id) == current_obj_id)[0][0]
+            self.current_obj_index = active_index
 
-    def add_object_piece(self, object_name, object_data=None):
-        if 'probe' in object_name:
-            group_index = self.probe_piece_count
+    #
+    def get_index_and_icon(self, object_type):
+        if 'probe' in object_type:
+            if 'merged' in object_type:
+                group_index = self.reg_probe_count
+            else:
+                group_index = self.probe_piece_count
             object_icon = self.probe_icon
-        elif 'virus' in object_name:
-            group_index = self.virus_piece_count
+        elif 'virus' in object_type:
+            if 'merged' in object_type:
+                group_index = self.reg_virus_count
+            else:
+                group_index = self.virus_piece_count
             object_icon = self.virus_icon
-        elif 'cell' in object_name:
-            group_index = self.cell_piece_count
+        elif 'cell' in object_type:
+            if 'merged' in object_type:
+                group_index = self.reg_cell_count
+            else:
+                group_index = self.cell_piece_count
             object_icon = self.cell_icon
-        elif 'contour' in object_name:
-            group_index = self.contour_piece_count
+        elif 'contour' in object_type:
+            if 'merged' in object_type:
+                group_index = self.reg_contour_count
+            else:
+                group_index = self.contour_piece_count
             object_icon = self.contour_icon
-        elif 'drawing' in object_name:
-            group_index = self.drawing_piece_count
+        elif 'drawing' in object_type:
+            if 'merged' in object_type:
+                group_index = self.reg_drawing_count
+            else:
+                group_index = self.drawing_piece_count
             object_icon = self.drawing_icon
         else:
+            group_index = None
+            object_icon = None
+        return group_index, object_icon
+
+    def add_object(self, object_type, object_data):
+        group_index, object_icon = self.get_index_and_icon(object_type)
+        if group_index is None:
             return
-        new_layer = SinglePiece(index=self.obj_count, object_name=object_name,
-                                 object_icon=object_icon, group_index=group_index)
-        new_layer.text_btn.setText("{} {}".format(object_name, group_index + 1))
+        if 'merged' in object_type:
+            print('merged')
+            new_layer = RegisteredObject(index=self.obj_count, object_type=object_type,
+                                         object_icon=object_icon, group_index=group_index)
+        else:
+            new_layer = SinglePiece(index=self.obj_count, object_type=object_type,
+                                    object_icon=object_icon, group_index=group_index)
+            new_layer.sig_name_changed.connect(self.obj_piece_name_changed)
+        new_layer.text_btn.setText("{} {}".format(object_type, group_index + 1))
         new_layer.set_checked(True)
         new_layer.sig_clicked.connect(self.obj_clicked)
-        new_layer.sig_name_changed.connect(self.obj_piece_name_changed)
-        self.obj_data.append(object_data)
-        self.obj_list.append(new_layer)
-        self.obj_index.append(self.obj_count)
-        self.obj_name.append("{} {}".format(object_name, group_index + 1))
 
-        if self.current_obj_ind is None:
-            self.current_obj_ind = self.obj_count
+        self.obj_data.append(object_data)
+        self.obj_group_id.append(group_index)
+        self.obj_list.append(new_layer)
+        self.obj_id.append(self.obj_count)
+        self.obj_name.append("{} {}".format(object_type, group_index + 1))
+        self.obj_type.append(object_type)
+
+        active_index = np.where(np.ravel(self.obj_id) == self.obj_count)[0][0]
+        if self.current_obj_index is None:
+            self.current_obj_index = active_index
         else:
-            ind2unactive = np.where(np.ravel(self.obj_index) == self.current_obj_ind)[0][0]
-            self.obj_list[ind2unactive].set_checked(False)
-            self.current_obj_ind = self.obj_count
+            print(self.current_obj_index)
+            self.obj_list[self.current_obj_index].set_checked(False)
+            self.current_obj_index = active_index
 
         self.layer_layout.addWidget(self.obj_list[-1])
         self.obj_count += 1
-        if 'probe' in object_name:
-            self.probe_piece_count += 1
-        elif 'virus' in object_name:
-            self.virus_piece_count += 1
-        elif 'cell' in object_name:
-            self.cell_piece_count += 1
-        elif 'contour' in object_name:
-            self.contour_piece_count += 1
+        if 'probe' in object_type:
+            if 'merged' in object_type:
+                self.reg_probe_count += 1
+            else:
+                self.probe_piece_count += 1
+        elif 'virus' in object_type:
+            if 'merged' in object_type:
+                self.reg_virus_count += 1
+            else:
+                self.virus_piece_count += 1
+        elif 'cell' in object_type:
+            if 'merged' in object_type:
+                self.reg_cell_count += 1
+            else:
+                self.cell_piece_count += 1
+        elif 'contour' in object_type:
+            if 'merged' in object_type:
+                self.reg_contour_count += 1
+            else:
+                self.contour_piece_count += 1
         else:
-            self.drawing_piece_count += 1
+            if 'merged' in object_type:
+                self.reg_drawing_count += 1
+            else:
+                self.drawing_piece_count += 1
 
-    def add_merged_object(self, object_name, object_data=None):
-        if 'probe' in object_name:
-            group_index = self.reg_probe_count
-            object_icon = self.probe_icon
-        elif 'virus' in object_name:
-            group_index = self.reg_virus_count
-            object_icon = self.virus_icon
-        elif 'cell' in object_name:
-            group_index = self.reg_cell_count
-            object_icon = self.cell_icon
-        elif 'contour' in object_name:
-            group_index = self.reg_contour_count
-            object_icon = self.contour_icon
-        elif 'drawing' in object_name:
-            group_index = self.reg_drawing_count
-            object_icon = self.drawing_icon
-        else:
+    # merge object piece
+    def merge_object_pieces(self, obj_type='probe'):
+        if obj_type not in ['probe', 'virus', 'contour', 'drawing', 'cell']:
             return
-        new_layer = RegisteredObject(index=self.obj_count, object_name=object_name,
-                                     object_icon=object_icon, group_index=group_index)
-        new_layer.text_btn.setText("{} {}".format(object_name, group_index + 1))
-        new_layer.set_checked(True)
-        self.obj_data.append(object_data)
-        self.obj_list.append(new_layer)
-        self.obj_index.append(self.obj_count)
-        self.obj_name.append("{} {}".format(object_name, group_index + 1))
-
-        if self.current_obj_ind is None:
-            self.current_obj_ind = self.obj_count
-        else:
-            ind2unactive = np.where(np.ravel(self.obj_index) == self.current_obj_ind)[0][0]
-            self.obj_list[ind2unactive].set_checked(False)
-            self.current_obj_ind = self.obj_count
-
-        self.layer_layout.addWidget(self.obj_list[-1])
-        self.obj_count += 1
-        if 'probe' in object_name:
-            self.reg_probe_count += 1
-        elif 'virus' in object_name:
-            self.reg_virus_count += 1
-        elif 'cell' in object_name:
-            self.reg_cell_count += 1
-        elif 'contour' in object_name:
-            self.reg_contour_count += 1
-        else:
-            self.reg_drawing_count += 1
-
-
-
-
-
-    # # draw 3d
-    # pos = (np.array([sp, new_ep, ep]) - np.array([256, 512, 256])) / 4.
-    # # pos_color = da_probe.cbutton.color(mode='byte')
-    #
-    # pos_color = da_probe.color
-    # pos_color = [pos_color[0], pos_color[1], pos_color[2], 1]
-    # da_color = np.array(pos_color) * 255
-    # da_color = da_color.astype(int)
-    # da_dict['prob_color'] = QColor(da_color[0], da_color[1], da_color[2], 255).name()
-    #
-    # # pos_color = np.array([da_color, da_color, [0, 0, 0, 1]])
-    # probe_line_3d = gl.GLLinePlotItem(pos=pos, color=pos_color, width=3, mode='line_strip')
-    # probe_line_3d.setGLOptions('opaque')
-    # self.probe3d_lines.append(probe_line_3d)
-    #
-    # # pos_tip = (np.array([new_ep, ep]) - np.array([256, 512, 256])) / 4.
-    # # probe_line_tip = gl.GLLinePlotItem(pos=pos_tip, color=(0, 0, 0, 1), width=1, mode='line_strip')
-    # # probe_line_tip.setGLOptions('opaque')
-    # self.view3d.addItem(self.probe3d_lines[-1])
-    # # self.view3d.addItem(probe_line_tip)
-    #
-    # self.probe_data_dicts.append(da_dict)
-
-
-
-    # merge probe piece
-    def merge_probe_pieces(self):
-        if self.probe_piece_count == 0:
-            return
-        n_obj = len(self.obj_index)
-        cind = [ind for ind in range(n_obj) if 'probe' in self.obj_name[ind] and 'merged' not in self.obj_name[ind]]
+        n_obj = len(self.obj_id)
+        cind = [ind for ind in range(n_obj) if obj_type in self.obj_type[ind] and 'merged' not in self.obj_type[ind]]
         print('cind', cind)
-        all_probe_names = np.ravel(self.obj_name)[cind]
-        n_pieces = len(all_probe_names)
-        probe_names = []
+        da_type_object_names = np.ravel(self.obj_name)[cind]
+        n_pieces = len(da_type_object_names)
+        pieces_names = []
         for i in range(n_pieces):
-            da_name = all_probe_names[i]
+            da_name = da_type_object_names[i]
             da_name = da_name.replace(" ", "")
             da_name_split = da_name.split('-')
-            probe_names.append(da_name_split[0])
-        unique_probe_names = np.unique(probe_names)
-        n_probes = len(unique_probe_names)
-        data = [[] for i in range(n_probes)]
-        for i in range(n_probes):
-            da_probe_name = unique_probe_names[i]
-            da_probe_ind_in_obj_order = [cind[ind] for ind in range(n_pieces) if probe_names[ind] == da_probe_name]
-            temp = self.obj_data[da_probe_ind_in_obj_order[0]].T
-            if len(da_probe_ind_in_obj_order) > 1:
-                for j in range(1, len(da_probe_ind_in_obj_order)):
-                    print(self.obj_data[da_probe_ind_in_obj_order[j]].T)
-                    temp = np.hstack([temp, self.obj_data[da_probe_ind_in_obj_order[j]].T])
+            pieces_names.append(da_name_split[0])
+        unique_object_names = np.unique(pieces_names)
+        n_object = len(unique_object_names)
+        data = [[] for i in range(n_object)]
+        for i in range(n_object):
+            da_piece_name = unique_object_names[i]
+            da_piece_ind_in_obj_order = [cind[ind] for ind in range(n_pieces) if pieces_names[ind] == da_piece_name]
+            temp = self.obj_data[da_piece_ind_in_obj_order[0]].T
+            if len(da_piece_ind_in_obj_order) > 1:
+                for j in range(1, len(da_piece_ind_in_obj_order)):
+                    print(self.obj_data[da_piece_ind_in_obj_order[j]].T)
+                    temp = np.hstack([temp, self.obj_data[da_piece_ind_in_obj_order[j]].T])
             data[i] = temp.T
-        self.probe_piece_count = 0
+            print(data[i])
+        if obj_type == 'probe':
+            self.probe_piece_count = 0
+        elif obj_type == 'virus':
+            self.virus_piece_count = 0
+        elif obj_type == 'contour':
+            self.contour_piece_count = 0
+        elif obj_type == 'drawing':
+            self.drawing_piece_count = 0
+        else:
+            self.cell_piece_count = 0
         self.delete_objects(cind)
+        print(self.current_obj_index)
         return data
 
-    def merge_cells(self):
-        print('merge_cells')
 
-    def merge_virus_piece(self):
-        if self.virus_piece_count == 0:
-            return
-        n_obj = len(self.obj_index)
-        cind = [ind for ind in range(n_obj) if 'virus' in self.obj_name[ind] and 'merged' not in self.obj_name[ind]]
-        print('cind', cind)
-        all_virus_names = np.ravel(self.obj_name)[cind]
-        n_pieces = len(all_virus_names)
-        virus_names = []
-        for i in range(n_pieces):
-            da_name = all_virus_names[i]
-            da_name = da_name.replace(" ", "")
-            da_name_split = da_name.split('-')
-            virus_names.append(da_name_split[0])
-        unique_virus_names = np.unique(virus_names)
-        n_virus = len(unique_virus_names)
-        data = [[] for i in range(n_virus)]
-        for i in range(n_virus):
-            da_virus_name = unique_virus_names[i]
-            da_virus_ind_in_obj_order = [cind[ind] for ind in range(n_pieces) if virus_names[ind] == da_virus_name]
-            temp = self.obj_data[da_virus_ind_in_obj_order[0]].T
-            if len(da_virus_ind_in_obj_order) > 1:
-                for j in range(1, len(da_virus_ind_in_obj_order)):
-                    print(self.obj_data[da_virus_ind_in_obj_order[j]].T)
-                    temp = np.hstack([temp, self.obj_data[da_virus_ind_in_obj_order[j]].T])
-            data[i] = temp.T
-        self.virus_piece_count = 0
-        self.delete_objects(cind)
-        return data
-
-    def merge_lines(self):
-        print('merge_lines')
-
-    def merge_boundaries(self):
-        print('merge bnd')
