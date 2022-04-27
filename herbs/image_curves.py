@@ -246,8 +246,6 @@ class CurveWidget(QWidget):
 
         QWidget.__init__(self)
 
-        styles = Styles()
-
         self.gray_max = 65535
         self.gamma = 1
         # self.prev_handle_pos = (0., 32767., 65535.)
@@ -354,7 +352,6 @@ class CurveWidget(QWidget):
             if val1 >= point_values[1, 0]:
                 self.multi_handle_slider.setValue((val2 - 1, val2))
                 return
-            print('black')
             self.black_spinbox.spin_val.setValue(val1)
             self.white_spinbox.spin_val.setMinimum(val1 + 1)
 
@@ -362,7 +359,6 @@ class CurveWidget(QWidget):
             if val2 <= point_values[-2, 0]:
                 self.multi_handle_slider.setValue((val1, val1 + 1))
                 return
-            print('white')
             self.white_spinbox.spin_val.setValue(val2)
             self.black_spinbox.spin_val.setMaximum(val2 - 1)
 
@@ -423,6 +419,7 @@ class CurveWidget(QWidget):
             table[table <= 0] = 0
             table[table >= self.gray_max] = self.gray_max
             table = table.astype(self.dtype)
+            print(table)
         self.table = table.copy()
         self.curve_plot.set_plot(point_values, self.table)
         self.sig_table_changed.emit(self.table)

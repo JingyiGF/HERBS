@@ -89,6 +89,8 @@ class ToolBox(QObject):
                                    'triang_btn': triang_btn,
                                    'loc_btn': loc_btn}
 
+        self.toolbox_btn_keys = list(self.checkable_btn_dict.keys())
+
         # for moving_btn, moving wrap
         self.left_button = QPushButton()
         # self.left_button.setStyleSheet(toolbox_bnt_style)
@@ -474,8 +476,36 @@ class ToolBox(QObject):
     def moving_dist_changed(self):
         self.moving_px = self.moving_valt.value()
 
+    def get_tool_data(self):
+        data = {'moving_valt': self.moving_valt.value(),
+                'rotation_valt': self.rotation_valt.value(),
+                'pencil_color': self.pencil_color_btn.color(),
+                'pencil_size': self.pencil_size_valt.text(),
+                'eraser_color': self.eraser_color_btn.color(),
+                'eraser_size': self.eraser_size_valt.text(),
+                'magic_wand_color': self.magic_color_btn.color(),
+                'magic_wand_tol': self.magic_tol_val.text(),
+                'magic_wand_kernel': self.magic_wand_kernel.currentText(),
+                'magic_wand_ksize': self.magic_wand_ksize.text(),
+                'probe_color': self.probe_color_btn.color(),
+                'triangle_color': self.triang_color_btn.color(),
+                'cell_color': self.cell_color_btn.color()}
+        return data
 
-
+    def set_tool_data(self, data):
+        self.moving_valt.setValue(data['moving_valt'])
+        self.rotation_valt.setValue(data['rotation_valt'])
+        self.pencil_color_btn.setColor(data['pencil_color'])
+        self.pencil_size_valt.setText(data['pencil_size'])
+        self.eraser_color_btn.setColor(data['eraser_color'])
+        self.eraser_size_valt.setText(data['eraser_size'])
+        self.magic_color_btn.setColor(data['magic_wand_color'])
+        self.magic_tol_val.setText(data['magic_wand_tol'])
+        self.magic_wand_kernel.setCurrentText(data['magic_wand_kernel'])
+        self.magic_wand_ksize.setText(data['magic_wand_ksize'])
+        self.probe_color_btn.setColor(data['probe_color'])
+        self.triang_color_btn.setColor(data['triangle_color'])
+        self.cell_color_btn.setColor(data['cell_color'])
 
 
 

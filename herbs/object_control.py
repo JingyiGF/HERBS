@@ -183,14 +183,16 @@ class VirusInfoWindow(QDialog):
 
 
 class ProbeInfoWindow(QDialog):
-    def __init__(self, group_id, data):
+    def __init__(self, name, data):
         super().__init__()
 
         self.setWindowTitle("Probe Information Window")
 
         layout = QGridLayout()
-        self.label = QLabel("Probe % d " % group_id)
-        label_style = 'QLabel {background-color: ' + QColor(data['vis_color']).name() + '; font-size: 20px}'
+        self.label = QLabel(name)
+        # self.label = QLabel("Probe % d " % group_id)
+        color = QColor(data['vis_color'][0], data['vis_color'][1], data['vis_color'][2], data['vis_color'][3])
+        label_style = 'QLabel {background-color: ' + color.name() + '; font-size: 20px}'
         self.label.setStyleSheet(label_style)
 
         ang_label = QLabel()
@@ -370,18 +372,16 @@ class SinglePiece(QWidget):
     def on_click(self):
         print("Click")
         self.set_checked(True)
-        self.sig_clicked.emit((self.id, self.object_name, self.group_id))
-
+        self.sig_clicked.emit(self.id)
 
     @pyqtSlot()
     def on_doubleclick(self):
-        print("Doubleclick")
         self.l_line_edit.setText(self.text_btn.text())
         self.l_line_edit.setVisible(True)
         self.text_btn.setVisible(False)
         self.l_line_edit.setFocus(True)
         self.set_checked(True)
-        self.sig_clicked.emit((self.id, self.object_name, self.group_id))
+        self.sig_clicked.emit(self.id)
 
     @pyqtSlot()
     def enter_pressed(self):
@@ -472,23 +472,23 @@ class RegisteredObject(QWidget):
         self.setLayout(outer_layout)
         self.setFixedHeight(40)
 
+    def set_icon_style(self, color):
+        self.color = color
+        self.icon_back = 'border:1px solid black; background-color: {}'.format(color.name())
+        self.tbnail.setStyleSheet(self.icon_back)
+
     def change_object_color(self):
-        color = QColorDialog.getColor()
-        if color.isValid():
-            self.color = QColor(color)
-            self.icon_back = 'border:1px solid black; background-color: {}'.format(color.name())
-            self.tbnail.setStyleSheet(self.icon_back)
-            self.sig_object_color_changed.emit((self.id, self.color, self.object_name, self.group_id))
+        self.sig_object_color_changed.emit(self.id)
 
     def eye_on_click(self):
         if self.eye_button.isChecked():
             self.vis = False
         else:
             self.vis = True
+        self.set_checked(True)
         self.tbnail.setEnabled(self.vis)
         self.text_btn.setEnabled(self.vis)
-        # self.l_line_edit.setEnabled(self.vis)
-        self.eye_clicked.emit((self.id, self.object_name, self.vis, self.group_id))
+        self.eye_clicked.emit((self.id, self.vis))
 
     def set_checked(self, check):
         self.active = check
@@ -500,7 +500,7 @@ class RegisteredObject(QWidget):
     def on_click(self):
         print("Click")
         self.set_checked(True)
-        self.sig_clicked.emit((self.id, self.object_name, self.group_id))
+        self.sig_clicked.emit(self.id)
 
     def is_checked(self):
         return self.active
@@ -514,7 +514,10 @@ class ObjectControl(QObject):
     class SignalProxy(QObject):
         sigOpacityChanged = pyqtSignal(object)
         sigVisChanged = pyqtSignal(object)
-        sigDeleteObject = pyqtSignal()
+        sigDeleteObject = pyqtSignal(object)
+        sigColorChanged = pyqtSignal(object)
+        sigSizeChanged = pyqtSignal(object)
+        sigBlendModeChanged = pyqtSignal(object)
 
     def __init__(self, parent=None):
 
@@ -522,8 +525,14 @@ class ObjectControl(QObject):
         self.sig_opacity_changed = self._sigprox.sigOpacityChanged
         self.sig_visible_changed = self._sigprox.sigVisChanged
         self.sig_delete_object = self._sigprox.sigDeleteObject
+        self.sig_color_changed = self._sigprox.sigColorChanged
+        self.sig_size_changed = self._sigprox.sigSizeChanged
+        self.sig_blend_mode_changed = self._sigprox.sigBlendModeChanged
 
         QObject.__init__(self)
+
+        self.default_size_val = 2
+        self.default_opacity_val = 100
 
         self.current_obj_index = None
 
@@ -543,10 +552,13 @@ class ObjectControl(QObject):
 
         self.obj_list = []  # widgets
         self.obj_id = []  # identity
-        self.obj_name = []  # names, initially the same as type, can be changed freely
+        self.obj_name = []  # names, initially the same as type, can be changed freely ???
         self.obj_type = []  # type
         self.obj_data = []  # data
         self.obj_group_id = []  # group identity
+        self.obj_size = []  # size
+        self.obj_opacity = []
+        self.obj_comp_mode = []
 
         self.probe_icon = QIcon('icons/sidebar/probe.svg')
         self.virus_icon = QIcon('icons/sidebar/virus.svg')
@@ -555,47 +567,67 @@ class ObjectControl(QObject):
         self.contour_icon = QIcon('icons/sidebar/contour.svg')
 
         combo_label = QLabel('Composition:')
+        combo_label.setFixedWidth(80)
         self.obj_blend_combo = QComboBox()
         self.obj_blend_combo.setEditable(False)
-        combo_value = ['Multiply', 'Overlay', 'SourceOver']
+        combo_value = ['opaque', 'translucent', 'additive']
         self.obj_blend_combo.addItems(combo_value)
-        self.obj_blend_combo.setCurrentText('Multiply')
+        self.obj_blend_combo.setCurrentText('opaque')
+        self.obj_blend_combo.currentTextChanged.connect(self.blend_mode_changed)
+        combo_wrap = QFrame()
+        combo_wrap_layout = QHBoxLayout(combo_wrap)
+        combo_wrap_layout.setContentsMargins(0, 0, 0, 0)
+        combo_wrap_layout.setSpacing(5)
+        combo_wrap_layout.addWidget(combo_label)
+        combo_wrap_layout.addWidget(self.obj_blend_combo)
 
         obj_opacity_label = QLabel('Opacity:')
+        obj_opacity_label.setFixedWidth(80)
         self.obj_opacity_slider = QSlider(Qt.Horizontal)
         self.obj_opacity_slider.setMaximum(100)
         self.obj_opacity_slider.setMinimum(0)
         self.obj_opacity_slider.setValue(100)
         self.obj_opacity_slider.valueChanged.connect(self.change_opacity_label_value)
+        self.obj_opacity_slider.sliderMoved.connect(self.send_opacity_changed_signal)
         self.obj_opacity_val_label = QLabel('100%')
+        self.obj_opacity_val_label.setFixedWidth(40)
+        opacity_wrap = QFrame()
+        opacity_wrap_layout = QHBoxLayout(opacity_wrap)
+        opacity_wrap_layout.setContentsMargins(0, 0, 0, 0)
+        opacity_wrap_layout.setSpacing(5)
+        opacity_wrap_layout.addWidget(obj_opacity_label)
+        opacity_wrap_layout.addWidget(self.obj_opacity_slider)
+        opacity_wrap_layout.addWidget(self.obj_opacity_val_label)
 
-        point_size_label = QLabel('Point Size: ')
-        self.point_size_slider = QSlider(QtCore.Qt.Horizontal)
-        self.point_size_slider.setValue(2)
-        self.point_size_slider.setMinimum(1)
-        self.point_size_slider.setMaximum(100)
-        # self.atlas_op_slider.valueChanged.connect(self.sig_rescale_slider)
-
-        line_width_label = QLabel('Line Width: ')
-        self.line_width_slider = QSlider(QtCore.Qt.Horizontal)
-        self.line_width_slider.setValue(2)
-        self.line_width_slider.setMinimum(1)
-        self.line_width_slider.setMaximum(100)
+        obj_size_label = QLabel('Size/Width: ')
+        obj_size_label.setFixedWidth(80)
+        self.obj_size_slider = QSlider(QtCore.Qt.Horizontal)
+        self.obj_size_slider.setValue(2)
+        self.obj_size_slider.setMinimum(1)
+        self.obj_size_slider.setMaximum(10)
+        self.obj_size_slider.valueChanged.connect(self.change_size_label_value)
+        self.obj_size_slider.sliderMoved.connect(self.send_size_changed_signal)
+        self.obj_size_val_label = QLabel('2')
+        self.obj_size_val_label.setAlignment(Qt.AlignCenter)
+        self.obj_size_val_label.setFixedWidth(40)
+        size_wrap = QFrame()
+        size_wrap_layout = QHBoxLayout(size_wrap)
+        size_wrap_layout.setContentsMargins(0, 0, 0, 0)
+        size_wrap_layout.setSpacing(5)
+        size_wrap_layout.addWidget(obj_size_label)
+        size_wrap_layout.addWidget(self.obj_size_slider)
+        size_wrap_layout.addWidget(self.obj_size_val_label)
 
         top_frame = QFrame()
-        top_layout = QGridLayout(top_frame)
+        top_layout = QVBoxLayout(top_frame)
         top_layout.setContentsMargins(0, 0, 0, 0)
-        top_layout.setSpacing(5)
-        top_layout.addWidget(combo_label, 0, 0, 1, 1)
-        top_layout.addWidget(self.obj_blend_combo, 0, 1, 1, 3)
-        top_layout.addWidget(obj_opacity_label, 1, 0, 1, 1)
-        top_layout.addWidget(self.obj_opacity_slider, 1, 1, 1, 2)
-        top_layout.addWidget(self.obj_opacity_val_label, 1, 3, 1, 1)
-        # top_layout.addWidget(point_size_label, 2, 0, 1, 1)
-        # top_layout.addWidget(self.point_size_slider, 2, 1, 1, 2)
-        # top_layout.addWidget(self.obj_opacity_val_label, 1, 3, 1, 1)
-        # top_layout.addWidget(line_width_label, 3, 0, 1, 1)
-        # top_layout.addWidget(self.line_width_slider, 3, 1, 1, 2)
+        top_layout.setSpacing(0)
+        top_layout.addWidget(combo_wrap)
+        top_layout.addSpacing(10)
+        top_layout.addWidget(opacity_wrap)
+        top_layout.addSpacing(10)
+        top_layout.addWidget(size_wrap)
+        top_layout.addSpacing(10)
 
         self.layer_frame = QFrame()
         self.layer_frame.setStyleSheet('background: transparent; border: 0px;')
@@ -673,10 +705,37 @@ class ObjectControl(QObject):
         self.delete_object_btn.setIconSize(QSize(20, 20))
         self.delete_object_btn.clicked.connect(self.delete_object_btn_clicked)
 
+    def blend_mode_changed(self):
+        blend_mode = self.obj_blend_combo.currentText()
+        if 'merged' not in self.obj_type[self.current_obj_index]:
+            return
+        if blend_mode != self.obj_comp_mode[self.current_obj_index]:
+            self.obj_comp_mode[self.current_obj_index] = blend_mode
+            self.sig_blend_mode_changed.emit(blend_mode)
+
     def change_opacity_label_value(self):
-        da_val = self.layer_opacity_slider.value()
-        self.layer_opacity_val_label.setText('{} %'.format(da_val))
+        da_val = self.obj_opacity_slider.value()
+        self.obj_opacity_val_label.setText('{} %'.format(da_val))
+
+    def send_opacity_changed_signal(self):
+        da_val = self.obj_opacity_slider.value()
+        if 'merged' not in self.obj_type[self.current_obj_index]:
+            self.obj_opacity_slider.setValue(da_val)
+            return
+        self.obj_opacity[self.current_obj_index] = da_val
         self.sig_opacity_changed.emit(da_val)
+
+    def change_size_label_value(self):
+        da_val = self.obj_size_slider.value()
+        self.obj_size_val_label.setText(str(da_val))
+
+    def send_size_changed_signal(self):
+        da_val = self.obj_size_slider.value()
+        if 'merged' not in self.obj_type[self.current_obj_index]:
+            self.obj_size_slider.setValue(da_val)
+            return
+        self.obj_size[self.current_obj_index] = da_val
+        self.sig_size_changed.emit((self.obj_type[self.current_obj_index], da_val))
 
     def obj_piece_name_changed(self, ev):
         clicked_id = ev[0]
@@ -715,22 +774,59 @@ class ObjectControl(QObject):
             else:
                 self.drawing_piece_count -= 1
         self.delete_objects(self.current_obj_index)
-        self.sig_delete_object.emit()
 
-    def obj_clicked(self, ev):
-        index = ev[0]
-        self.set_active_layer_to_current(index)
+    def obj_clicked(self, clicked_id):
+        self.set_active_layer_to_current(clicked_id)
+        if 'merged' in self.obj_type[self.current_obj_index]:
+            self.obj_info_on_click()
+
+    def obj_info_on_click(self):
+        da_data = self.obj_data[self.current_obj_index]
+        da_name = self.obj_name[self.current_obj_index]
+        if 'probe' in self.obj_type[self.current_obj_index]:
+            self.info_window = ProbeInfoWindow(da_name, da_data)
+        elif 'virus' in self.obj_type[self.current_obj_index]:
+            self.info_window = VirusInfoWindow(da_name, da_data)
+        elif 'cell' in self.obj_type[self.current_obj_index]:
+            self.info_window = CellsInfoWindow(da_name, da_data)
+        else:
+            return
+        self.info_window.exec()
 
     def set_active_layer_to_current(self, clicked_id):
         previous_obj_id = self.obj_id[self.current_obj_index]
+        size_val = self.obj_size_slider.value()
+        opacity_val = self.obj_opacity_slider.value()
+        compo_mode = self.obj_blend_combo.currentText()
         if previous_obj_id != clicked_id:
             active_index = np.where(np.ravel(self.obj_id) == clicked_id)[0][0]
             self.current_obj_index = active_index
             # self.obj_list[active_index].set_checked(True)
             inactive_id = np.where(np.ravel(self.obj_id) == previous_obj_id)[0][0]
             self.obj_list[inactive_id].set_checked(False)
+            if 'merged' in self.obj_type[self.current_obj_index]:
+                if self.obj_size[self.current_obj_index] != size_val:
+                    self.obj_size_slider.setValue(self.obj_size[self.current_obj_index])
+                if self.obj_opacity[self.current_obj_index] != opacity_val:
+                    self.obj_opacity_slider.setValue(self.obj_opacity[self.current_obj_index])
+                if self.obj_comp_mode[self.current_obj_index] != compo_mode:
+                    self.obj_blend_combo.setCurrentText(self.obj_comp_mode[self.current_obj_index])
         else:
             return
+
+    def obj_color_changed(self, clicked_id):
+        self.set_active_layer_to_current(clicked_id)
+        color = QColorDialog.getColor()
+        if color.isValid():
+            self.obj_list[self.current_obj_index].set_icon_style(color)
+            da_color = (color.red(), color.green(), color.blue(), 255)
+            self.sig_color_changed.emit((self.current_obj_index, da_color))
+
+    def obj_eye_clicked(self, ev):
+        clicked_id = ev[0]
+        vis = ev[1]
+        self.set_active_layer_to_current(clicked_id)
+        self.sig_visible_changed.emit((self.current_obj_index, vis))
 
     # delete a object
     def delete_objects(self, delete_index):
@@ -748,6 +844,10 @@ class ObjectControl(QObject):
             del self.obj_group_id[da_ind]
             del self.obj_type[da_ind]
             del self.obj_data[da_ind]
+            del self.obj_comp_mode[da_ind]
+            del self.obj_opacity[da_ind]
+            del self.obj_size[da_ind]
+            self.sig_delete_object.emit(da_ind)
         if self.current_obj_index in del_ind:
             if self.obj_list:
                 self.obj_list[-1].set_checked(True)
@@ -799,24 +899,41 @@ class ObjectControl(QObject):
         group_index, object_icon = self.get_index_and_icon(object_type)
         if group_index is None:
             return
+        self.obj_id.append(self.obj_count)
+        self.obj_data.append(object_data)
+        self.obj_name.append("{} {}".format(object_type, group_index + 1))
+        self.obj_type.append(object_type)
         if 'merged' in object_type:
             print('merged')
             new_layer = RegisteredObject(index=self.obj_count, object_type=object_type,
                                          object_icon=object_icon, group_index=group_index)
+            new_layer.eye_clicked.connect(self.obj_eye_clicked)
+            new_layer.sig_object_color_changed.connect(self.obj_color_changed)
+            self.obj_opacity.append(self.default_opacity_val)
+            self.obj_size.append(self.default_size_val)
+            self.obj_comp_mode.append('opaque')
+            da_color = (new_layer.color.red(), new_layer.color.green(), new_layer.color.blue(), 255)
+            self.obj_data[-1]['vis_color'] = da_color
+            if self.obj_size_slider.value() != self.default_size_val:
+                self.obj_size_slider.setValue(self.default_size_val)
+            if self.obj_opacity_slider.value() != self.default_opacity_val:
+                self.obj_opacity_slider.setValue(self.default_opacity_val)
+            if self.obj_blend_combo.currentText() != 'opaque':
+                self.obj_blend_combo.setCurrentText('opaque')
+
         else:
             new_layer = SinglePiece(index=self.obj_count, object_type=object_type,
                                     object_icon=object_icon, group_index=group_index)
             new_layer.sig_name_changed.connect(self.obj_piece_name_changed)
+            self.obj_opacity.append([])
+            self.obj_size.append([])
+            self.obj_comp_mode.append([])
+
         new_layer.text_btn.setText("{} {}".format(object_type, group_index + 1))
         new_layer.set_checked(True)
         new_layer.sig_clicked.connect(self.obj_clicked)
-
-        self.obj_data.append(object_data)
-        self.obj_group_id.append(group_index)
         self.obj_list.append(new_layer)
-        self.obj_id.append(self.obj_count)
-        self.obj_name.append("{} {}".format(object_type, group_index + 1))
-        self.obj_type.append(object_type)
+        self.obj_group_id.append(group_index)
 
         active_index = np.where(np.ravel(self.obj_id) == self.obj_count)[0][0]
         if self.current_obj_index is None:
@@ -855,7 +972,7 @@ class ObjectControl(QObject):
                 self.drawing_piece_count += 1
 
     # merge object piece
-    def merge_object_pieces(self, obj_type='probe'):
+    def get_merged_data(self, obj_type='probe'):
         if obj_type not in ['probe', 'virus', 'contour', 'drawing', 'cell']:
             return
         n_obj = len(self.obj_id)
@@ -895,5 +1012,38 @@ class ObjectControl(QObject):
         self.delete_objects(cind)
         print(self.current_obj_index)
         return data
+
+    # get obj data
+    def get_obj_data(self):
+        data = {'obj_list': self.obj_list,
+                'obj_id': self.obj_id,
+                'obj_name':  self.obj_name,
+                'obj_type': self.obj_type,
+                'obj_data': self.obj_data,
+                'obj_group_id': self.obj_group_id,
+                'obj_size': self.obj_size,
+                'obj_opacity': self.obj_opacity,
+                'obj_comp_mode': self.obj_comp_mode,
+                'obj_count': self.obj_count,
+                'current_obj_index': self.current_obj_index}
+        return data
+
+    def set_obj_data(self, data):
+        self.obj_list = data['obj_list']
+        self.obj_id = data['obj_id']
+        self.obj_name = data['obj_name']
+        self.obj_type = data['obj_type']
+        self.obj_data = data['obj_data']
+        self.obj_group_id = data['obj_group_id']
+        self.obj_size = data['obj_size']
+        self.obj_opacity = data['obj_opacity']
+        self.obj_comp_mode = data['obj_comp_mode']
+        self.obj_count = data['obj_count']
+        self.current_obj_index = data['current_obj_index']
+
+        for i in range(len(self.obj_list)):
+            self.layer_layout.addWidget(self.obj_list[i])
+
+
 
 

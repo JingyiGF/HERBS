@@ -16,7 +16,6 @@ from pyqtgraph.Qt import QtGui, QtCore
 from .image_stacks import ImageStacks
 from .image_curves import CurveWidget, ChannelSelector
 from .uuuuuu import hsv2rgb, gamma_line, color_img, make_color_lut, get_corner_line_from_rect
-from .styles import Styles
 
 
 class ImageView(QObject):
@@ -39,7 +38,7 @@ class ImageView(QObject):
     def __init__(self):
         self._sigprox = ImageView.SignalProxy()
         self.sig_image_changed = self._sigprox.imageChanged
-        # QWidget.__init__(self)
+
         QObject.__init__(self)
 
         # define the initials
@@ -47,23 +46,17 @@ class ImageView(QObject):
         self.current_img = None
         self.img_size = None
         self.tb_size = None
-        self.adding_allowed = False
-        self.line_kind = 'gamma'
-        self.channel_tables = []
-        self.channel_points = []
         self.color_lut_list = []
         self.scene_index = 0
         self.max_num_channels = 4
         self.channel_visible = [False, False, False, False]
         self.channel_color = [None, None, None, None]
-
-        self.table = None
-        self.signal_block = False
+        self.image_merged = False
 
         self.side_lines = None
         self.corner_points = None
 
-        self.current_mode = 'gray'
+        self.current_mode = 'rgb'
 
         # make empty space taker, width 300 according to width of sidebar
         space_item = QSpacerItem(300, 10, QSizePolicy.Expanding)
@@ -145,29 +138,22 @@ class ImageView(QObject):
             if not self.image_file.is_rgb:
                 for i in range(self.image_file.n_channels):
                     self.chn_widget_list[i].delete_item()
-                    self.channel_visible[i] = False
-                    self.img_stacks.image_list[i].setVisible(False)
-            for i in range(self.image_file.n_channels):
+            for i in range(self.max_num_channels):
                 self.channel_color[i] = None
-            self.current_mode = 'gray'
+                self.channel_visible[i] = False
+                self.img_stacks.image_list[i].setVisible(False)
+                self.chn_widget_list[i].setVisible(False)
 
         self.image_file = image_file
 
         scene_ind = self.scene_slider.value()
 
         self.current_img = copy.deepcopy(self.image_file.data['scene {}'.format(scene_ind)])
-        if self.image_file.is_rgb:
-            print('rgb')
-            self.current_mode = 'rgb'
-            self.current_img = cv2.cvtColor(self.current_img, cv2.COLOR_BGR2RGBA)
         self.img_size = self.current_img.shape[:2]
         self.img_stacks.tri_pnts.set_range(self.img_size[1], self.img_size[0])
 
         scale_factor = np.max(np.ravel(self.img_size) / 80)
         self.tb_size = (int(self.img_size[1] / scale_factor), int(self.img_size[0] / scale_factor))
-
-        for i in range(self.max_num_channels):
-            self.chn_widget_list[i].setVisible(False)
 
         if self.image_file.n_scenes != 1:
             self.scene_slider.setMaximum(self.image_file.n_scenes-1)
@@ -176,42 +162,42 @@ class ImageView(QObject):
         else:
             self.scene_wrap.setVisible(False)
 
-        if self.image_file.is_czi:
+        if self.image_file.is_czi:   ## ???????
             self.scale_wrap.setVisible(True)
 
         # set color and names to channels
-        if self.image_file.is_rgb:
-            self.chn_widget_wrap.setVisible(False)
-        else:
-            self.chn_widget_wrap.setVisible(True)
-            for i in range(self.image_file.n_channels):
-                # get color look-up-table
-                self.channel_color[i] = copy.deepcopy(self.image_file.hsv_colors[i])
-                da_hsv_color = self.channel_color[i]
-                da_lut = make_color_lut(da_hsv_color)
-                self.color_lut_list.append(da_lut)
+        self.chn_widget_wrap.setVisible(True)
+        for i in range(self.image_file.n_channels):
+            # get color look-up-table
+            self.channel_color[i] = copy.deepcopy(self.image_file.hsv_colors[i])
+            da_hsv_color = self.channel_color[i]
+            da_lut = make_color_lut(da_hsv_color)
+            self.color_lut_list.append(da_lut)
 
-                self.chn_widget_list[i].setVisible(True)
-                self.chn_widget_list[i].vis_btn.setText(self.image_file.channel_name[i])
-                self.chn_widget_list[i].add_item(self.channel_color[i])
-                self.channel_visible[i] = True
+            self.chn_widget_list[i].setVisible(True)
+            self.chn_widget_list[i].vis_btn.setText(self.image_file.channel_name[i])
+            self.chn_widget_list[i].add_item(self.channel_color[i])
+            self.channel_visible[i] = True
 
         # set data to curves
         self.update_curves()
 
         # set data to image stacks
-        print(self.current_img.shape)
-        print(np.max(self.current_img), np.min(self.current_img))
-        self.img_stacks.set_data(self.current_img, self.image_file.is_rgb)
-        self.img_stacks.set_lut(self.color_lut_list, self.image_file.is_rgb)
+        self.set_data_to_img_stacks()
         self.get_corner_and_lines()
+
+    def set_data_to_img_stacks(self):
+        self.img_stacks.set_data(self.current_img)
+        self.img_stacks.set_lut(self.color_lut_list, self.image_file.level)
+
+    def get_corner_and_lines(self):
+        rect = (0, 0, self.img_size[1], self.img_size[0])
+        self.corner_points, self.side_lines = get_corner_line_from_rect(rect)
+        self.sig_image_changed.emit()
 
     def update_curves(self):
         self.curve_widget.setEnabled(True)
-        if self.image_file.is_rgb:
-            img_layers = self.current_img[:, :, :3]
-        else:
-            img_layers = self.current_img
+        img_layers = self.current_img.copy()
         self.curve_widget.set_data(img_layers, self.image_file.rgb_colors, self.image_file.level, self.image_file.data_type)
 
     def scene_index_changed(self):
@@ -219,7 +205,6 @@ class ImageView(QObject):
         self.scene_label.setText('{}/{}'.format(scene_index, self.image_file.n_scenes-1))
         if self.image_file is None:
             return
-        self.current_mode = 'gray'
         with pg.BusyCursor():
             if 'scene {}'.format(scene_index) not in self.image_file.data.keys():
                 if self.image_file.is_czi:
@@ -229,32 +214,14 @@ class ImageView(QObject):
                 else:
                     print('not czi files')
             self.current_img = copy.deepcopy(self.image_file.data['scene {}'.format(scene_index)])
-            if self.image_file.is_rgb:
-                self.current_mode = 'rgb'
-                self.current_img = cv2.cvtColor(self.current_img, cv2.COLOR_BGR2RGB)
+
             self.img_size = self.current_img.shape[:2]
             self.img_stacks.tri_pnts.set_range(self.img_size[1], self.img_size[0])
-            self.img_stacks.set_data(self.current_img, self.image_file.is_rgb)
-            self.img_stacks.set_lut(self.color_lut_list, self.image_file.is_rgb)
+            self.img_stacks.set_data(self.current_img, self.image_file.pixel_type)
+            self.img_stacks.set_lut(self.color_lut_list, self.image_file.pixel_type)
             self.get_corner_and_lines()
-
-
-
-            # for i in range(self.image_file.n_channels):
-            #     self.chn_widget_list[i].color_combo.setCurrentIndex(len(self.channel_color)-1)
-
-            # shp = self.current_img.shape[:2]
-            # scale_factor = np.max(shp / 80)
-            # self.tb_size = np.floor(shp / scale_factor).astype(self.image_file.data_type)
-
-    def get_corner_and_lines(self):
-        rect = (0, 0, self.img_size[1], self.img_size[0])
-        self.corner_points, self.side_lines = get_corner_line_from_rect(rect)
-        self.sig_image_changed.emit()
-
-    def _set_data_to_img_stacks(self):
-        self.img_stacks.set_data(self.current_img, self.image_file.is_rgb)
-        self.img_stacks.set_lut(self.color_lut_list, self.image_file.is_rgb)
+            self.update_curves()
+            # reset gamma and channels and black/white slider
 
     def scale_value_changed(self):
         scale = self.scale_slider.value()
@@ -266,21 +233,17 @@ class ImageView(QObject):
         scene_index = self.scene_slider.value()
         if self.image_file is None:
             return
-        self.current_mode = 'gray'
         if self.image_file.is_czi:
             with pg.BusyCursor():
                 self.image_file.read_data(scale_val, scene_index)
                 self.current_img = copy.deepcopy(self.image_file.data['scene %d' % scene_index])
-                if self.image_file.is_rgb:
-                    self.current_mode = 'rgb'
-                    self.current_img = cv2.cvtColor(self.current_img, cv2.COLOR_BGR2RGB)
+
                 self.img_size = self.current_img.shape[:2]
                 self.img_stacks.tri_pnts.set_range(self.img_size[1], self.img_size[0])
-                self._set_data_to_img_stacks()
+                self.set_data_to_img_stacks()
                 self.get_corner_and_lines()
 
     def channel_color_changed(self, col, ind):
-        print(col)
         da_lut = make_color_lut(col)
         self.img_stacks.image_list[ind].setLookupTable(da_lut)
         self.color_lut_list[ind] = da_lut
@@ -294,16 +257,17 @@ class ImageView(QObject):
     def image_curve_changed(self, table):
         if self.image_file is None:
             return
+        table = table.astype(int)
         scene_index = self.scene_slider.value()
         da_img = copy.deepcopy(self.image_file.data['scene %d' % scene_index])
-        if self.image_file.is_rgb:
-            da_img = cv2.LUT(self.current_img, table.astype("uint8"))
-            self.img_stacks.image_list[0].setImage(da_img)
+        if self.image_file.pixel_type == 'rgb24':
+            da_img = cv2.LUT(self.current_img, table)
+            self.img_stacks.set_data(da_img)
         else:
             for i in range(self.image_file.n_channels):
                 if self.channel_visible[i]:
                     lut_in = self.color_lut_list[i].copy()
-                    lut_out = lut_in[table.astype("uint16"), :]
+                    lut_out = lut_in[table, :]
                     self.img_stacks.image_list[i].setLookupTable(lut_out)
 
     def image_curve_type_changed(self):
@@ -311,11 +275,11 @@ class ImageView(QObject):
         signal function after change line type
         set to the original 2 points linear type
         """
-        if self.image_file.is_rgb:
-            print('curve type changed for rgb image')
-        else:
-            for i in range(self.image_file.n_channels):
-                self.img_stacks.image_list[i].setLookupTable(self.color_lut_list[i])
+        # if self.image_file.is_rgb:
+        #     print('curve type changed for rgb image')
+        # else:
+        for i in range(self.image_file.n_channels):
+            self.img_stacks.image_list[i].setLookupTable(self.color_lut_list[i])
 
     def image_curve_reset(self):
         """
@@ -335,43 +299,42 @@ class ImageView(QObject):
     def image_vertical_flip(self):
         if self.image_file is None:
             return
-        if self.image_file.is_rgb:
-            print('rgb image')
-        else:
-            for i in range(self.image_file.n_channels):
-                self.current_img[:, :, i] = cv2.flip(self.current_img[:, :, i], 0)
-            self.img_size = self.current_img.shape[:2]
-            self.img_stacks.tri_pnts.set_range(self.img_size[1], self.img_size[0])
-        self.img_stacks.set_data(self.current_img)
+        # if self.image_file.is_rgb:
+        #     self.current_img = cv2.flip(self.current_img, 0)
+        # else:
+        for i in range(self.image_file.n_channels):
+            self.current_img[:, :, i] = cv2.flip(self.current_img[:, :, i], 0)
+        self.img_size = self.current_img.shape[:2]
+        self.img_stacks.tri_pnts.set_range(self.img_size[1], self.img_size[0])
+        self.img_stacks.set_data(self.current_img, self.image_file.is_rgb)
 
-    #
     def image_horizon_flip(self):
         if self.image_file is None:
             return
-        if self.image_file.is_rgb:
-            print('rgb image')
-        else:
-            for i in range(self.image_file.n_channels):
-                self.current_img[:, :, i] = cv2.flip(self.current_img[:, :, i], 1)
-            self.img_size = self.current_img.shape[:2]
-            self.img_stacks.tri_pnts.set_range(self.img_size[1], self.img_size[0])
-        self.img_stacks.set_data(self.current_img)
+        # if self.image_file.is_rgb:
+        #     self.current_img = cv2.flip(self.current_img, 1)
+        # else:
+        for i in range(self.image_file.n_channels):
+            self.current_img[:, :, i] = cv2.flip(self.current_img[:, :, i], 1)
+        self.img_stacks.set_data(self.current_img, self.image_file.is_rgb)
+        self.img_size = self.current_img.shape[:2]
+        self.img_stacks.tri_pnts.set_range(self.img_size[1], self.img_size[0])
 
     def image_90_rotate(self):
         if self.image_file is None:
             return
         scene_index = self.scene_slider.value()
-        if self.image_file.is_rgb:
-            print('rgb image')
-        else:
-            temp = []
-            for i in range(self.image_file.n_channels):
-                self.img_stacks.image_list[i].clear()
-                temp.append(cv2.rotate(self.current_img[:, :, i], cv2.ROTATE_90_CLOCKWISE))
-            self.current_img = np.dstack(temp)
-            self.img_size = self.current_img.shape[:2]
-            self.img_stacks.tri_pnts.set_range(self.img_size[1], self.img_size[0])
-        self.img_stacks.set_data(self.current_img)
+        # if self.image_file.is_rgb:
+        #     self.current_img = cv2.rotate(self.current_img, cv2.ROTATE_90_CLOCKWISE)
+        # else:
+        temp = []
+        for i in range(self.image_file.n_channels):
+            self.img_stacks.image_list[i].clear()
+            temp.append(cv2.rotate(self.current_img[:, :, i], cv2.ROTATE_90_CLOCKWISE))
+        self.current_img = np.dstack(temp)
+        self.img_stacks.set_data(self.current_img, self.image_file.is_rgb)
+        self.img_size = self.current_img.shape[:2]
+        self.img_stacks.tri_pnts.set_range(self.img_size[1], self.img_size[0])
         self.get_corner_and_lines()
         self.image_file.data['scene %d' % scene_index] = self.current_img.copy()
         self.tb_size = np.flip(self.tb_size, 0)
@@ -379,38 +342,68 @@ class ImageView(QObject):
     def image_180_rotate(self):
         if self.image_file is None:
             return
-        if self.image_file.is_rgb:
-            self.current_img = cv2.rotate(self.current_img, cv2.ROTATE_180)
-        else:
-            temp = []
-            for i in range(self.image_file.n_channels):
-                self.img_stacks.image_list[i].clear()
-                temp.append(cv2.rotate(self.current_img[:, :, i], cv2.ROTATE_180))
-            self.current_img = np.dstack(temp)
-            self.img_size = self.current_img.shape[:2]
-            self.img_stacks.tri_pnts.set_range(self.img_size[1], self.img_size[0])
-        self.img_stacks.set_data(self.current_img)
+        # if self.image_file.is_rgb:
+        #     self.current_img = cv2.rotate(self.current_img, cv2.ROTATE_180)
+        # else:
+        temp = []
+        for i in range(self.image_file.n_channels):
+            self.img_stacks.image_list[i].clear()
+            temp.append(cv2.rotate(self.current_img[:, :, i], cv2.ROTATE_180))
+        self.current_img = np.dstack(temp)
+        self.img_stacks.set_data(self.current_img, self.image_file.is_rgb)
+        self.img_size = self.current_img.shape[:2]
+        self.img_stacks.tri_pnts.set_range(self.img_size[1], self.img_size[0])
 
     def image_90_counter_rotate(self):
         if self.image_file is None:
             return
-        if self.image_file.is_rgb:
-            print('rgb image')
-        else:
-            temp = []
-            for i in range(self.image_file.n_channels):
-                self.img_stacks.image_list[i].clear()
-                temp.append(cv2.rotate(self.current_img[:, :, i], cv2.ROTATE_90_COUNTERCLOCKWISE))
-            self.current_img = np.dstack(temp)
-            self.img_size = self.current_img.shape[:2]
-            self.img_stacks.tri_pnts.set_range(self.img_size[1], self.img_size[0])
-        self.img_stacks.set_data(self.current_img)
+        # if self.image_file.is_rgb:
+        #     self.current_img = cv2.rotate(self.current_img, cv2.ROTATE_90_COUNTERCLOCKWISE)
+        # else:
+        temp = []
+        for i in range(self.image_file.n_channels):
+            self.img_stacks.image_list[i].clear()
+            temp.append(cv2.rotate(self.current_img[:, :, i], cv2.ROTATE_90_COUNTERCLOCKWISE))
+        self.current_img = np.dstack(temp)
+        self.img_stacks.set_data(self.current_img, self.image_file.is_rgb)
+        self.img_size = self.current_img.shape[:2]
+        self.img_stacks.tri_pnts.set_range(self.img_size[1], self.img_size[0])
         self.get_corner_and_lines()
         self.tb_size = np.flip(self.tb_size, 0)
 
+    def image_1_rotate(self):
+        print('1')
+
+    def image_1_counter_rotate(self):
+        print('1')
+
+    # merge image
+    def turn_current_to_process(self):
+        if self.image_file is None:
+            return
+        if self.image_file.is_rgb:
+            self.current_img = cv2.merge([self.current_img[:, :, 0], self.current_img[:, :, 1], self.current_img[:, :, 2]])
+            self.image_merged = True
+            for i in range(1, 3):
+                self.img_stacks.image_list[i].clear()
+                self.img_stacks.image_list[i].setVisible(False)
+            self.img_stacks.set_data(self.current_img, self.image_merged)
+            self.chn_widget_wrap.setVisible(False)
+
+    def reset_current_image(self):
+        if not self.image_merged:
+            return
+        scene_index = self.scene_slider.value()
+        self.current_img = copy.deepcopy(self.image_file.data['scene {}'.format(scene_index)])
+        self.image_merged = False
+        self.set_data_to_img_stacks()
+        self.chn_widget_wrap.setVisible(True)
+
     # mode change
     def image_mode_changed(self, mode):
-        if self.image_file is None or not self.image_file.is_rgb:
+        if self.image_file is None:
+            return
+        if not self.image_file.is_rgb:
             return
         temp = self.current_img.copy()
         scene_ind = self.scene_slider.value()
@@ -429,11 +422,22 @@ class ImageView(QObject):
             scene_ind = self.scene_slider.value()
             temp = copy.deepcopy(self.image_file.data['scene {}'.format(scene_ind)])
             da_img = cv2.cvtColor(temp, cv2.COLOR_BGR2RGBA)
-        self.current_img = da_img.copy()
-        self.img_stacks.set_data(self.current_img, is_rgb=True)
-        self.current_mode = mode
+        # self.current_img = da_img.copy()
+        # self.img_stacks.set_data(self.current_img, is_rgb=True)
+        # self.current_mode = mode
 
-
+    def get_image_control_data(self):
+        data = {'current_img': self.current_img,
+                'color_lut_list': self.color_lut_list,
+                'scene_index': self.scene_index,
+                'scale_val': self.scale_slider.value(),
+                'channel_visible': self.channel_visible,
+                'channel_color': self.channel_color,
+                'image_merged': self.image_merged,
+                'side_lines': self.side_lines,
+                'corner_points': self.corner_points,
+                'current_mode': self.current_mode}
+        return data
 
 
 

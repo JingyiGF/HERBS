@@ -111,11 +111,9 @@ class ImageStacks(pg.GraphicsLayoutWidget):
 
         self.contour_img = pg.ImageItem()
         self.contour_img.setLevels(levels=(0, 1))
-        # self.contour_pnts = pg.ScatterPlotItem()
+
         self.virus_img = pg.ImageItem()
         self.virus_img.setLevels(levels=(0, 1))
-        # self.virus_pnts = pg.ScatterPlotItem(pen=(133, 255, 117), symbolBrush=(133, 255, 117), symbolPen=(55, 55, 55),
-        #                                      symbol='s', symbolSize=1)
 
         self.image_list = [self.img1, self.img2, self.img3, self.img4]
 
@@ -135,7 +133,6 @@ class ImageStacks(pg.GraphicsLayoutWidget):
 
         self.vb.addItem(self.virus_img)
         self.vb.addItem(self.contour_img)
-        # self.vb.addItem(self.virus_pnts)
 
         self.vb.addItem(self.probe_pnts)
 
@@ -143,40 +140,27 @@ class ImageStacks(pg.GraphicsLayoutWidget):
         self.vb.addItem(self.blob_pnts)
 
         self.vb.addItem(self.drawing_pnts)
-
-
         # self.vb.addItem(self.contour_pnts)
 
-    def set_data(self, data, is_rgb=False, scale=None):
+    def set_data(self, data, scale=None):
         self.data = data
         if scale is not None:
             self.resetTransform()
             self.scale(*scale)
         base_img = np.zeros(data.shape[:2], 'uint8')
         self.base_layer.setImage(base_img)
-        if is_rgb:
-            print(is_rgb)
-            self.image_list[0].setImage(self.data.astype('uint8'), autoLevels=False)
-            self.image_list[0].setVisible(True)
-        else:
-            for i in range(self.data.shape[2]):
-                self.image_list[i].setImage(self.data[:, :, i], autoLevels=False)
-                self.image_list[i].setVisible(True)
-        # self.hist_lut.setLevels(0, 65535)
-
-    def set_lut(self, lut_list, is_rgb=False):
-        if is_rgb:
-            return
         for i in range(self.data.shape[2]):
-            self.image_list[i].setLevels(levels=(0, 65535))
+            self.image_list[i].setImage(self.data[:, :, i], autoLevels=False)
+            self.image_list[i].setVisible(True)
+
+    def set_lut(self, lut_list, bit_level):
+        for i in range(self.data.shape[2]):
+            self.image_list[i].setLevels(levels=(0, bit_level))
             self.image_list[i].setLookupTable(lut_list[i])
 
-    def set_opacity(self, is_rgb):
-        if is_rgb:
-            self.image_list[0].setOpts(opacity=1)
-        else:
-            for i in range(len(self.data)):
-                self.image_list[i].setOpts(opacity=0)
+    def set_opacity(self, val):
+        for i in range(len(self.data)):
+            self.image_list[i].setOpts(opacity=val)
 
     def boundingRect(self):
         return self.base_layer.boundingRect()

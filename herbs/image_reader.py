@@ -1,6 +1,7 @@
 import os
 import cv2
 import tifffile
+import colorsys
 import numpy as np
 
 
@@ -12,12 +13,17 @@ class ImageReader(object):
             self.file_name_list[0] = self.file_name_list[0][:-1]
         self.n_scenes = 1
         self.is_rgb = True
+        self.pixel_type = 'rgb24'
         self.level = 255
         self.n_channels = 3
         self.data_type = 'uint8'
-        self.hsv_colors = [(0, 255, 255), (120, 255, 255), (240, 255, 255)]
         self.rgb_colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255)]
         self.channel_name = ['Red', 'Green', 'Blue']
+        self.hsv_colors = []
+        for i in range(3):
+            chsv = colorsys.rgb_to_hsv(self.rgb_colors[i][0], self.rgb_colors[i][1], self.rgb_colors[i][2])
+            hsv_color = (chsv[0], chsv[1], chsv[2] / 255)
+            self.hsv_colors.append(hsv_color)
         self.gamma_val = []
 
         file_type = image_file_path[-4:].lower()
@@ -28,6 +34,8 @@ class ImageReader(object):
         else:
             print('TIFF file is testing')
             img_data = tifffile.imread(image_file_path)
+
+        img_data = cv2.cvtColor(img_data, cv2.COLOR_BGR2RGB)
         self.data['scene 0'] = img_data
 
 

@@ -78,15 +78,16 @@ def get_closest_point_to_line(p0, r, p):
 
 def line_fit(points):
     points = np.asarray(points)
+    sort_order = np.argsort(points[:, 2])[::-1]
+    points = points[sort_order, :]
     avg = np.mean(points, 0)
     substracted = points - avg
-    u, s, vh = np.linalg.svd(substracted, full_matrices=True)
+    u, s, vh = np.linalg.svd(substracted)
     direction = vh[0, :] / np.linalg.norm(vh[0, :])
-    p1 = points[np.where(points[:, 2] == np.max(points[:, 2]))[0], :]
-    p2 = points[np.where(points[:, 2] == np.min(points[:, 2]))[0], :]
+    p1 = points[0, :]
+    p2 = points[-1, :]
     sp = get_closest_point_to_line(avg, direction, p1)
     ep = get_closest_point_to_line(avg, direction, p2)
-    print(sp, ep)
     return sp, ep, avg, direction
 
 
@@ -310,10 +311,6 @@ def order_contour_pnt(pnt):
     lower_pnts = pnt[:, lower_inds]
 
 
-
-
-
-
 def calculate_contour_line(data):
     data = np.asarray(data)
     res = splprep([data[:, 0], data[:, 1], data[:, 2]], s=2)
@@ -327,18 +324,13 @@ def calculate_contour_line(data):
 
 
 def get_object_vis_color(color):
-    vis_color_r = color.red()
-    vis_color_g = color.green()
-    vis_color_b = color.blue()
-    vis_color = (vis_color_r / 255, vis_color_g / 255, vis_color_b / 255, 1)
+    vis_color = (color[0] / 255, color[1] / 255, color[2] / 255, 1)
     return vis_color
 
 
 def create_plot_points_in_3d(data_dict):
     pnts = data_dict['data']
-    print(pnts)
     vis_color = get_object_vis_color(data_dict['vis_color'])
-    print(vis_color)
     vis_points = gl.GLScatterPlotItem(pos=pnts, color=vis_color, size=3)
     vis_points.setGLOptions('opaque')
     return vis_points
@@ -413,7 +405,6 @@ def merge_channels_into_single_img(czi_img, channel_colors):
 
 def make_color_lut(channel_color: tuple):
     r, g, b = colorsys.hsv_to_rgb(channel_color[0], channel_color[1], channel_color[2])
-    # colors = [(0, 0, 0), (r, g, b)]
     colors = [(0, 0, 0), (r * 255, g * 255, b * 255)]
     color_map = pg.ColorMap(pos=[0, 1], color=colors)
     da_lut = color_map.getLookupTable(nPts=65536, mode=pg.ColorMap.FLOAT)
@@ -542,8 +533,8 @@ def warp_triangle(img1, img2, t1, t2, is_rgb=False):
 
     # Get mask by filling triangle
     if is_rgb:
-        mask = np.zeros((r2[3], r2[2], 3), dtype=np.float32)
-        cv2.fillConvexPoly(mask, np.int32(t2_rect_int), (1.0, 1.0, 1.0), 16, 0)
+        mask = np.zeros((r2[3], r2[2], img1.shape[2]), dtype=np.float32)
+        cv2.fillConvexPoly(mask, np.int32(t2_rect_int), tuple(np.repeat(1.0, img1.shape[2])), 16, 0)
     else:
         mask = np.zeros((r2[3], r2[2]), dtype=np.float32)
         cv2.fillConvexPoly(mask, np.int32(t2_rect_int), 1, 16, 0)
@@ -563,7 +554,7 @@ def warp_triangle(img1, img2, t1, t2, is_rgb=False):
     yr = (r2[0], r2[0] + r2[2])
     xr = (r2[1], r2[1] + r2[3])
     if is_rgb:
-        img2[xr[0]:xr[1], yr[0]:yr[1]] = img2[xr[0]:xr[1], yr[0]:yr[1]] * ((1.0, 1.0, 1.0) - mask)
+        img2[xr[0]:xr[1], yr[0]:yr[1]] = img2[xr[0]:xr[1], yr[0]:yr[1]] * (tuple(np.repeat(1.0, img1.shape[2])) - mask)
     else:
         img2[xr[0]:xr[1], yr[0]:yr[1]] = img2[xr[0]:xr[1], yr[0]:yr[1]] * (1 - mask)
     img2[xr[0]:xr[1], yr[0]:yr[1]] = img2[xr[0]:xr[1], yr[0]:yr[1]] + img2_rect
@@ -840,7 +831,13 @@ def get_tri_lines(rect, pnts):
 # channel_hsv = image_file.hsv_colors
 # temp_img = merge_channels_into_single_img(czi_img, channel_hsv)
 
+def gamma_correction(src, gamma):
+    inv_gamma = 1 / gamma
 
+    table = [((i / 255) ** inv_gamma) * 255 for i in range(256)]
+    table = np.array(table, np.uint8)
+
+    return cv2.LUT(src, table)
 
 
 
@@ -871,7 +868,7 @@ def get_bound_color(color, tol, level, mode):
         upper_val = []
         for i in range(3):
             lower_val.append(get_lower_val(color[i], tol, 0))
-            upper_val.append(get_upper_val(color[i], tol, 255))
+            upper_val.append(get_upper_val(color[i], tol, level))
     return lower_val, upper_val
 
 

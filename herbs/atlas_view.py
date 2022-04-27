@@ -889,10 +889,11 @@ class AtlasView(QObject):
         dv_plate_md = gl.MeshData(vertexes=dv_plate_verts, faces=self.dv_plate_faces)
         self.dv_plate_mesh.setMeshData(meshdata=dv_plate_md)
 
-
-
-
-
+    def get_atlas_angles(self):
+        c_ang = (self.crotation_ctrl.h_slider.value(), self.crotation_ctrl.v_slider.value())
+        s_ang = (self.srotation_ctrl.h_slider.value(), self.srotation_ctrl.v_slider.value())
+        h_ang = (self.hrotation_ctrl.h_slider.value(), self.hrotation_ctrl.v_slider.value())
+        return [c_ang, s_ang, h_ang]
     # def labels_changed(self):
     #     # reapply label colors
     #     lut = self.label_tree.lookup_table()

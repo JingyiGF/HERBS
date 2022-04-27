@@ -87,6 +87,7 @@ QLineEdit {
 class SingleLayer(QWidget):
     sig_clicked = pyqtSignal(object)
     eye_clicked = pyqtSignal(object)
+    sig_delete = pyqtSignal(object)
 
     def __init__(self, parent=None, layer_id=0, link='None'):
         QWidget.__init__(self, parent=parent)
@@ -100,7 +101,7 @@ class SingleLayer(QWidget):
         self.active = True
         self.vis = True
         self.eye_button = QPushButton()
-        self.eye_button.setFixedSize(QSize(40, 60))
+        self.eye_button.setFixedSize(QSize(30, 60))
         self.eye_button.setStyleSheet(eye_button_style)
         self.eye_button.setCheckable(True)
         eye_icon = QIcon()
@@ -118,15 +119,22 @@ class SingleLayer(QWidget):
         self.text_btn = QDoubleButton()
         self.text_btn.setStyleSheet(text_btn_style)
         self.text_btn.setText(link)
-        self.text_btn.setFixedHeight(60)
+        self.text_btn.setFixedSize(QSize(140, 60))
         self.text_btn.left_clicked.connect(self.on_click)
         self.text_btn.double_clicked.connect(self.on_doubleclick)
 
         self.l_line_edit = QLineEdit()
         self.l_line_edit.setStyleSheet(line_edit_style)
-        self.l_line_edit.setFixedSize(QSize(180, 60))
+        self.l_line_edit.setFixedSize(QSize(140, 60))
         self.l_line_edit.editingFinished.connect(self.enter_pressed)
         self.l_line_edit.setVisible(False)
+
+        self.trash_button = QPushButton()
+        self.trash_button.setFixedSize(QSize(25, 60))
+        self.trash_button.setStyleSheet(eye_button_style)
+        self.trash_button.setIcon(QIcon('icons/sidebar/trash.png'))
+        self.trash_button.setIconSize(QSize(20, 20))
+        self.trash_button.clicked.connect(self.on_delete)
 
         self.inner_frame = QFrame()
         self.inner_frame.setStyleSheet(self.active_style)
@@ -140,6 +148,7 @@ class SingleLayer(QWidget):
         self.inner_layout.addSpacing(5)
         self.inner_layout.addWidget(self.text_btn)
         self.inner_layout.addWidget(self.l_line_edit)
+        self.inner_layout.addWidget(self.trash_button)
         self.inner_layout.addStretch()
 
         outer_layout = QHBoxLayout()
@@ -160,7 +169,7 @@ class SingleLayer(QWidget):
 
     def on_click(self):
         self.set_checked(True)
-        self.sig_clicked.emit((self.id, self.link, self.vis))
+        self.sig_clicked.emit(self.id)
 
     def eye_on_click(self):
         if self.eye_button.isChecked():
@@ -172,14 +181,16 @@ class SingleLayer(QWidget):
         self.l_line_edit.setEnabled(self.vis)
         self.eye_clicked.emit((self.id, self.link, self.vis))
 
+    def on_delete(self):
+        self.sig_delete.emit(self.id)
+
     @pyqtSlot()
     def on_doubleclick(self):
-        self.set_checked(True)
         self.l_line_edit.setText(self.text_btn.text())
         self.l_line_edit.setVisible(True)
         self.text_btn.setVisible(False)
         self.l_line_edit.setFocus(True)
-        self.sig_clicked.emit((self.id, self.link, self.vis))
+        self.on_click()
 
     def enter_pressed(self):
         self.l_line_edit.setVisible(False)
@@ -217,21 +228,27 @@ class LayersControl(QWidget):
     class SignalProxy(QObject):
         sigOpacityChanged = pyqtSignal(object)
         sigVisChanged = pyqtSignal(object)
+        sigBlendModeChanged = pyqtSignal(object)
 
     def __init__(self, parent=None):
 
         self._sigprox = LayersControl.SignalProxy()
         self.sig_opacity_changed = self._sigprox.sigOpacityChanged
         self.sig_visible_changed = self._sigprox.sigVisChanged
+        self.sig_blend_mode_changed = self._sigprox.sigBlendModeChanged
 
         QWidget.__init__(self)
 
-        self.current_layer_id = []
+        self.valid_blendable_link = ['img-mask', 'img-virus', 'img-contour', 'img-overlay', 'Image', 'atlas-overlay']
+
+        self.current_layer_index = []
 
         self.layer_list = []
         self.layer_id = []
         self.layer_link = []
         self.layer_opacity = []
+        self.layer_blend_mode = []
+        self.layer_color = []
 
         self.layer_count = 0
 
@@ -244,9 +261,9 @@ class LayersControl(QWidget):
         self.layer_blend_combo = QComboBox()
         self.layer_blend_combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
         self.layer_blend_combo.setEditable(False)
-        combo_value = ['Multiply', 'Overlay', 'SourceOver']
+        combo_value = ['Plus', 'Multiply', 'Overlay', 'SourceOver']
         self.layer_blend_combo.addItems(combo_value)
-        self.layer_blend_combo.setCurrentText('Multiply')
+        self.layer_blend_combo.setCurrentText('Plus')
 
         blend_layout.addWidget(combo_label)
         blend_layout.addWidget(self.layer_blend_combo)
@@ -263,7 +280,7 @@ class LayersControl(QWidget):
         self.layer_opacity_slider.setMaximum(100)
         self.layer_opacity_slider.setMinimum(0)
         self.layer_opacity_slider.setValue(100)
-        self.layer_opacity_slider.sliderMoved.connect(self.opacity_slider_released)
+        self.layer_opacity_slider.sliderMoved.connect(self.opacity_slider_moved)
         self.layer_opacity_slider.valueChanged.connect(self.change_opacity_label_value)
         self.layer_opacity_val_label = QLabel('100%')
 
@@ -311,7 +328,6 @@ class LayersControl(QWidget):
         self.delete_layer_btn.setIconSize(QSize(20, 20))
         self.delete_layer_btn.clicked.connect(self.delete_layer_btn_clicked)
 
-
         outer_layout = QVBoxLayout()
         outer_layout.setSpacing(10)
         outer_layout.addWidget(blend_frame)
@@ -320,113 +336,133 @@ class LayersControl(QWidget):
 
         self.setLayout(outer_layout)
 
-    def add_layer(self, widget_link):
-        new_layer = SingleLayer(layer_id=self.layer_count, link=widget_link)
-        new_layer.sig_clicked.connect(self.layer_clicked)
-        new_layer.eye_clicked.connect(self.layer_eye_clicked)
-
-        if not self.current_layer_id:
-            self.current_layer_id.append(self.layer_count)
-        else:
-            for da_id in self.current_layer_id:
-                inactive_layer_ind = np.where(np.asarray(self.layer_id) == da_id)[0][0]
-                self.layer_list[inactive_layer_ind].set_checked(False)
-            self.current_layer_id = [self.layer_count]
-
-        self.layer_list.append(new_layer)
+    def add_layer(self, widget_link, color):
         self.layer_id.append(self.layer_count)
         self.layer_link.append(widget_link)
         self.layer_opacity.append(100)
+        self.layer_blend_mode.append('Plus')
+        self.layer_color.append(color)
+
+        new_layer = SingleLayer(layer_id=self.layer_count, link=widget_link)
+        new_layer.sig_clicked.connect(self.layer_clicked)
+        new_layer.eye_clicked.connect(self.layer_eye_clicked)
+        new_layer.sig_delete.connect(self.delete_layer_btn_clicked)
+
+        active_index = np.where(np.ravel(self.layer_id) == self.layer_count)[0][0]
+        if not self.current_layer_index:
+            self.current_layer_index.append(active_index)
+        else:
+            for da_ind in self.current_layer_index:
+                self.layer_list[da_ind].set_checked(False)
+            self.current_layer_index = [active_index]
+
+        self.layer_list.append(new_layer)
         self.layer_layout.addWidget(self.layer_list[-1])
         self.layer_count += 1
 
-    def delete_layer_btn_clicked(self):
-        if len(self.current_layer_id) == 0:
-            return
-        for da_id in self.current_layer_id:
-            layer_ind = np.where(np.ravel(self.layer_id) == da_id)[0][0]
-            self.delete_layer(layer_ind)
-        if len(self.layer_id) != 0:
-            self.layer_list[-1].set_checked(True)
-            self.current_layer_id.append(self.layer_id[-1])
+        if self.layer_opacity[-1] != self.layer_opacity_slider.value():
+            self.layer_opacity_slider.setValue(self.layer_opacity[-1])
+        if self.layer_blend_mode[-1] != self.layer_blend_combo.currentText():
+            self.layer_blend_combo.setCurrentText(self.layer_blend_mode[-1])
 
-    def delete_layer(self, da_index):
-        # ind is the index in the layer_list, not the real id
-        if self.layer_id[da_index] in self.current_layer_id:
-            remove_from_current_ind = np.where(np.ravel(self.current_layer_id) == self.layer_id[da_index])[0][0]
-            del self.current_layer_id[remove_from_current_ind]
+    def delete_layer_btn_clicked(self, clicked_id):
+        delete_index = np.where(np.ravel(self.layer_id) == clicked_id)[0][0]
+        self.delete_layer(delete_index)
 
-        self.layer_layout.removeWidget(self.layer_list[da_index])
-        self.layer_list[da_index].deleteLater()
-        del self.layer_list[da_index]
-        del self.layer_id[da_index]
-        del self.layer_link[da_index]
-        del self.layer_opacity[da_index]
+    def delete_layer(self, delete_index):
+        if delete_index in self.current_layer_index:
+            remove_ind = np.where(np.ravel(self.current_layer_index) == delete_index)[0][0]
+            for i in range(len(self.current_layer_index)):
+                da_ind = self.current_layer_index[i]
+                if da_ind > delete_index:
+                    self.current_layer_index[i] -= 1
+            del self.current_layer_index[remove_ind]
 
-        print(self.layer_id)
-        print(self.layer_link)
+        self.layer_layout.removeWidget(self.layer_list[delete_index])
+        self.layer_list[delete_index].deleteLater()
+        del self.layer_list[delete_index]
+        del self.layer_id[delete_index]
+        del self.layer_link[delete_index]
+        del self.layer_opacity[delete_index]
+        del self.layer_blend_mode[delete_index]
 
-    def layer_clicked(self, ev):
-        # a bit slow of timer
-        clicked_id = ev[0]
-        all_layer_ids = np.ravel(self.layer_id)
+    def layer_clicked(self, clicked_id):
+        clicked_index = np.where(np.ravel(self.layer_id) == clicked_id)[0][0]
+
         modifiers = QApplication.keyboardModifiers()
         if modifiers == Qt.ControlModifier:
-            if clicked_id in self.current_layer_id:
-                id2unactive = np.where(all_layer_ids == clicked_id)[0][0]
-                self.layer_list[id2unactive].set_checked(False)
-                ind = np.where(np.ravel(self.current_layer_id) == clicked_id)[0][0]
-                self.current_layer_id.pop(ind)
+            if clicked_index in self.current_layer_index:
+                self.layer_list[clicked_index].set_checked(False)
+                remove_ind = np.where(np.ravel(self.current_layer_index) == clicked_index)[0][0]
+                self.current_layer_index.pop(remove_ind)
             else:
-                id2active = np.where(all_layer_ids == clicked_id)[0][0]
-                self.layer_list[id2active].set_checked(True)
-                self.current_layer_id.append(clicked_id)
+                self.layer_list[clicked_index].set_checked(True)
+                self.current_layer_index.append(clicked_index)
         else:
-            current_ids_copy = np.ravel(self.current_layer_id).copy()
-            if clicked_id in current_ids_copy:
-                for da_id in current_ids_copy:
-                    if da_id != clicked_id:
-                        id2unactive = np.where(all_layer_ids == da_id)[0][0]
-                        self.layer_list[id2unactive].set_checked(False)
-                        unactive_ind = np.where(np.ravel(self.current_layer_id) == da_id)[0][0]
-                        self.current_layer_id.pop(unactive_ind)
-                target_index = np.where(all_layer_ids == clicked_id)[0][0]
-            else:
-                for ind in current_ids_copy:
-                    id2unactive = np.where(all_layer_ids == ind)[0][0]
-                    self.layer_list[id2unactive].set_checked(False)
-                    unactive_ind = np.where(np.ravel(self.current_layer_id) == ind)[0][0]
-                    self.current_layer_id.pop(unactive_ind)
-                target_index = np.where(all_layer_ids == clicked_id)[0][0]
-                self.layer_list[target_index].set_checked(True)
-                self.current_layer_id.append(clicked_id)
-            if self.layer_opacity_slider.value() != self.layer_opacity[target_index]:
-                self.layer_opacity_slider.setValue(self.layer_opacity[target_index])
+            for da_ind in self.current_layer_index:
+                self.layer_list[da_ind].set_checked(False)
+            self.layer_list[clicked_index].set_checked(True)
+            self.current_layer_index = [clicked_index]
 
-        print(self.current_layer_id)
-        print(('ids', self.layer_id))
+            if self.layer_opacity[clicked_index] != self.layer_opacity_slider.value():
+                self.layer_opacity_slider.setValue(self.layer_opacity[-1])
+            if self.layer_blend_mode[clicked_index] != self.layer_blend_combo.currentText():
+                self.layer_blend_combo.setCurrentText(self.layer_blend_mode[-1])
 
     def layer_eye_clicked(self, event):
         self.sig_visible_changed.emit(event)
 
-    def opacity_slider_released(self):
-        if not self.current_layer_id:
-            self.layer_opacity_slider.setValue(100)
+    def blend_mode_changed(self):
+        if not self.current_layer_index:
             return
-        if len(self.current_layer_id) > 1:
-            self.layer_opacity_slider.setValue(100)
+        if len(self.current_layer_index) > 1:
             return
-        da_val = self.layer_opacity_slider.value()
-        self.layer_opacity_val_label.setText('{} %'.format(da_val))
-        working_layer_id = self.current_layer_id[0]
-        working_layer_index = np.where(np.ravel(self.layer_id) == working_layer_id)[0][0]
-        working_layer_link = self.layer_link[working_layer_index]
-        self.layer_opacity[working_layer_index] = da_val
-        self.sig_opacity_changed.emit((working_layer_link, da_val))
+        blend_mode = self.layer_blend_combo.currentText()
+        if blend_mode != self.layer_blend_mode[self.current_layer_index[0]]:
+            current_link = self.layer_link[self.current_layer_index[0]]
+            self.layer_blend_mode[self.current_layer_index[0]] = blend_mode
+            self.sig_blend_mode_changed.emit((current_link, blend_mode))
+
+    def opacity_slider_moved(self):
+        if not self.current_layer_index:
+            return
+        if len(self.current_layer_index) > 1:
+            return
+        val = self.layer_opacity_slider.value()
+        if val != self.layer_opacity[self.current_layer_index[0]]:
+            current_link = self.layer_link[self.current_layer_index[0]]
+            self.layer_opacity[self.current_layer_index[0]] = val
+            self.sig_opacity_changed.emit((current_link, val))
 
     def change_opacity_label_value(self):
         da_val = self.layer_opacity_slider.value()
         self.layer_opacity_val_label.setText('{} %'.format(da_val))
+
+    def get_layer_data(self):
+        data = {'layer_list': self.layer_list,
+                'layer_id': self.layer_id,
+                'layer_link': self.layer_link,
+                'layer_color': self.layer_color,
+                'layer_opacity': self.layer_opacity,
+                'layer_blend_mode': self.layer_blend_mode,
+                'layer_count': self.layer_count,
+                'current_layer_index': self.current_layer_index}
+        return data
+
+    def set_layer_data(self, data):
+        self.layer_list = data['layer_list']
+        self.layer_id = data['layer_id']
+        self.layer_link = data['layer_link']
+        self.layer_color = data['layer_color']
+        self.layer_opacity = data['layer_opacity']
+        self.layer_blend_mode = data['layer_blend_mode']
+        self.layer_count = data['layer_count']
+        self.current_layer_index = data['current_layer_index']
+
+        for i in range(len(self.layer_list)):
+            self.layer_layout.addWidget(self.layer_list[i])
+
+
 
 
 
