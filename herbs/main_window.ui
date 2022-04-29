@@ -247,10 +247,10 @@ border-color: rgb(75, 78, 84);</string>
      <property name="title">
       <string>Translation</string>
      </property>
-     <addaction name="actionUp_1px"/>
-     <addaction name="actionDown_1px"/>
-     <addaction name="actionLeft_1px"/>
-     <addaction name="actionRight_1px"/>
+     <addaction name="actionUp"/>
+     <addaction name="actionDown"/>
+     <addaction name="actionLeft"/>
+     <addaction name="actionRight"/>
      <addaction name="actionDistance"/>
     </widget>
     <widget class="QMenu" name="menuRotation">
@@ -636,22 +636,22 @@ selection-background-color: rgb(50, 50, 50);</string>
     <string>Load Triangulation Points ...</string>
    </property>
   </action>
-  <action name="actionUp_1px">
+  <action name="actionUp">
    <property name="text">
     <string>Up</string>
    </property>
   </action>
-  <action name="actionDown_1px">
+  <action name="actionDown">
    <property name="text">
     <string>Down</string>
    </property>
   </action>
-  <action name="actionLeft_1px">
+  <action name="actionLeft">
    <property name="text">
     <string>Left</string>
    </property>
   </action>
-  <action name="actionRight_1px">
+  <action name="actionRight">
    <property name="text">
     <string>Right</string>
    </property>

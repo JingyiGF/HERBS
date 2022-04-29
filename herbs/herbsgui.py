@@ -701,6 +701,10 @@ class HERBS(QMainWindow, FORM_Main):
         self.actionDown.triggered.connect(lambda: self.vertical_translation_pressed('down'))
         self.actionLeft.triggered.connect(lambda: self.horizontal_translation_pressed('left'))
         self.actionRight.triggered.connect(lambda: self.horizontal_translation_pressed('right'))
+        self.actionClockwise.triggered.connect(lambda: self.layer_rotation_pressed('clockwise'))
+        self.actionCounter_Clockwise.triggered.connect(lambda: self.layer_rotation_pressed('counter_clock'))
+        self.actionUndo.triggered.connect(self.undo_called)
+        self.actionRedo.triggered.connect(self.redo_called)
 
         # atlas menu related
         self.actionDownload.triggered.connect(self.download_waxholm_rat_atlas)
@@ -1090,12 +1094,6 @@ class HERBS(QMainWindow, FORM_Main):
     #                  Menu Bar ---- Edit ----- related
     #
     # ------------------------------------------------------------------
-    def save_current_action(self, current_btn, btn_checked, sub_action, data):
-        current_action = {'tool': current_btn, 'check': btn_checked, 'sub-action': sub_action, 'data': data}
-        self.action_list.append(current_action)
-        if len(self.action_list) > 6:
-            del self.action_list[0]
-
     def moving_img_tri_pnts(self, moving_vec):
         temp = np.asarray(self.histo_tri_inside_data).copy()
         temp = temp + moving_vec
@@ -1114,10 +1112,31 @@ class HERBS(QMainWindow, FORM_Main):
         for i in range(len(self.working_atlas_text)):
             self.working_atlas_text[i].setPos(self.atlas_tri_data[i][0], self.atlas_tri_data[i][1])
 
+    def rotating_img_tri_pnts(self, origin, rot_mat):
+        temp = np.asarray(self.histo_tri_inside_data).copy() - origin
+        temp = np.dot(rot_mat, temp)
+        self.histo_tri_inside_data = temp.tolist()
+        self.histo_tri_data = self.histo_tri_onside_data + self.histo_tri_inside_data
+        self.image_view.img_stacks.tri_pnts.setData(self.histo_tri_data)
+        for i in range(len(self.working_img_text)):
+            self.working_img_text[i].setPos(self.histo_tri_data[i][0], self.histo_tri_data[i][1])
+
+    def rotating_atlas_tri_pnts(self, origin, rot_mat):
+        temp = np.asarray(self.atlas_tri_inside_data).copy() - origin
+        temp = np.dot(rot_mat, temp)
+        self.atlas_tri_inside_data = temp.tolist()
+        self.atlas_tri_data = self.atlas_tri_onside_data + self.atlas_tri_inside_data
+        self.atlas_view.working_atlas.tri_pnts.setData(self.atlas_tri_data)
+        for i in range(len(self.working_atlas_text)):
+            self.working_atlas_text[i].setPos(self.atlas_tri_data[i][0], self.atlas_tri_data[i][1])
+
     def moving_overlay(self, moving_vec):
         shift_mat = np.float32([[1, 0, moving_vec[0]], [0, 1, moving_vec[1]]])
         da_img = self.overlay_img.copy()
         self.overlay_img = cv2.warpAffine(da_img, shift_mat, da_img.shape[:2])
+
+    def rotating_overlay(self, rotate_angle):
+        self.overlay_img = ndi.rotate(self.overlay_img, rotate_angle, mode='mirror')
 
     def get_valid_layer(self):
         if not self.layer_ctrl.current_layer_index or not self.h2a_transferred:
@@ -1164,41 +1183,48 @@ class HERBS(QMainWindow, FORM_Main):
         else:
             return
 
-    # def rotate_layers(self, da_link, rotate_angle):
-    #     if 'probe' in da_link:
-    #         temp = np.asarray(self.working_atlas_probe).copy()
-    #         self.working_atlas_probe = temp.tolist()
-    #         self.atlas_view.working_atlas.probe_pnts.setData(pos=self.working_atlas_probe)
-    #     elif 'virus' in da_link:
-    #         temp = np.asarray(self.working_atlas_virus).copy()
-    #         temp = temp + moving_vec
-    #         self.working_atlas_virus = temp.tolist()
-    #         self.atlas_view.working_atlas.virus_pnts.setData(pos=self.working_atlas_virus)
-    #     elif 'cell' in da_link:
-    #         temp = np.asarray(self.working_atlas_cell).copy()
-    #         temp = temp + moving_vec
-    #         self.working_atlas_cell = temp.tolist()
-    #         self.atlas_view.working_atlas.cell_pnts.setData(pos=self.working_atlas_cell)
-    #     elif 'contour' in da_link:
-    #         temp = np.asarray(self.working_atlas_contour).copy()
-    #         temp = temp + moving_vec
-    #         self.working_atlas_contour = temp.tolist()
-    #         self.atlas_view.working_atlas.contour_pnts.setData(pos=self.working_atlas_contour)
-    #     elif 'drawing' in da_link:
-    #         temp = np.asarray(self.working_atlas_drawing).copy()
-    #         temp = temp + moving_vec
-    #         self.working_atlas_drawing = temp.tolist()
-    #         self.atlas_view.working_atlas.drawing_pnts.setData(pos=self.working_atlas_drawing)
-    #     elif 'overlay' in da_link:
-    #         self.moving_overlay(moving_vec)
-    #         if 'img' in da_link:
-    #             self.image_view.img_stacks.overlay_img.setImage(self.overlay_img)
-    #             self.moving_atlas_tri_pnts(moving_vec)
-    #         else:
-    #             self.atlas_view.working_atlas.overlay_img.setImage(self.overlay_img)
-    #             self.moving_img_tri_pnts(moving_vec)
-    #     else:
-    #         return
+    def rotate_layers(self, da_link, rotate_angle):
+        atlas_rotation_origin = 0.5 * self.atlas_view.atlas_size
+        theta = np.radians(rotate_angle)
+
+        rot_mat = np.array(((np.cos(theta), -np.sin(theta)), (np.sin(theta), np.cos(theta))))
+
+        if 'probe' in da_link:
+            temp = np.asarray(self.working_atlas_probe).copy() - atlas_rotation_origin
+            temp = np.dot(rot_mat, temp) + atlas_rotation_origin
+            self.working_atlas_probe = temp.tolist()
+            self.atlas_view.working_atlas.probe_pnts.setData(pos=self.working_atlas_probe)
+        elif 'virus' in da_link:
+            temp = np.asarray(self.working_atlas_virus).copy() - atlas_rotation_origin
+            temp = np.dot(rot_mat, temp) + atlas_rotation_origin
+            self.working_atlas_virus = temp.tolist()
+            self.atlas_view.working_atlas.virus_pnts.setData(pos=self.working_atlas_virus)
+        elif 'cell' in da_link:
+            temp = np.asarray(self.working_atlas_cell).copy() - atlas_rotation_origin
+            temp = np.dot(rot_mat, temp) + atlas_rotation_origin
+            self.working_atlas_cell = temp.tolist()
+            self.atlas_view.working_atlas.cell_pnts.setData(pos=self.working_atlas_cell)
+        elif 'contour' in da_link:
+            temp = np.asarray(self.working_atlas_contour).copy() - atlas_rotation_origin
+            temp = np.dot(rot_mat, temp) + atlas_rotation_origin
+            self.working_atlas_contour = temp.tolist()
+            self.atlas_view.working_atlas.contour_pnts.setData(pos=self.working_atlas_contour)
+        elif 'drawing' in da_link:
+            temp = np.asarray(self.working_atlas_drawing).copy() - atlas_rotation_origin
+            temp = np.dot(rot_mat, temp) + atlas_rotation_origin
+            self.working_atlas_drawing = temp.tolist()
+            self.atlas_view.working_atlas.drawing_pnts.setData(pos=self.working_atlas_drawing)
+        elif 'overlay' in da_link:
+            self.moving_overlay(rotate_angle)
+            if 'img' in da_link:
+                self.image_view.img_stacks.overlay_img.setImage(self.overlay_img)
+                self.rotating_atlas_tri_pnts(atlas_rotation_origin, rot_mat)
+            else:
+                img_rotation_origin = 0.5 * self.image_view.image_file
+                self.atlas_view.working_atlas.overlay_img.setImage(self.overlay_img)
+                self.rotating_img_tri_pnts(img_rotation_origin, rot_mat)
+        else:
+            return
 
     def vertical_translation_pressed(self, moving_direction):
         valid_links = self.get_valid_layer()
@@ -1230,8 +1256,20 @@ class HERBS(QMainWindow, FORM_Main):
         else:
             rotating_val = - self.rotating_step_val
 
+        for da_link in valid_links:
+            self.rotate_layers(da_link, rotating_val)
 
+    def save_current_action(self, current_btn, btn_checked, sub_action, data):
+        current_action = {'tool': current_btn, 'check': btn_checked, 'sub-action': sub_action, 'data': data}
+        self.action_list.append(current_action)
+        if len(self.action_list) > 6:
+            del self.action_list[0]
 
+    def redo_called(self):
+        print('1')
+
+    def undo_called(self):
+        print('1')
 
 
 
@@ -4015,14 +4053,6 @@ class HERBS(QMainWindow, FORM_Main):
                 self.object_3d_list.append(object_dict['widget3d'])
                 self.view3d.addItem(self.object_3d_list[-1])
             self.print_message('Objects loaded successfully.', 'white', 0)
-
-
-    def redo_called(self):
-        print('1')
-
-    def undo_called(self):
-        print('1')
-
 
     # status
     def print_message(self, msg, col, sec):
