@@ -158,6 +158,7 @@ text_combo_list_style = '''
     }
 '''
 
+
 class BWSpin(QWidget):
     def __init__(self, parent=None):
         QWidget.__init__(self)

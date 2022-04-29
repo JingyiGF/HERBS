@@ -917,6 +917,11 @@ def render_small_volume(atlas_data, atlas_label, atlas_folder, factor=2, level=0
     return
 
 
+def get_statusbar_style(col):
+    style = 'background-color: #323232;' \
+            ' color: {}; border-top: 1px solid #272727; ' \
+            'padding-left: 30px;'.format(col)
+    return style
 
 
 

@@ -161,7 +161,8 @@
     <string notr="true">background-color: rgb(50, 50, 50);
 color: rgb(255, 255, 255);
 border-top: 1px solid #272727;
-padding-left: 10px;</string>
+padding-left: 30px;
+</string>
    </property>
   </widget>
   <widget class="QMenuBar" name="menuBar">
@@ -174,11 +175,11 @@ padding-left: 10px;</string>
     </rect>
    </property>
    <property name="styleSheet">
-    <string notr="true">color: rgb(254, 252, 255);
-selection-background-color: rgb(40, 95, 193);
-border-bottom-color: rgb(37, 37, 37); 
-selection-color: rgb(255, 255, 255);
-background-color: rgb(25, 27, 29);</string>
+    <string notr="true">background-color: rgb(25, 27, 29);
+color: rgb(254, 252, 255);
+border-bottom-color: rgb(37, 37, 37);
+selection-background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 rgba(0, 83, 185, 255), stop:1 rgba(0, 49, 104, 255));
+selection-color: rgb(255, 255, 255);</string>
    </property>
    <property name="nativeMenuBar">
     <bool>false</bool>
@@ -189,38 +190,47 @@ background-color: rgb(25, 27, 29);</string>
 background-color: qlineargradient(spread:pad, x1:1, y1:1, x2:1, y2:0, stop:0 rgba(42, 49, 53, 255), stop:1 rgba(85, 85, 88, 255));
 selection-color: rgb(255, 255, 255);
 selection-background-color: rgb(63, 124, 234);
-border-color: rgb(75, 78, 84);
-</string>
+border-color: rgb(75, 78, 84);</string>
     </property>
     <property name="title">
      <string>File</string>
     </property>
-    <widget class="QMenu" name="menuSave_Image">
+    <widget class="QMenu" name="menuSave_Operating_Data">
      <property name="title">
-      <string>Save Image</string>
+      <string>Save Operating Data</string>
      </property>
-     <addaction name="actionOverlay_Image"/>
-     <addaction name="actionProcessed_Image"/>
-     <addaction name="actionMask_Image"/>
+     <addaction name="actionSave_Overlay_Image"/>
+     <addaction name="actionSave_Processed_Image"/>
+     <addaction name="actionSave_Mask_Image"/>
     </widget>
     <widget class="QMenu" name="menuSave_Object">
      <property name="title">
       <string>Save Object</string>
      </property>
-     <addaction name="actionCurrent"/>
-     <addaction name="actionProbes"/>
-     <addaction name="actionVirus"/>
-     <addaction name="actionCells"/>
-     <addaction name="actionContours"/>
-     <addaction name="actionDrawings"/>
+     <addaction name="actionSave_Current"/>
+     <addaction name="actionSave_Probes"/>
+     <addaction name="actionSave_Virus"/>
+     <addaction name="actionSave_Cells"/>
+     <addaction name="actionSave_Contours"/>
+     <addaction name="actionSave_Drawings"/>
+    </widget>
+    <widget class="QMenu" name="menuLoad_Data">
+     <property name="title">
+      <string>Load Operating Data</string>
+     </property>
+     <addaction name="actionOverlay_Image_2"/>
+     <addaction name="actionMask_Image_2"/>
     </widget>
     <addaction name="actionAtlas"/>
-    <addaction name="actionGroup_Images"/>
     <addaction name="actionSingle_Image"/>
     <addaction name="separator"/>
     <addaction name="actionSave_Project"/>
-    <addaction name="menuSave_Image"/>
+    <addaction name="menuSave_Operating_Data"/>
     <addaction name="menuSave_Object"/>
+    <addaction name="separator"/>
+    <addaction name="actionLoad_Project"/>
+    <addaction name="menuLoad_Data"/>
+    <addaction name="actionLoad_Object"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="styleSheet">
@@ -233,11 +243,29 @@ border-color: rgb(75, 78, 84);</string>
     <property name="title">
      <string>Edit</string>
     </property>
+    <widget class="QMenu" name="menuTranslation">
+     <property name="title">
+      <string>Translation</string>
+     </property>
+     <addaction name="actionUp_1px"/>
+     <addaction name="actionDown_1px"/>
+     <addaction name="actionLeft_1px"/>
+     <addaction name="actionRight_1px"/>
+     <addaction name="actionDistance"/>
+    </widget>
+    <widget class="QMenu" name="menuRotation">
+     <property name="title">
+      <string>Rotation</string>
+     </property>
+     <addaction name="actionClockwise"/>
+     <addaction name="actionCounter_Clockwise"/>
+     <addaction name="actionAngle"/>
+    </widget>
     <addaction name="actionUndo"/>
     <addaction name="actionRedo"/>
-    <addaction name="actionCut"/>
-    <addaction name="actionCopy"/>
-    <addaction name="actionPaste"/>
+    <addaction name="separator"/>
+    <addaction name="menuTranslation"/>
+    <addaction name="menuRotation"/>
    </widget>
    <widget class="QMenu" name="menuImage">
     <property name="styleSheet">
@@ -263,6 +291,8 @@ border-color: rgb(75, 78, 84);</string>
     <addaction name="action180"/>
     <addaction name="action90_Clockwise"/>
     <addaction name="action90_Counter_Clockwise"/>
+    <addaction name="action1_Clockwise"/>
+    <addaction name="action1_Counter_Clockwise"/>
     <addaction name="separator"/>
     <addaction name="actionFlip_Horizontal"/>
     <addaction name="actionFlip_Vertical"/>
@@ -290,6 +320,9 @@ border-color: rgb(75, 78, 84);</string>
     <addaction name="actionSave_Slice"/>
     <addaction name="separator"/>
     <addaction name="actionMesh"/>
+    <addaction name="separator"/>
+    <addaction name="actionSave_Triangulation_Points"/>
+    <addaction name="actionLoad_Triangulation_Points"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="styleSheet">
@@ -388,14 +421,9 @@ selection-background-color: rgb(50, 50, 50);</string>
     <string>Load Atlas ...</string>
    </property>
   </action>
-  <action name="actionGroup_Images">
-   <property name="text">
-    <string>Load Group Images ...</string>
-   </property>
-  </action>
   <action name="actionSingle_Image">
    <property name="text">
-    <string>Load Single Image ...</string>
+    <string>Load Image ...</string>
    </property>
   </action>
   <action name="actionSave_Project">
@@ -411,21 +439,6 @@ selection-background-color: rgb(50, 50, 50);</string>
   <action name="actionRedo">
    <property name="text">
     <string>Redo</string>
-   </property>
-  </action>
-  <action name="actionCut">
-   <property name="text">
-    <string>Cut</string>
-   </property>
-  </action>
-  <action name="actionCopy">
-   <property name="text">
-    <string>Copy</string>
-   </property>
-  </action>
-  <action name="actionPaste">
-   <property name="text">
-    <string>Paste</string>
    </property>
   </action>
   <action name="action180">
@@ -548,49 +561,129 @@ selection-background-color: rgb(50, 50, 50);</string>
     <string>Atlas Processor</string>
    </property>
   </action>
-  <action name="actionOverlay_Image">
+  <action name="actionSave_Overlay_Image">
    <property name="text">
     <string>Overlay Image</string>
    </property>
   </action>
-  <action name="actionProcessed_Image">
+  <action name="actionSave_Processed_Image">
    <property name="text">
     <string>Processed Image</string>
    </property>
   </action>
-  <action name="actionMask_Image">
+  <action name="actionSave_Mask_Image">
    <property name="text">
     <string>Mask Image</string>
    </property>
   </action>
-  <action name="actionCurrent">
+  <action name="actionSave_Current">
    <property name="text">
     <string>Current</string>
    </property>
   </action>
-  <action name="actionProbes">
+  <action name="actionSave_Probes">
    <property name="text">
     <string>Probes</string>
    </property>
   </action>
-  <action name="actionVirus">
+  <action name="actionSave_Virus">
    <property name="text">
     <string>Virus</string>
    </property>
   </action>
-  <action name="actionCells">
+  <action name="actionSave_Cells">
    <property name="text">
     <string>Cells</string>
    </property>
   </action>
-  <action name="actionContours">
+  <action name="actionSave_Contours">
    <property name="text">
     <string>Contours</string>
    </property>
   </action>
-  <action name="actionDrawings">
+  <action name="actionSave_Drawings">
    <property name="text">
     <string>Drawings</string>
+   </property>
+  </action>
+  <action name="actionLoad_Project">
+   <property name="text">
+    <string>Load Project</string>
+   </property>
+  </action>
+  <action name="actionLoad_Object">
+   <property name="text">
+    <string>Load Objects</string>
+   </property>
+  </action>
+  <action name="actionOverlay_Image_2">
+   <property name="text">
+    <string>Overlay Image</string>
+   </property>
+  </action>
+  <action name="actionMask_Image_2">
+   <property name="text">
+    <string>Mask Image</string>
+   </property>
+  </action>
+  <action name="actionSave_Triangulation_Points">
+   <property name="text">
+    <string>Save Triangulation Points ...</string>
+   </property>
+  </action>
+  <action name="actionLoad_Triangulation_Points">
+   <property name="text">
+    <string>Load Triangulation Points ...</string>
+   </property>
+  </action>
+  <action name="actionUp_1px">
+   <property name="text">
+    <string>Up</string>
+   </property>
+  </action>
+  <action name="actionDown_1px">
+   <property name="text">
+    <string>Down</string>
+   </property>
+  </action>
+  <action name="actionLeft_1px">
+   <property name="text">
+    <string>Left</string>
+   </property>
+  </action>
+  <action name="actionRight_1px">
+   <property name="text">
+    <string>Right</string>
+   </property>
+  </action>
+  <action name="actionDistance">
+   <property name="text">
+    <string>Distance Setting</string>
+   </property>
+  </action>
+  <action name="actionClockwise">
+   <property name="text">
+    <string>Clockwise</string>
+   </property>
+  </action>
+  <action name="actionCounter_Clockwise">
+   <property name="text">
+    <string>Counter Clockwise</string>
+   </property>
+  </action>
+  <action name="actionAngle">
+   <property name="text">
+    <string>Angle Setting</string>
+   </property>
+  </action>
+  <action name="action1_Clockwise">
+   <property name="text">
+    <string>1 Clockwise</string>
+   </property>
+  </action>
+  <action name="action1_Counter_Clockwise">
+   <property name="text">
+    <string>1 Counter Clockwise</string>
    </property>
   </action>
  </widget>

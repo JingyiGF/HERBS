@@ -18,6 +18,33 @@ from .image_curves import CurveWidget, ChannelSelector
 from .uuuuuu import hsv2rgb, gamma_line, color_img, make_color_lut, get_corner_line_from_rect
 
 
+sidebar_button_style = '''
+QPushButton{
+    background: #656565;
+    border-radius: 5px;
+    color: white;
+    border-style: outset;
+    border-bottom: 1px solid rgb(30, 30, 30);
+    height: 24px;
+    margin: 0px;
+}
+
+QPushButton:hover{
+    background-color: #323232;
+    border: 1px solid #656565;
+}
+
+QPushButton:checked{
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                      stop: 0 #17bb00, stop: 1 #0e6900);
+    border-bottom: 1px solid rgb(30, 30, 30);
+    border-top: None;
+    border-left: None;
+    border-right: None;  
+}
+'''
+
+
 class ImageView(QObject):
     """
     A collection of user interface elements bound together:
@@ -63,6 +90,7 @@ class ImageView(QObject):
 
         # scene control
         self.check_scenes = QPushButton('Load ALL Scenes')
+        self.check_scenes.setStyleSheet(sidebar_button_style)
         self.check_scenes.setCheckable(True)
         self.scene_slider = QSlider(Qt.Horizontal)
         self.scene_slider.setMinimum(0)

@@ -5,7 +5,6 @@ import pyqtgraph as pg
 import numpy as np
 from pyqtgraph.Qt import QtGui, QtCore
 
-from .styles import Styles
 
 toolbar_spinbox_textedit_style = '''
 QLineEdit { 
@@ -20,8 +19,6 @@ class ToolBox(QObject):
 
     def __init__(self):
         QObject.__init__(self)
-
-        styles = Styles()
 
         self.moving_px = 0
         self.base_lut = np.array([[0, 0, 0, 0], [128, 128, 128, 255]])
@@ -79,15 +76,16 @@ class ToolBox(QObject):
         loc_btn = QAction(QIcon('icons/toolbar/location.svg'), 'location', self)
         loc_btn.setCheckable(True)
 
-        self.checkable_btn_dict = {'moving_btn': moving_btn,
-                                   'rotation_btn': rotation_btn,
-                                   'pencil_btn': pencil_btn,
+        self.checkable_btn_dict = {'pencil_btn': pencil_btn,
                                    'eraser_btn': eraser_btn,
                                    'lasso_btn': lasso_btn,
                                    'magic_wand_btn': magic_wand_btn,
                                    'probe_btn': probe_btn,
                                    'triang_btn': triang_btn,
                                    'loc_btn': loc_btn}
+
+        # 'moving_btn': moving_btn,
+        # 'rotation_btn': rotation_btn,
 
         self.toolbox_btn_keys = list(self.checkable_btn_dict.keys())
 
@@ -116,6 +114,7 @@ class ToolBox(QObject):
 
         self.moving_wrap = QFrame()
         moving_layout = QHBoxLayout(self.moving_wrap)
+        moving_layout.setAlignment(Qt.AlignVCenter)
         moving_layout.setContentsMargins(0, 0, 0, 0)
         moving_layout.addWidget(self.left_button)
         moving_layout.addWidget(self.right_button)
@@ -142,7 +141,7 @@ class ToolBox(QObject):
 
         self.rotation_wrap = QFrame()
         rotation_layout = QHBoxLayout(self.rotation_wrap)
-        rotation_layout.setAlignment(Qt.AlignCenter)
+        rotation_layout.setAlignment(Qt.AlignVCenter)
         rotation_layout.setContentsMargins(0, 0, 0, 0)
         rotation_layout.setSpacing(10)
         rotation_layout.addWidget(rotation_label)
@@ -162,7 +161,7 @@ class ToolBox(QObject):
         self.magic_tol_val.setText('0')
 
         self.magic_wand_kernel = QComboBox()
-        self.magic_wand_kernel.setFixedSize(QSize(150, 22))
+        self.magic_wand_kernel.setFixedSize(150, 22)
         self.magic_wand_kernel.addItems(["Kernel", "Rectangular", "Elliptical", "Cross-shaped"])
 
         magic_wand_ksize_label = QLabel('Size:')
@@ -171,13 +170,6 @@ class ToolBox(QObject):
         # self.magic_tol_val.setAlignment(Qt.AlignLeft)
         self.magic_wand_ksize.setValidator(QIntValidator())
         self.magic_wand_ksize.setText('0')
-
-        # self.magic_wand_cb1 = QCheckBox('Anti Alias')
-        # self.magic_wand_cb1.setStyleSheet('color: #d6d6d6;')
-        # self.magic_wand_cb1.setChecked(True)
-        # self.magic_wand_cb2 = QCheckBox('Contiguous')
-        # self.magic_wand_cb2.setStyleSheet('color: #d6d6d6;')
-        # self.magic_wand_cb2.setChecked(True)
 
         self.magic_wand_virus_register = QPushButton()
         self.magic_wand_virus_register.setFocusPolicy(Qt.NoFocus)
@@ -189,9 +181,9 @@ class ToolBox(QObject):
         self.magic_wand_bnd_register.setIconSize(QSize(20, 20))
 
         self.magic_wand_wrap = QFrame()
-        self.magic_wand_wrap.setFixedHeight(32)
-        # self.magic_wand_wrap.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
+        # self.magic_wand_wrap.setFixedHeight(32)
         magic_wand_layout = QHBoxLayout(self.magic_wand_wrap)
+        magic_wand_layout.setAlignment(Qt.AlignVCenter)
         magic_wand_layout.setContentsMargins(0, 0, 0, 0)
         magic_wand_layout.setSpacing(10)
         magic_wand_layout.addWidget(magic_color_label)
@@ -202,8 +194,6 @@ class ToolBox(QObject):
         magic_wand_layout.addWidget(self.magic_wand_kernel)
         magic_wand_layout.addWidget(magic_wand_ksize_label)
         magic_wand_layout.addWidget(self.magic_wand_ksize)
-        # magic_wand_layout.addWidget(self.magic_wand_cb1)
-        # magic_wand_layout.addWidget(self.magic_wand_cb2)
         magic_wand_layout.addWidget(self.magic_wand_virus_register)
         magic_wand_layout.addWidget(self.magic_wand_bnd_register)
         magic_wand_layout.addStretch(1)
@@ -224,15 +214,13 @@ class ToolBox(QObject):
         self.pencil_size_valt.setValidator(QIntValidator(1, 30))
         self.pencil_size_valt.setText('3')
 
-
         pencil_color_label = QLabel('Color:')
         self.pencil_color_btn = pg.ColorButton(padding=0)
         self.pencil_color_btn.setFixedSize(60, 15)
 
-
-
         self.pencil_wrap = QFrame()
         pencil_layout = QHBoxLayout(self.pencil_wrap)
+        pencil_layout.setAlignment(Qt.AlignVCenter)
         pencil_layout.setContentsMargins(0, 0, 0, 0)
         pencil_layout.setSpacing(10)
         pencil_layout.addWidget(pencil_color_label)
@@ -265,6 +253,7 @@ class ToolBox(QObject):
 
         self.eraser_wrap = QFrame()
         eraser_layout = QHBoxLayout(self.eraser_wrap)
+        eraser_layout.setAlignment(Qt.AlignVCenter)
         eraser_layout.setContentsMargins(0, 0, 0, 0)
         eraser_layout.setSpacing(10)
         eraser_layout.addWidget(eraser_color_label)
@@ -277,11 +266,12 @@ class ToolBox(QObject):
 
         # for lasso_btn, lasso wrap
         lasso_color_label = QLabel('Color:')
-        self.lasso_color_btn = pg.ColorButton()
-        self.lasso_color_btn.setFixedSize(80, 24)
+        self.lasso_color_btn = pg.ColorButton(padding=0)
+        self.lasso_color_btn.setFixedSize(60, 15)
 
         self.lasso_wrap = QFrame()
         lasso_layout = QHBoxLayout(self.lasso_wrap)
+        lasso_layout.setAlignment(Qt.AlignVCenter)
         lasso_layout.setContentsMargins(0, 0, 0, 0)
         lasso_layout.setSpacing(10)
         lasso_layout.addWidget(lasso_color_label)
@@ -298,6 +288,7 @@ class ToolBox(QObject):
 
         self.mask_wrap = QFrame()
         mask_layout = QHBoxLayout(self.mask_wrap)
+        mask_layout.setAlignment(Qt.AlignVCenter)
         mask_layout.setContentsMargins(0, 0, 0, 0)
         mask_layout.setSpacing(10)
         mask_layout.addWidget(kernel_size_label)
@@ -320,8 +311,6 @@ class ToolBox(QObject):
         # self.probe_style_square = QRadioButton("Square")
         # self.probe_style_square.toggled.connect(self.probe_style_changed)
 
-
-
         self.probe_wrap = QFrame()
         probe_layout = QHBoxLayout(self.probe_wrap)
         probe_layout.setAlignment(Qt.AlignVCenter)
@@ -342,8 +331,8 @@ class ToolBox(QObject):
 
         # for triang_btn, triang wrap
         triang_color_label = QLabel('Color:')
-        self.triang_color_btn = pg.ColorButton()
-        self.triang_color_btn.setFixedSize(80, 24)
+        self.triang_color_btn = pg.ColorButton(padding=0)
+        self.triang_color_btn.setFixedSize(60, 15)
         bound_pnts_num_label = QLabel('Points Number:')
         self.bound_pnts_num = QLineEdit()
         self.bound_pnts_num.setFixedSize(50, 24)
@@ -364,6 +353,7 @@ class ToolBox(QObject):
         self.triang_wrap = QFrame()
         self.triang_wrap.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         triang_layout = QHBoxLayout(self.triang_wrap)
+        triang_layout.setAlignment(Qt.AlignVCenter)
         triang_layout.setContentsMargins(0, 0, 0, 0)
         triang_layout.setSpacing(10)
         triang_layout.addWidget(self.triang_vis_btn)
@@ -419,8 +409,9 @@ class ToolBox(QObject):
 
         self.cell_count_wrap = QFrame()
         cell_layout = QHBoxLayout(self.cell_count_wrap)
+        cell_layout.setAlignment(Qt.AlignVCenter)
         cell_layout.setContentsMargins(0, 0, 0, 0)
-        cell_layout.setSpacing(5)
+        cell_layout.setSpacing(10)
         cell_layout.addWidget(cell_color_label)
         cell_layout.addWidget(self.cell_color_btn)
         cell_layout.addSpacing(15)
@@ -477,9 +468,7 @@ class ToolBox(QObject):
         self.moving_px = self.moving_valt.value()
 
     def get_tool_data(self):
-        data = {'moving_valt': self.moving_valt.value(),
-                'rotation_valt': self.rotation_valt.value(),
-                'pencil_color': self.pencil_color_btn.color(),
+        data = {'pencil_color': self.pencil_color_btn.color(),
                 'pencil_size': self.pencil_size_valt.text(),
                 'eraser_color': self.eraser_color_btn.color(),
                 'eraser_size': self.eraser_size_valt.text(),
@@ -490,11 +479,13 @@ class ToolBox(QObject):
                 'probe_color': self.probe_color_btn.color(),
                 'triangle_color': self.triang_color_btn.color(),
                 'cell_color': self.cell_color_btn.color()}
+        # 'moving_valt': self.moving_valt.value(),
+        # 'rotation_valt': self.rotation_valt.value(),
         return data
 
     def set_tool_data(self, data):
-        self.moving_valt.setValue(data['moving_valt'])
-        self.rotation_valt.setValue(data['rotation_valt'])
+        # self.moving_valt.setValue(data['moving_valt'])
+        # self.rotation_valt.setValue(data['rotation_valt'])
         self.pencil_color_btn.setColor(data['pencil_color'])
         self.pencil_size_valt.setText(data['pencil_size'])
         self.eraser_color_btn.setColor(data['eraser_color'])

@@ -142,6 +142,12 @@ QPushButton{
     min-height: 16px;
     margin: 0px;
 }
+
+QPushButton:hover{
+    background-color: #323232;
+    border: 1px solid #656565;
+}
+
 '''
 
 
@@ -269,7 +275,8 @@ class LabelTree(QWidget):
     def set_label_color(self, label_id, color, recursive=True, emit=True):
         item = self.labels_by_id[label_id]['item']
         btn = self.labels_by_id[label_id]['btn']
-        rgb_color = color.getRgb()
+        print(color)
+        rgb_color = QColor(color).getRgb()
         self.current_lut[label_id] = np.array([rgb_color[0], rgb_color[1], rgb_color[2]])
         with SignalBlock(btn.sigColorChanged, self.item_color_changed):
             btn.setColor(color)

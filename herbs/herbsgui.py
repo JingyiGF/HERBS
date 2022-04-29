@@ -192,6 +192,7 @@ QSpinBox {
     padding-right: 0px; /* make room for the arrows */
     border: 1px solid #242424;
     background: transparent;
+    color: white;
 }
 
 QSpinBox::up-button {
@@ -245,6 +246,7 @@ QDoubleSpinBox {
     padding-right: 0px; 
     border: 1px solid #242424;
     background: transparent;
+    color: white;
     
 }
 
@@ -341,13 +343,13 @@ QRadioButton {
 }
 
 
-QToolButton::hover {
+QToolButton:hover {
     background-color: #27292a;
     border-top: 2px solid #27292a;
     border-bottom: 2px solid #27292a;
 }
 
-QToolButton::checked {
+QToolButton:checked {
     border-bottom: 2px solid gray;
 }
 
@@ -360,7 +362,7 @@ QPushButton {
     padding: 0px;
 }
 
-QPushButton::hover {
+QPushButton:hover {
     background-color: #27292a;
 }
 
@@ -392,6 +394,78 @@ QSlider::handle:horizontal {
 
 '''
 
+sidebar_button_style = '''
+QPushButton{
+    background: #656565;
+    border-radius: 5px;
+    color: white;
+    border-style: outset;
+    border-bottom: 1px solid rgb(30, 30, 30);
+    height: 24px;
+    margin: 0px;
+}
+
+QPushButton:hover{
+    background-color: #323232;
+    border: 1px solid #656565;
+}
+
+QPushButton:checked{
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                      stop: 0 #17bb00, stop: 1 #0e6900);
+    border-bottom: 1px solid rgb(30, 30, 30);
+    border-top: None;
+    border-left: None;
+    border-right: None;  
+}
+'''
+
+menubar_style = '''
+QMenuBar {
+    background-color: rgb(25, 27, 29);
+    color: rgb(254, 252, 255);
+    border-bottom-color: rgb(37, 37, 37);
+}
+
+QMenuBar::item {
+    spacing: 50px;
+    background-color: rgb(25, 27, 29);
+    color: rgb(254, 252, 255);
+    border-bottom-color: rgb(37, 37, 37);
+}
+
+QMenuBar::item:selected {
+    background-color: red;
+    color: rgb(254, 252, 255);
+    border-bottom-color: rgb(37, 37, 37);
+}
+ 
+QMenu {
+    border: None; 
+    color: rgb(255, 255, 255);
+    background-color: qlineargradient(spread:pad, x1:1, y1:1, x2:1, y2:0, stop:0 rgb(42, 49, 53), stop:1 rgb(85, 85, 88));
+}
+
+QMenu:hover {
+    border: None; 
+    color: rgb(255, 255, 255);
+    background-color: red;
+}
+ 
+QMenu::item{
+    Background-color: qlineargradient(spread:pad, x1:1, y1:1, x2:1, y2:0, stop:0 rgba(42, 49, 53, 255), stop:1 rgba(85, 85, 88, 255));
+    Border: 2px solid transparent; // border
+    Padding: 20 25 20 20px;
+}
+
+QMenu::item:selected{
+    color: rgb(255, 255, 255);
+    background-color: rgb(63, 124, 234);
+    
+}
+
+'''
+
 script_dir = dirname(realpath(__file__))
 FORM_Main, _ = loadUiType((join(dirname(__file__), "main_window.ui")))
 
@@ -401,7 +475,7 @@ class HERBS(QMainWindow, FORM_Main):
         super(HERBS, self).__init__()
         QMainWindow.__init__(self)
         self.setupUi(self)
-        self.setWindowTitle("HERBS - Histological E-data Registration in Rat Brain Space")
+        self.setWindowTitle("HERBS - A toolkit for Histological E-data Registration in Brain Space")
 
         self.num_windows = 1
 
@@ -472,6 +546,7 @@ class HERBS(QMainWindow, FORM_Main):
         self.register_method = 0
 
         self.action_after_projection = {}
+        self.action_list = []
 
         self.probe_lines_2d_list = []
 
@@ -490,9 +565,12 @@ class HERBS(QMainWindow, FORM_Main):
         self.processing_img = None
         self.overlay_img = None
 
-
-
         self.error_message_color = '#ff6e6e'
+        self.reminder_color = 'gray'
+        self.normal_color = 'white'
+
+        self.moving_step_val = 1
+        self.rotating_step_val = 1
 
         # ---------------------
         self.tool_box = ToolBox()
@@ -598,20 +676,37 @@ class HERBS(QMainWindow, FORM_Main):
         self.atlas_view.simg.contour_pnts.setPen(color=self.magic_wand_color)
         self.atlas_view.himg.contour_pnts.setPen(color=self.magic_wand_color)
 
-
         # --------------------------------------------------------
         #                 connect all menu actions
         # --------------------------------------------------------
+        # self.menuBar.setStyleSheet(menubar_style)
         # file menu related
+        self.actionAtlas.triggered.connect(self.load_atlas)
         self.actionSingle_Image.triggered.connect(self.load_image)
-        self.actionProcessed_Image.triggered.connect(lambda: self.save_image('Processed'))
-        self.actionOverlay_Image.triggered.connect(lambda: self.save_image('Overlay'))
+        self.actionSave_Processed_Image.triggered.connect(lambda: self.save_image('Processed'))
+        self.actionSave_Overlay_Image.triggered.connect(lambda: self.save_image('Overlay'))
+        self.actionSave_Mask_Image.triggered.connect(lambda: self.save_image('Mask'))
+        self.actionSave_Project.triggered.connect(self.save_project)
+        self.actionSave_Current.triggered.connect(self.save_current_object)
+        self.actionSave_Probes.triggered.connect(lambda: self.save_merged_object('probe'))
+        self.actionSave_Cells.triggered.connect(lambda: self.save_merged_object('cell'))
+        self.actionSave_Virus.triggered.connect(lambda: self.save_merged_object('virus'))
+        self.actionSave_Drawings.triggered.connect(lambda: self.save_merged_object('drawing'))
+        self.actionSave_Contours.triggered.connect(lambda: self.save_merged_object('contour'))
+        self.actionLoad_Project.triggered.connect(self.load_project)
+        self.actionLoad_Object.triggered.connect(self.load_object)
 
-        self.actionCurrent.triggered.connect(self.save_current_object)
+        # edit menu related
+        self.actionUp.triggered.connect(lambda: self.vertical_translation_pressed('up'))
+        self.actionDown.triggered.connect(lambda: self.vertical_translation_pressed('down'))
+        self.actionLeft.triggered.connect(lambda: self.horizontal_translation_pressed('left'))
+        self.actionRight.triggered.connect(lambda: self.horizontal_translation_pressed('right'))
+
         # atlas menu related
         self.actionDownload.triggered.connect(self.download_waxholm_rat_atlas)
         self.actionAtlas_Processor.triggered.connect(self.process_raw_atlas_data)
 
+        # view menu related
         self.actionCoronal_Window.triggered.connect(self.show_only_coronal_window)
         self.actionSagital_Window.triggered.connect(self.show_only_sagital_window)
         self.actionHorizontal_Window.triggered.connect(self.show_only_horizontal_window)
@@ -631,6 +726,8 @@ class HERBS(QMainWindow, FORM_Main):
         self.action90_Counter_Clockwise.triggered.connect(self.image_view.image_90_counter_rotate)
         self.actionProcess_Image.triggered.connect(self.turn_current_to_process)
         self.actionReset_Image.triggered.connect(self.reset_current_image)
+
+        # about menu related
 
         self.init_tool_bar()
         self.init_side_bar()
@@ -709,7 +806,7 @@ class HERBS(QMainWindow, FORM_Main):
         tab5_shortcut = QShortcut(QKeySequence('Ctrl+5'), self)
         tab5_shortcut.activated.connect(lambda: self.sidebar_tab_state(4))
 
-        self.statusbar.showMessage('Ready')
+        self.print_message('Ready', self.normal_color, 0)
 
     def sidebar_tab_state(self, tab_num):
         self.sidebar.setCurrentIndex(tab_num)
@@ -993,6 +1090,150 @@ class HERBS(QMainWindow, FORM_Main):
     #                  Menu Bar ---- Edit ----- related
     #
     # ------------------------------------------------------------------
+    def save_current_action(self, current_btn, btn_checked, sub_action, data):
+        current_action = {'tool': current_btn, 'check': btn_checked, 'sub-action': sub_action, 'data': data}
+        self.action_list.append(current_action)
+        if len(self.action_list) > 6:
+            del self.action_list[0]
+
+    def moving_img_tri_pnts(self, moving_vec):
+        temp = np.asarray(self.histo_tri_inside_data).copy()
+        temp = temp + moving_vec
+        self.histo_tri_inside_data = temp.tolist()
+        self.histo_tri_data = self.histo_tri_onside_data + self.histo_tri_inside_data
+        self.image_view.img_stacks.tri_pnts.setData(self.histo_tri_data)
+        for i in range(len(self.working_img_text)):
+            self.working_img_text[i].setPos(self.histo_tri_data[i][0], self.histo_tri_data[i][1])
+
+    def moving_atlas_tri_pnts(self, moving_vec):
+        temp = np.asarray(self.atlas_tri_inside_data).copy()
+        temp = temp + moving_vec
+        self.atlas_tri_inside_data = temp.tolist()
+        self.atlas_tri_data = self.atlas_tri_onside_data + self.atlaso_tri_inside_data
+        self.atlas_view.working_atlas.tri_pnts.setData(self.atlas_tri_data)
+        for i in range(len(self.working_atlas_text)):
+            self.working_atlas_text[i].setPos(self.atlas_tri_data[i][0], self.atlas_tri_data[i][1])
+
+    def moving_overlay(self, moving_vec):
+        shift_mat = np.float32([[1, 0, moving_vec[0]], [0, 1, moving_vec[1]]])
+        da_img = self.overlay_img.copy()
+        self.overlay_img = cv2.warpAffine(da_img, shift_mat, da_img.shape[:2])
+
+    def get_valid_layer(self):
+        if not self.layer_ctrl.current_layer_index or not self.h2a_transferred:
+            self.print_message('Translation only works for layers on atlas window.', self.reminder_color, 0)
+            return []
+        selected_links = [self.layer_ctrl.layer_link[ind] for ind in self.layer_ctrl.current_layer_index]
+        valid_links = [da_link for da_link in selected_links if 'atlas' in da_link]
+        return valid_links
+
+    def move_layers(self, da_link, moving_vec):
+        if 'probe' in da_link:
+            temp = np.asarray(self.working_atlas_probe).copy()
+            temp = temp + moving_vec
+            self.working_atlas_probe = temp.tolist()
+            self.atlas_view.working_atlas.probe_pnts.setData(pos=self.working_atlas_probe)
+        elif 'virus' in da_link:
+            temp = np.asarray(self.working_atlas_virus).copy()
+            temp = temp + moving_vec
+            self.working_atlas_virus = temp.tolist()
+            self.atlas_view.working_atlas.virus_pnts.setData(pos=self.working_atlas_virus)
+        elif 'cell' in da_link:
+            temp = np.asarray(self.working_atlas_cell).copy()
+            temp = temp + moving_vec
+            self.working_atlas_cell = temp.tolist()
+            self.atlas_view.working_atlas.cell_pnts.setData(pos=self.working_atlas_cell)
+        elif 'contour' in da_link:
+            temp = np.asarray(self.working_atlas_contour).copy()
+            temp = temp + moving_vec
+            self.working_atlas_contour = temp.tolist()
+            self.atlas_view.working_atlas.contour_pnts.setData(pos=self.working_atlas_contour)
+        elif 'drawing' in da_link:
+            temp = np.asarray(self.working_atlas_drawing).copy()
+            temp = temp + moving_vec
+            self.working_atlas_drawing = temp.tolist()
+            self.atlas_view.working_atlas.drawing_pnts.setData(pos=self.working_atlas_drawing)
+        elif 'overlay' in da_link:
+            self.moving_overlay(moving_vec)
+            if 'img' in da_link:
+                self.image_view.img_stacks.overlay_img.setImage(self.overlay_img)
+                self.moving_atlas_tri_pnts(moving_vec)
+            else:
+                self.atlas_view.working_atlas.overlay_img.setImage(self.overlay_img)
+                self.moving_img_tri_pnts(moving_vec)
+        else:
+            return
+
+    # def rotate_layers(self, da_link, rotate_angle):
+    #     if 'probe' in da_link:
+    #         temp = np.asarray(self.working_atlas_probe).copy()
+    #         self.working_atlas_probe = temp.tolist()
+    #         self.atlas_view.working_atlas.probe_pnts.setData(pos=self.working_atlas_probe)
+    #     elif 'virus' in da_link:
+    #         temp = np.asarray(self.working_atlas_virus).copy()
+    #         temp = temp + moving_vec
+    #         self.working_atlas_virus = temp.tolist()
+    #         self.atlas_view.working_atlas.virus_pnts.setData(pos=self.working_atlas_virus)
+    #     elif 'cell' in da_link:
+    #         temp = np.asarray(self.working_atlas_cell).copy()
+    #         temp = temp + moving_vec
+    #         self.working_atlas_cell = temp.tolist()
+    #         self.atlas_view.working_atlas.cell_pnts.setData(pos=self.working_atlas_cell)
+    #     elif 'contour' in da_link:
+    #         temp = np.asarray(self.working_atlas_contour).copy()
+    #         temp = temp + moving_vec
+    #         self.working_atlas_contour = temp.tolist()
+    #         self.atlas_view.working_atlas.contour_pnts.setData(pos=self.working_atlas_contour)
+    #     elif 'drawing' in da_link:
+    #         temp = np.asarray(self.working_atlas_drawing).copy()
+    #         temp = temp + moving_vec
+    #         self.working_atlas_drawing = temp.tolist()
+    #         self.atlas_view.working_atlas.drawing_pnts.setData(pos=self.working_atlas_drawing)
+    #     elif 'overlay' in da_link:
+    #         self.moving_overlay(moving_vec)
+    #         if 'img' in da_link:
+    #             self.image_view.img_stacks.overlay_img.setImage(self.overlay_img)
+    #             self.moving_atlas_tri_pnts(moving_vec)
+    #         else:
+    #             self.atlas_view.working_atlas.overlay_img.setImage(self.overlay_img)
+    #             self.moving_img_tri_pnts(moving_vec)
+    #     else:
+    #         return
+
+    def vertical_translation_pressed(self, moving_direction):
+        valid_links = self.get_valid_layer()
+
+        if moving_direction == 'up':
+            moving_vec = np.array([0, self.moving_step_val])
+        else:
+            moving_vec = np.array([0, - self.moving_step_val])
+
+        for da_link in valid_links:
+            self.move_layers(da_link, moving_vec)
+
+    def horizontal_translation_pressed(self, moving_direction):
+        valid_links = self.get_valid_layer()
+
+        if moving_direction == 'right':
+            moving_vec = np.array([self.moving_step_val, 0])
+        else:
+            moving_vec = np.array([- self.moving_step_val, 0])
+
+        for da_link in valid_links:
+            self.move_layers(da_link, moving_vec)
+
+    def layer_rotation_pressed(self, rotating_direction):
+        valid_links = self.get_valid_layer()
+
+        if rotating_direction == 'clockwise':
+            rotating_val = self.rotating_step_val
+        else:
+            rotating_val = - self.rotating_step_val
+
+
+
+
+
 
     # ------------------------------------------------------------------
     #
@@ -1059,8 +1300,8 @@ class HERBS(QMainWindow, FORM_Main):
         self.tool_box.toa_btn.triggered.connect(self.transfer_to_atlas_clicked)
         self.tool_box.check_btn.triggered.connect(self.transform_accept)
 
-        self.tool_box.checkable_btn_dict['moving_btn'].triggered.connect(self.moving_btn_clicked)
-        self.tool_box.checkable_btn_dict['rotation_btn'].triggered.connect(self.rotation_btn_clicked)
+        # self.tool_box.checkable_btn_dict['moving_btn'].triggered.connect(self.moving_btn_clicked)
+        # self.tool_box.checkable_btn_dict['rotation_btn'].triggered.connect(self.rotation_btn_clicked)
         self.tool_box.checkable_btn_dict['lasso_btn'].triggered.connect(self.lasso_btn_clicked)
         self.tool_box.checkable_btn_dict['magic_wand_btn'].triggered.connect(self.magic_wand_btn_clicked)
         self.tool_box.checkable_btn_dict['pencil_btn'].triggered.connect(self.pencil_btn_clicked)
@@ -1083,10 +1324,10 @@ class HERBS(QMainWindow, FORM_Main):
         self.tool_box.cell_selector_btn.clicked.connect(self.cell_select_btn_clicked)
         self.tool_box.cell_aim_btn.clicked.connect(self.cell_aim_btn_clicked)
         # moving related
-        self.tool_box.left_button.clicked.connect(self.moving_left_btn_clicked)
-        self.tool_box.right_button.clicked.connect(self.moving_right_btn_clicked)
-        self.tool_box.up_button.clicked.connect(self.moving_up_btn_clicked)
-        self.tool_box.down_button.clicked.connect(self.moving_down_btn_clicked)
+        # self.tool_box.left_button.clicked.connect(self.moving_left_btn_clicked)
+        # self.tool_box.right_button.clicked.connect(self.moving_right_btn_clicked)
+        # self.tool_box.up_button.clicked.connect(self.moving_up_btn_clicked)
+        # self.tool_box.down_button.clicked.connect(self.moving_down_btn_clicked)
         # rotation related
         # pencil related
         self.tool_box.pencil_color_btn.sigColorChanged.connect(self.change_pencil_color)
@@ -1141,32 +1382,36 @@ class HERBS(QMainWindow, FORM_Main):
 
         self.np_onside = int(self.tool_box.bound_pnts_num.text())
 
-
     # ------------------------------------------------------------------
     #              ToolBar checkable btn clicked
     # ------------------------------------------------------------------
     def moving_btn_clicked(self):
         self.inactive_lasso()
         self.set_toolbox_btns_unchecked('moving')
+        self.show_triangle_points('triang')
         self.vis_eraser_symbol(False)
 
     def lasso_btn_clicked(self):
         self.set_toolbox_btns_unchecked('lasso')
+        self.show_triangle_points('triang')
         self.vis_eraser_symbol(False)
 
     def magic_wand_btn_clicked(self):
         self.inactive_lasso()
         self.set_toolbox_btns_unchecked('magic_wand')
+        self.show_triangle_points('triang')
         self.vis_eraser_symbol(False)
 
     def pencil_btn_clicked(self):
         self.inactive_lasso()
         self.set_toolbox_btns_unchecked('pencil')
+        self.show_triangle_points('triang')
         self.vis_eraser_symbol(False)
 
     def eraser_btn_clicked(self):
         self.inactive_lasso()
         self.set_toolbox_btns_unchecked('eraser')
+        self.show_triangle_points('triang')
         if self.tool_box.checkable_btn_dict['eraser_btn'].isChecked():
             self.vis_eraser_symbol(True)
         else:
@@ -1175,6 +1420,7 @@ class HERBS(QMainWindow, FORM_Main):
     def rotation_btn_clicked(self):
         self.inactive_lasso()
         self.set_toolbox_btns_unchecked('rotation')
+        self.show_triangle_points('triang')
         self.vis_eraser_symbol(False)
 
     def triang_btn_clicked(self):
@@ -1186,15 +1432,18 @@ class HERBS(QMainWindow, FORM_Main):
     def probe_btn_clicked(self):
         self.inactive_lasso()
         self.set_toolbox_btns_unchecked('probe')
+        self.show_triangle_points('triang')
         self.vis_eraser_symbol(False)
 
     def loc_btn_clicked(self):
         self.inactive_lasso()
         self.set_toolbox_btns_unchecked('loc')
+        self.show_triangle_points('triang')
         self.vis_eraser_symbol(False)
 
     def set_toolbox_btns_unchecked(self, current_btn):
-        if self.tool_box.checkable_btn_dict['{}_btn'.format(current_btn)].isChecked():
+        btn_checked = self.tool_box.checkable_btn_dict['{}_btn'.format(current_btn)].isChecked()
+        if btn_checked:
             self.current_checked_tool = current_btn
             for da_key in self.tool_box.toolbox_btn_keys:
                 if current_btn in da_key:
@@ -1209,6 +1458,8 @@ class HERBS(QMainWindow, FORM_Main):
         else:
             self.current_checked_tool = None
             self.toolbar_wrap_action_dict['{}_act'.format(current_btn)].setVisible(False)
+
+        self.save_current_action(current_btn, btn_checked, None, None)
 
     def vis_eraser_symbol(self, vis):
         self.image_view.img_stacks.circle_follow.setVisible(vis)
@@ -1250,7 +1501,7 @@ class HERBS(QMainWindow, FORM_Main):
         label_container_layout.setSpacing(0)
         label_container_layout.setAlignment(Qt.AlignTop)
         show_3d_button = QPushButton()
-        show_3d_button.setStyleSheet('margin: 0px;')
+        show_3d_button.setStyleSheet(sidebar_button_style)
         show_3d_button.setCheckable(True)
         show_3d_button.setText('Show in 3D view')
         show_3d_button.clicked.connect(self.show_small_area_in_3d)
@@ -1358,7 +1609,7 @@ class HERBS(QMainWindow, FORM_Main):
         self.lasso_is_closure = False
 
     def lasso_points_clicked(self, points, ev):
-        if len(self.lasso_pnts) == 0:
+        if not self.lasso_pnts:
             return
         clicked_ind = ev[0].index()
         if clicked_ind == 0 and len(self.lasso_pnts) >= 3:
@@ -1439,23 +1690,6 @@ class HERBS(QMainWindow, FORM_Main):
             da_pnt_widget = None
         return da_img_widget, da_pnt_widget
 
-    def moving_layers(self, tx, ty):
-        shift_mat = np.float32([[1, 0, tx], [0, 1, ty]])
-        n_working_layer = len(self.layer_ctrl.current_layer_id)
-        for i in range(n_working_layer):
-            da_ind = self.layer_ctrl.current_layer_id[i]
-            da_link = self.layer_ctrl.layer_link[i]
-            da_img_widget, da_pnt_widget = self.check_layers(da_link)
-            if da_img_widget is not None:
-                da_img = da_img_widget.image.copy()
-                dst = cv2.warpAffine(da_img, shift_mat, da_img.shape[:2])
-                da_img_widget.setImage(dst)
-            if da_pnt_widget is not None:
-                da_data = da_img_widget.data['pos'].copy()
-                print(da_data)
-                da_data[:, 0] = da_data[:, 0] + tx
-                da_data[:, 1] = da_data[:, 1] + ty
-                da_img_widget.setData(pos=da_data)
 
     def moving_left_btn_clicked(self):
         if not self.layer_ctrl.current_layer_id:
@@ -2320,8 +2554,8 @@ class HERBS(QMainWindow, FORM_Main):
                 if abs(self.working_img_drawing_data[-1][0] - x) > 1 or abs(self.working_img_drawing_data[-1][1] - y) > 1:
                     self.working_img_drawing_data.append([x, y])
                     self.image_view.img_stacks.drawing_pnts.setData(np.asarray(self.working_img_drawing_data))
-
-        self.statusbar.showMessage('Histological image coordinates: {}, {}'.format(round(x, 3), round(y, 3)))
+        msg = 'Histological image coordinates: {}, {}'.format(round(x, 3), round(y, 3))
+        self.print_message(msg, self.normal_color, 0)
 
     def img_stacks_key_pressed(self, action):
         print(action)
@@ -2489,7 +2723,7 @@ class HERBS(QMainWindow, FORM_Main):
         pstr = 'Atlas voxel:({}, {}, {}), ML:{}um, AP:{}um, DV:{}um) : {} '.format(
             int(da_pnt[1]), int(da_pnt[2]), int(da_pnt[0]), coords[1], coords[2], coords[0],
             self.atlas_view.label_tree.describe(da_id))
-        self.statusbar.showMessage(pstr)
+        self.print_message(pstr, self.normal_color, 0)
 
     def sagital_slice_stacks_hovered(self, pos):
         y = pos.y()
@@ -2512,7 +2746,7 @@ class HERBS(QMainWindow, FORM_Main):
         pstr = 'Atlas voxel:({}, {}, {}), ML:{}um, AP:{}um, DV:{}um) : {} '.format(
             int(da_pnt[1]), int(da_pnt[2]), int(da_pnt[0]), coords[1], coords[2], coords[0],
             self.atlas_view.label_tree.describe(da_id))
-        self.statusbar.showMessage(pstr)
+        self.print_message(pstr, self.normal_color, 0)
 
     def horizontal_slice_stacks_hovered(self, pos):
         y = pos.y()
@@ -2535,7 +2769,7 @@ class HERBS(QMainWindow, FORM_Main):
         pstr = 'Atlas voxel:({}, {}, {}), ML:{}um, AP:{}um, DV:{}um) : {} '.format(
             int(da_pnt[1]), int(da_pnt[2]), int(da_pnt[0]), coords[1], coords[2], coords[0],
             self.atlas_view.label_tree.describe(da_id))
-        self.statusbar.showMessage(pstr)
+        self.print_message(pstr, self.normal_color, 0)
 
     def atlas_stacks_clicked(self, pos):
         # print('atlas clicked')
@@ -3141,7 +3375,7 @@ class HERBS(QMainWindow, FORM_Main):
     #
     # ------------------------------------------------------------------
     def load_atlas(self):
-        self.statusbar.showMessage('Select folder to load Brain Atlas...')
+        self.print_message('Loading Brain Atlas...', self.normal_color, 0.1)
 
         if os.path.exists('data/atlas_path.txt'):
             with open('data/atlas_path.txt') as f:
@@ -3157,18 +3391,17 @@ class HERBS(QMainWindow, FORM_Main):
                 f.write(atlas_folder)
 
         if atlas_folder != '':
-            self.statusbar.showMessage('Loading Brain Atlas...')
-
             self.atlas_folder = atlas_folder
 
             with pg.BusyCursor():
                 da_atlas = AtlasLoader(atlas_folder)
 
             if not da_atlas.success:
+                # self.print_message(da_atlas.msg)
                 self.statusbar.showMessage(da_atlas.msg)
                 return
             else:
-                self.statusbar.showMessage('Atlas loaded successfully.')
+                self.print_message('Atlas loaded successfully.', self.normal_color, 0.1)
 
             atlas_data = np.transpose(da_atlas.atlas_data, [2, 0, 1])[::-1, :, :]
             segmentation_data = np.transpose(da_atlas.segmentation_data, [2, 0, 1])[::-1, :, :]
@@ -3184,29 +3417,31 @@ class HERBS(QMainWindow, FORM_Main):
             self.atlas_view.working_cut_changed(self.atlas_display)
             self.reset_corners_atlas()
 
-            self.statusbar.showMessage('Successfully set atlas data to view. Checking rendering for 3D visualisation...')
+            msg = 'Successfully set atlas data to view. Checking rendering for 3D visualisation...'
+            self.print_message(msg, self.normal_color, 0.1)
 
             # load mesh data
             pre_made_meshdata_path = os.path.join(atlas_folder, 'atlas_meshdata.pkl')
             pre_made_small_meshdata_path = os.path.join(atlas_folder, 'atlas_small_meshdata.pkl')
 
             if not os.path.exists(pre_made_meshdata_path) or not os.path.exists(pre_made_small_meshdata_path):
-                self.statusbar.showMessage(
-                    'Brain mesh is not found! Please pre-process the atlas.')
+                msg = 'Brain mesh is not found! Please pre-process the atlas.'
+                self.print_message(msg, self.error_message_color, 0)
 
             try:
                 infile = open(pre_made_meshdata_path, 'rb')
                 self.meshdata = pickle.load(infile)
                 infile.close()
             except ValueError:
-                self.statusbar.showMessage('Please re-process mesh for the whole brain.')
+                msg = 'Please pre-process mesh for the whole brain.'
+                self.print_message(msg, self.error_message_color, 0)
                 return
 
             self.atlas_view.mesh.setMeshData(meshdata=self.meshdata)
             self.mesh_origin = np.ravel(da_atlas.atlas_info[3]['Bregma'])
             self.atlas_view.mesh.translate(-self.mesh_origin[0], -self.mesh_origin[1], -self.mesh_origin[2])
 
-            self.statusbar.showMessage('Brain mesh is Loaded.')
+            self.print_message('Brain mesh is Loaded.', self.normal_color, 0)
 
             return
 
@@ -3324,7 +3559,6 @@ class HERBS(QMainWindow, FORM_Main):
         self.layerpanel.setEnabled(True)
         self.statusbar.showMessage('Image file loaded.')
 
-
     # load multiple images
     def load_images(self):
         self.statusbar.showMessage('Selecte folder to load multiple images, files can not be .czi format ...')
@@ -3369,28 +3603,45 @@ class HERBS(QMainWindow, FORM_Main):
         else:
             self.print_message('No file name is given to save.', '#ff6e6e', 0.1)
 
+    # save triangle points for the atlas
     def save_triangulation_points(self):
-        print('save triang pnts')
+        path = QFileDialog.getSaveFileName(self, "Save Triangulation Points Data",
+                                           str(Path.home()), "Pickle File (*.pkl)")
+        if path[0] != '':
+            data = {'atlas_corner_points': self.atlas_corner_points,
+                    'atlas_side_lines': self.atlas_side_lines,
+                    'atlas_tri_data': self.atlas_tri_data,
+                    'atlas_tri_inside_data': self.atlas_tri_inside_data,
+                    'atlas_tri_onside_data': self.atlas_tri_onside_data,
+                    'working_atlas_text': self.working_atlas_text,
+                    'atlas_display': self.atlas_display}
+            with open(path[0], 'wb') as handle:
+                pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
+    # save merged object
     def save_merged_object(self, object_type):
         if not self.object_ctrl.obj_list:
-            self.statusbar.showMessage('No object is created ...')
+            self.print_message('No object is created ...', 'gray', 0)
             return
+
         otype = self.object_ctrl.obj_type
         valid_index = [ind for ind in range(len(otype)) if object_type in otype[ind] and 'merged' in otype[ind]]
+
         if not valid_index:
-            self.statusbar.showMessage('No merged object is created ...')
+            self.print_message('No merged object is created ...', 'gray', 0)
             return
+
         save_path = str(QFileDialog.getExistingDirectory(self, "Select Folder to Save Objects"))
         if save_path != '':
-            self.statusbar.showMessage('Saving {} objects ...'.format(object_type))
-            time.sleep(0.1)
+            self.print_message('Saving {} objects ...'.format(object_type), 'white', 0.1)
             for da_ind in valid_index:
-                s_data = self.object_ctrl.obj_data[da_ind]
+                data = {'type': self.object_ctrl.obj_type[da_ind],
+                        'data': self.object_ctrl.obj_data[da_ind],
+                        'widget3d': self.object_3d_list[da_ind]}
                 s_name = self.object_ctrl.obj_name[da_ind]
                 s_path = os.path.join(save_path, s_name)
                 with open('{}.pkl'.format(s_path), 'wb') as handle:
-                    pickle.dump(s_data, handle, protocol=pickle.HIGHEST_PROTOCOL)
+                    pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
         else:
             return
 
@@ -3410,7 +3661,7 @@ class HERBS(QMainWindow, FORM_Main):
 
     def save_project(self):
         if self.overlay_img is None:
-            self.statusbar.showMessage('Project can be saved after overlay image is created.')
+            self.print_message('Project can be saved after overlay image is created.', 'white', 0)
             return
         self.statusbar.showMessage('Saving Project ...')
 
@@ -3459,7 +3710,7 @@ class HERBS(QMainWindow, FORM_Main):
 
             with open(file_name[0], 'wb') as handle:
                 pickle.dump(project_data, handle, protocol=pickle.HIGHEST_PROTOCOL)
-            self.statusbar.showMessage('Project saved successfully.')
+            self.print_message('Project saved successfully.', 'white', 0)
 
     def get_setting_data(self):
         data = {'num_windows': self.num_windows,
@@ -3577,6 +3828,7 @@ class HERBS(QMainWindow, FORM_Main):
         dlg = QFileDialog()
         dlg.setFileMode(QFileDialog.ExistingFiles)
         project_path = dlg.getOpenFileName(self, "Load Project", str(Path.home()), "Pickle File (*.pkl)")
+
         if project_path[0] != '':
             infile = open(project_path[0], 'rb')
             project_dict = pickle.load(infile)
@@ -3706,31 +3958,76 @@ class HERBS(QMainWindow, FORM_Main):
 
     # load triangulation points
     def load_triangulation_points(self):
+        if self.atlas_view.atlas_data is None:
+            self.print_message('Atlas need to be loaded first.', 'gray', 0)
+            return
         filter = "Pickle File (*.pkl)"
         dlg = QFileDialog()
         dlg.setFileMode(QFileDialog.ExistingFiles)
         pnt_path = dlg.getOpenFileName(self, "Load Triangulation Points", str(Path.home()), filter)
+        print(pnt_path)
 
         if pnt_path[0] != '':
             infile = open(pnt_path[0], 'rb')
-            pnt_dict = pickle.load(infile)
+            tri_data = pickle.load(infile)
             infile.close()
+
+            if 'atlas_corner_points' not in list(tri_data.keys()):
+                self.print_message('Loaded data is not triangulation points data !!!', self.error_message_color, 0.1)
+                return
+
+            self.atlas_display = tri_data['atlas_display']
+            self.atlas_corner_points = tri_data['atlas_corner_points']
+            self.atlas_side_lines = tri_data['atlas_side_lines']
+            self.atlas_tri_data = tri_data['atlas_tri_data']
+            self.atlas_tri_inside_data = tri_data['atlas_tri_inside_data']
+            self.atlas_tri_onside_data = tri_data['atlas_tri_onside_data']
+            self.working_atlas_text = tri_data['working_atlas_text']
+
+            if tri_data['atlas_display'] == 'coronal':
+                self.atlas_view.section_rabnt1.setChecked(True)
+            elif tri_data['atlas_display'] == 'sagital':
+                self.atlas_view.section_rabnt2.setChecked(True)
+            else:
+                self.atlas_view.section_rabnt3.setChecked(True)
+            if self.atlas_tri_data:
+                self.atlas_view.working_atlas.tri_pnts.setData(self.atlas_tri_data)
+                for i in range(len(self.atlas_tri_data)):
+                    self.atlas_view.working_atlas.vb.addItem(self.working_atlas_text[i])
 
     # load object
     def load_object(self):
-        filter = "Pickle File (*.pkl)"
+        if self.atlas_view.atlas_data is None:
+            self.print_message('Atlas need to be loaded first.', 'gray', 0)
+            return
         dlg = QFileDialog()
         dlg.setFileMode(QFileDialog.ExistingFiles)
-        object_file_path = dlg.getOpenFileName(self, "Load Object File", str(Path.home()), filter)
+        object_file_path = dlg.getOpenFileNames(self, "Load Object Files", str(Path.home()), "Pickle File (*.pkl)")
 
-        if object_file_path[0] != '':
-            infile = open(object_file_path[0], 'rb')
-            object_dict = pickle.load(infile)
-            infile.close()
+        if object_file_path[0]:
+            n_files = len(object_file_path[0])
+            for i in range(n_files):
+                infile = open(object_file_path[0][i], 'rb')
+                object_dict = pickle.load(infile)
+                infile.close()
 
+                self.object_ctrl.add_object(object_dict['type'], object_data=object_dict['data'])
+                self.object_3d_list.append(object_dict['widget3d'])
+                self.view3d.addItem(self.object_3d_list[-1])
+            self.print_message('Objects loaded successfully.', 'white', 0)
+
+
+    def redo_called(self):
+        print('1')
+
+    def undo_called(self):
+        print('1')
+
+
+    # status
     def print_message(self, msg, col, sec):
-        self.statusbar.setStyleSheet('background-color: rgb(50, 50, 50); color: {}; border-top: 1px solid #272727; padding-left: 10px;'.format(col))
-        self.statusbar.showMessage(msg)
+        self.statusbar.setStyleSheet(get_statusbar_style(col))
+        self.statusbar.showMessage('  ' + msg)
         time.sleep(sec)
 
 
@@ -3739,6 +4036,8 @@ class HERBS(QMainWindow, FORM_Main):
 def main():
     app = QApplication(argv)
     app.setStyleSheet(herbs_style)
+    print(sys.flags.interactive)  # 0
+    print(hasattr(QtCore, 'PYQT_VERSION'))
     # if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
     #     app.instance().exec_()
     window = HERBS()

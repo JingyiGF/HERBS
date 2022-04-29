@@ -45,6 +45,132 @@ QFrame {
 }
 '''
 
+reset_button_style = '''
+QPushButton{
+    background: #656565;
+    border-radius: 5px;
+    color: white;
+    border-style: outset;
+    border-bottom: 1px solid rgb(30, 30, 30);
+    height: 24px;
+    margin: 0px;
+}
+
+QPushButton:hover{
+    background-color: #323232;
+    border: 1px solid #656565;
+}
+
+'''
+
+spinbox_style = '''
+/*---------------------- SpinBox -----------------------*/
+QSpinBox {
+    padding-right: 0px; /* make room for the arrows */
+    border: 1px solid #242424;
+    background: transparent;
+}
+
+QSpinBox::up-button {
+    background: transparent;
+    subcontrol-origin: border;
+    subcontrol-position: top right; /* position at the top right corner */
+    width: 15px; 
+    border-width: 0px;
+}
+
+QSpinBox::down-button {
+    background: transparent;
+    subcontrol-origin: border;
+    subcontrol-position: bottom right; /* position at bottom right corner */
+    width: 15px;
+    border-width: 0px;
+}
+
+QSpinBox::up-button:hover {
+    background-color: #282828;
+}
+
+QSpinBox::down-button:hover {
+    background-color: #282828;
+}
+
+QSpinBox::up-button:pressed {
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                      stop: 0 #282828, stop: 1 #323232);
+}
+
+QSpinBox::down-button:pressed {
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                      stop: 0 #323232, stop: 1 #282828);
+}
+
+QSpinBox::up-arrow {
+    image: url(icons/up-arrow.svg);
+    width: 7px;
+    height: 7px;
+}
+
+QSpinBox::down-arrow {
+    image: url(icons/down-arrow.svg);
+    width: 7px;
+    height: 7px;
+}
+
+/*---------------------- DoubleSpinBox -----------------------*/
+QDoubleSpinBox {
+    padding-right: 0px; 
+    border: 1px solid #242424;
+    background: transparent;
+    
+}
+
+QDoubleSpinBox::up-button {
+    background: transparent;
+    subcontrol-origin: border;
+    subcontrol-position: top right; /* position at the top right corner */
+    width: 15px; 
+    border: None;
+}
+
+QDoubleSpinBox::down-button {
+    background: transparent;
+    subcontrol-origin: border;
+    subcontrol-position: bottom right; /* position at bottom right corner */
+    width: 15px;
+    border: None;
+}
+
+QDoubleSpinBox::up-button:hover {
+    background-color: #282828;
+}
+
+QDoubleSpinBox::down-button:hover {
+    background-color: #282828;
+}
+
+QDoubleSpinBox::up-button:pressed {
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                      stop: 0 #282828, stop: 1 #000000);
+}
+
+QDoubleSpinBox::down-button:pressed {
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                      stop: 0 #000000, stop: 1 #282828);
+}
+
+QDoubleSpinBox::up-arrow {
+    image: url(icons/up-arrow.svg);
+    width: 7px;
+    height: 7px;
+}
+
+QDoubleSpinBox::down-arrow {
+    image: url(icons/down-arrow.svg);
+    width: 7px;
+    height: 7px;
+}
+'''
 
 class CurvesPlot(pg.PlotWidget):
     sigLineChange = pyqtSignal(object)
@@ -286,7 +412,7 @@ class CurveWidget(QWidget):
         self.gamma_spinbox.spin_val.valueChanged.connect(self.gamma_spinbox_changed)
 
         self.reset_btn = QPushButton('Reset')
-        self.reset_btn.setStyleSheet('margin-bottom: 1px; border:None;')
+        self.reset_btn.setStyleSheet(reset_button_style)
         self.reset_btn.setFixedHeight(25)
         self.reset_btn.clicked.connect(self.reset_pressed)
 

@@ -210,16 +210,6 @@ class Styles(object):
                 margin-top: 0px
             }
     
-            QPushButton{
-                background: #656565;
-                border-radius: 5px;
-                color: white;
-                border-style: outset;
-                border-bottom: 1px solid rgb(30, 30, 30);
-                margin: 0px;
-                min-height: 22px;
-            }
-    
             QLabel {
                 color: white;
             }

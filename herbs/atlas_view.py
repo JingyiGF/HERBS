@@ -54,17 +54,6 @@ QPushButton {
 }
 '''
 
-atlas_panel_button_style = '''
-QPushButton{
-    background: #656565;
-    border-radius: 5px;
-    color: white;
-    border-style: outset;
-    border-bottom: 1px solid rgb(30, 30, 30);
-}
-'''
-
-
 page_control_style = '''
 QLabel{
     border: None;
@@ -104,6 +93,31 @@ QSlider::handle:horizontal {
 }
 '''
 
+sidebar_button_style = '''
+QPushButton{
+    background: #656565;
+    border-radius: 5px;
+    color: white;
+    border-style: outset;
+    border-bottom: 1px solid rgb(30, 30, 30);
+    height: 24px;
+    margin: 0px;
+}
+
+QPushButton:hover{
+    background-color: #323232;
+    border: 1px solid #656565;
+}
+
+QPushButton:checked{
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                      stop: 0 #17bb00, stop: 1 #0e6900);
+    border-bottom: 1px solid rgb(30, 30, 30);
+    border-top: None;
+    border-left: None;
+    border-right: None;  
+}
+'''
 
 class PageController(QWidget):
     class SignalProxy(QtCore.QObject):
@@ -427,12 +441,12 @@ class AtlasView(QObject):
 
         # boundary
         self.show_boundary_btn = QPushButton('Show Boundary')
-        self.show_boundary_btn.setStyleSheet(atlas_panel_button_style)
+        self.show_boundary_btn.setStyleSheet(sidebar_button_style)
         self.show_boundary_btn.setCheckable(True)
 
         #
         self.navigation_btn = QPushButton('Navigation')
-        self.navigation_btn.setStyleSheet(atlas_panel_button_style)
+        self.navigation_btn.setStyleSheet(sidebar_button_style)
         self.navigation_btn.setCheckable(True)
         self.navigation_btn.clicked.connect(self.navigation_btn_clicked)
 
