@@ -147,28 +147,44 @@ class SliceStacks(pg.GraphicsLayoutWidget):
         self.boundary.setCompositionMode(QPainter.CompositionMode.CompositionMode_Plus)
         self.boundary.setVisible(False)
 
-        self.tri_pnts = TriangulationPoints()
+        tri_pnts = TriangulationPoints()
         self.tri_lines_list = []
 
-        self.circle_follow = pg.PlotDataItem(pen=pg.mkPen('r', width=2, style=Qt.DashLine))
-        self.lasso_path = pg.PlotDataItem(pen=pg.mkPen(color='r', width=3, style=Qt.DashLine),
+        circle_follow = pg.PlotDataItem(pen=pg.mkPen('r', width=2, style=Qt.DashLine))
+        lasso_path = pg.PlotDataItem(pen=pg.mkPen(color='r', width=3, style=Qt.DashLine),
                                           symbolPen='r', symbol='o', symbolSize=4)
 
-        self.overlay_img = pg.ImageItem()
+        overlay_img = pg.ImageItem()
 
-        self.overlay_contour = pg.ImageItem()
-        self.overlay_contour.setLevels(levels=(0, 1))
+        overlay_contour = pg.ImageItem()
+        overlay_contour.setLevels(levels=(0, 1))
 
-        self.mask_img = pg.ImageItem()
-        # self.mask_img.setLevels(levels=(0, 1))
+        mask_img = pg.ImageItem()
+        mask_img.setLevels(levels=(0, 1))
 
-        self.virus_pnts = pg.ScatterPlotItem(pen=(133, 255, 117), symbolBrush=(133, 255, 117), symbolPen=(55, 55, 55),
+        grid_lines = pg.GridItem(pen=(128, 128, 128))
+        grid_lines.setVisible(False)
+
+        virus_pnts = pg.ScatterPlotItem(pen=(133, 255, 117), symbolBrush=(133, 255, 117), symbolPen=(55, 55, 55),
                                              symbol='s', symbolSize=1)
 
-        self.probe_pnts = pg.ScatterPlotItem(pen=(0, 0, 255), brush=(0, 0, 255), symbol='s', size=5, hoverSize=8)
-        self.cell_pnts = pg.ScatterPlotItem(pen=(0, 255, 0), brush=(0, 255, 0), size=5, hoverSize=8)
-        self.drawing_pnts = pg.ScatterPlotItem(pen='b', symbol='o', symbolSize=2, brush=None)
-        self.contour_pnts = pg.ScatterPlotItem(pen=(188, 118, 254), brush=(188, 118, 254), size=5, hoverSize=8)
+        probe_pnts = pg.ScatterPlotItem(pen=(0, 0, 255), brush=(0, 0, 255), symbol='s', size=5, hoverSize=8)
+        cell_pnts = pg.ScatterPlotItem(pen=(0, 255, 0), brush=(0, 255, 0), size=5, hoverSize=8)
+        drawing_pnts = pg.ScatterPlotItem(pen='b', symbol='o', symbolSize=2, brush=None)
+        contour_pnts = pg.ScatterPlotItem(pen=(188, 118, 254), brush=(188, 118, 254), size=5, hoverSize=8)
+
+        self.image_dict = {'atlas-overlay': overlay_img,
+                           'atlas-mask': mask_img,
+                           'grid_lines': grid_lines,
+                           'tri_pnts': tri_pnts,
+                           'circle_follow': circle_follow,
+                           'lasso_path': lasso_path,
+                           'atlas-virus': virus_pnts,
+                           'atlas-contour': contour_pnts,
+                           'atlas-probe': probe_pnts,
+                           'atlas-cells': cell_pnts,
+                           'atlas-drawing': drawing_pnts}
+        self.image_dict_keys = list(self.image_dict.keys())
 
         self.v_line = pg.InfiniteLine(angle=90, movable=False)
         self.h_line = pg.InfiniteLine(angle=0, movable=False)
@@ -185,19 +201,8 @@ class SliceStacks(pg.GraphicsLayoutWidget):
         # for i in range(4):
         #     self.vb.addItem(self.overlay_img[i])
 
-        self.vb.addItem(self.overlay_img)
-        self.vb.addItem(self.overlay_contour)
-
-        self.vb.addItem(self.tri_pnts)
-        self.vb.addItem(self.circle_follow)
-        self.vb.addItem(self.lasso_path)
-
-        self.vb.addItem(self.mask_img)
-        self.vb.addItem(self.virus_pnts)
-        self.vb.addItem(self.probe_pnts)
-        self.vb.addItem(self.cell_pnts)
-        self.vb.addItem(self.drawing_pnts)
-        self.vb.addItem(self.contour_pnts)
+        for i in range(len(self.image_dict)):
+            self.vb.addItem(self.image_dict[self.image_dict_keys[i]])
 
         self.vb.addItem(self.v_line, ignoreBounds=True)
         self.vb.addItem(self.h_line, ignoreBounds=True)

@@ -52,7 +52,7 @@ eye_button_style = '''
 text_btn_style = '''
 QPushButton {
     background: transparent;
-    border:1px solid yellow;
+    border: None;
     border-radius:0px;
     text-align:left; 
     padding-left: 5px; 
@@ -330,6 +330,8 @@ class SinglePiece(QWidget):
         self.group_id = group_index
 
         self.tbnail = QPushButton()
+        self.tbnail.setFixedSize(QSize(40, 40))
+        self.tbnail.setStyleSheet(eye_button_style)
         self.tbnail.setIcon(object_icon)
         self.tbnail.setIconSize(QSize(20, 20))
         self.tbnail.clicked.connect(self.on_click)

@@ -641,7 +641,6 @@ def get_pnts_triangle_ind(tri_vet_inds, tri_data, size, pnts):
     # size = (200, 100)
     # pnts = np.array([[0, 1], [0, 2], [60, 200]])
 
-
     update_pnts = pnts.copy()
     n_pnts = len(pnts)
     loc = np.zeros(n_pnts)
@@ -706,15 +705,11 @@ def num_side_pnt_changed(num_pnt, corner_points, side_lines):
             da_line = side_lines[i]
             for j in range(n_pnts_to_make):
                 inline_point = da_line[0] + (da_line[1] - da_line[0]) / (n_pnts_to_make + 1) * (j + 1)
-                onside_data.append([inline_point[0], inline_point[1]])
+                onside_data.append([int(inline_point[0]), int(inline_point[1])])
     return onside_data
 
 
 def match_sides_points(rect_atlas, size_atlas, rect_image, size_image):
-    print(rect_atlas)
-    print(size_atlas)
-    print(rect_image)
-    print(size_image)
     x_factor = rect_atlas[2] / rect_image[2]
     y_factor = rect_atlas[3] / rect_image[3]
 
@@ -819,12 +814,18 @@ def get_tri_lines(rect, pnts):
         subdiv.insert(p)
     edge_list = subdiv.getEdgeList()
     lines_list = []
+    # special_pnt = []
     for el in edge_list:
         pt1 = [el[0], el[1]]
         pt2 = [el[2], el[3]]
         if rect_contains(rect, pt1) and rect_contains(rect, pt2):
             lines_list.append(el)
-    return lines_list
+        # else:
+        #     if not rect_contains(rect, pt1) and pt1 not in special_pnt:
+        #         special_pnt.append(pt1)
+        #     if not rect_contains(rect, pt2) and pt2 not in special_pnt:
+        #         special_pnt.append(pt2)
+    return lines_list  #, special_pnt
 
 
 # czi_img = image_file.data['scene 0'].copy()
@@ -924,4 +925,30 @@ def get_statusbar_style(col):
     return style
 
 
+def rotate(image, angle, img_center=None, scale=1.0):
+    (h, w) = image.shape[:2]
 
+    if img_center is None:
+        img_center = (w // 2, h // 2)
+
+    rot_mat = cv2.getRotationMatrix2D(img_center, angle, scale)
+    rotated_img = cv2.warpAffine(image, rot_mat, (w, h))
+
+    return rotated_img
+
+
+def rotate_bound(image, angle):
+    (h, w) = image.shape[:2]
+    (center_x, center_y) = (w / 2, h / 2)
+
+    rot_mat = cv2.getRotationMatrix2D((center_x, center_y), -angle, 1.0)
+    cos = np.abs(rot_mat[0, 0])
+    sin = np.abs(rot_mat[0, 1])
+
+    bound_w = int((h * sin) + (w * cos))
+    bound_h = int((h * cos) + (w * sin))
+
+    rot_mat[0, 2] += (bound_w / 2) - center_x
+    rot_mat[1, 2] += (bound_h / 2) - center_y
+
+    return cv2.warpAffine(image, rot_mat, (bound_w, bound_h))

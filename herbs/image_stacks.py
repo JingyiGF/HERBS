@@ -54,10 +54,10 @@ class ClickableImage(pg.ImageItem):
 
 
 class ImageStacks(pg.GraphicsLayoutWidget):
-    class SignalProxy(QtCore.QObject):
-        sigMouseHovered = QtCore.Signal(object)  # id
-        sigMouseClicked = QtCore.Signal(object)  # id
-        sigKeyPressed = QtCore.Signal(object)  # event
+    class SignalProxy(QObject):
+        sigMouseHovered = pyqtSignal(object)  # id
+        sigMouseClicked = pyqtSignal(object)  # id
+        sigKeyPressed = pyqtSignal(object)  # event
 
     def __init__(self):
         self._sigprox = ImageStacks.SignalProxy()
@@ -79,68 +79,68 @@ class ImageStacks(pg.GraphicsLayoutWidget):
         self.base_layer.mouseClicked.connect(self.mouse_clicked)
         self.base_layer.mouseHovered.connect(self.mouse_hovered)
 
-        self.img1 = pg.ImageItem()
-        self.img1.setCompositionMode(QtGui.QPainter.CompositionMode.CompositionMode_Plus)
-        self.img2 = pg.ImageItem()
-        self.img2.setCompositionMode(QtGui.QPainter.CompositionMode.CompositionMode_Plus)
-        self.img3 = pg.ImageItem()
-        self.img3.setCompositionMode(QtGui.QPainter.CompositionMode.CompositionMode_Plus)
-        self.img4 = pg.ImageItem()
-        self.img4.setCompositionMode(QtGui.QPainter.CompositionMode.CompositionMode_Plus)
+        img1 = pg.ImageItem()
+        img1.setCompositionMode(QPainter.CompositionMode_Plus)
+        img2 = pg.ImageItem()
+        img2.setCompositionMode(QPainter.CompositionMode_Plus)
+        img3 = pg.ImageItem()
+        img3.setCompositionMode(QPainter.CompositionMode_Plus)
+        img4 = pg.ImageItem()
+        img4.setCompositionMode(QPainter.CompositionMode_Plus)
 
-        self.circle_follow = pg.PlotDataItem(pen=pg.mkPen('r', width=2, style=Qt.DashLine))
-        self.lasso_path = pg.PlotDataItem(pen=pg.mkPen(color='r', width=3, style=Qt.DashLine),
-                                          symbolPen='r', symbol='o', symbolSize=4)
+        circle_follow = pg.PlotDataItem(pen=pg.mkPen('r', width=2, style=Qt.DashLine))
+        lasso_path = pg.PlotDataItem(pen=pg.mkPen(color='r', width=3, style=Qt.DashLine),
+                                     symbolPen='r', symbol='o', symbolSize=4)
 
-        self.overlay_img = pg.ImageItem()
-        self.overlay_img.setCompositionMode(QtGui.QPainter.CompositionMode.CompositionMode_Plus)
-        self.overlay_contour = pg.ImageItem()
-        self.overlay_contour.setLevels(levels=(0, 1))
+        overlay_img = pg.ImageItem()
+        overlay_img.setCompositionMode(QPainter.CompositionMode_Plus)
+        overlay_contour = pg.ImageItem()
+        overlay_contour.setLevels(levels=(0, 1))
 
-        self.mask_img = pg.ImageItem()
-        self.mask_img.setLevels(levels=(0, 1))
+        mask_img = pg.ImageItem()
+        mask_img.setLevels(levels=(0, 1))
 
-        self.tri_pnts = TriangulationPoints()
-        self.tri_pnts.setVisible(False)
+        tri_pnts = TriangulationPoints()
+        tri_pnts.setVisible(False)
         self.tri_lines_list = []
 
-        self.probe_pnts = pg.ScatterPlotItem(pen=(0, 0, 255), brush=(0, 0, 255), symbol='s', size=5, hoverSize=8)
-        self.cell_pnts = pg.ScatterPlotItem(pen=(0, 255, 0), brush=(0, 255, 0), size=5, hoverSize=8)
-        self.blob_pnts = pg.ScatterPlotItem(pen=(55, 55, 55), brush=(55, 55, 55), symbol='s', size=5)
-        self.drawing_pnts = pg.PlotDataItem(pen=pg.mkPen(color=(128, 128, 128), width=3), brush=None)
+        grid_lines = pg.GridItem(pen=(128, 128, 128))
+        grid_lines.setVisible(False)
 
-        self.contour_img = pg.ImageItem()
-        self.contour_img.setLevels(levels=(0, 1))
+        probe_pnts = pg.ScatterPlotItem(pen=(0, 0, 255), brush=(0, 0, 255), symbol='s', size=5, hoverSize=8)
+        cell_pnts = pg.ScatterPlotItem(pen=(0, 255, 0), brush=(0, 255, 0), size=5, hoverSize=8)
+        blob_pnts = pg.ScatterPlotItem(pen=(55, 55, 55), brush=(55, 55, 55), symbol='s', size=5)
+        drawing_pnts = pg.PlotDataItem(pen=pg.mkPen(color=(128, 128, 128), width=3), brush=None)
 
-        self.virus_img = pg.ImageItem()
-        self.virus_img.setLevels(levels=(0, 1))
+        contour_img = pg.ImageItem()
+        contour_img.setLevels(levels=(0, 1))
 
-        self.image_list = [self.img1, self.img2, self.img3, self.img4]
+        virus_img = pg.ImageItem()
+        virus_img.setLevels(levels=(0, 1))
+
+        self.image_list = [img1, img2, img3, img4]
+        self.image_dict = {'img-overlay': overlay_img,
+                           'overlay_contour': overlay_contour,
+                           'img-mask': mask_img,
+                           'grid_lines': grid_lines,
+                           'tri_pnts': tri_pnts,
+                           'circle_follow': circle_follow,
+                           'lasso_path': lasso_path,
+                           'img-virus': virus_img,
+                           'img-contour': contour_img,
+                           'img-probe': probe_pnts,
+                           'img-cells': cell_pnts,
+                           'img-blob': blob_pnts,
+                           'img-drawing': drawing_pnts}
+        self.image_dict_keys = list(self.image_dict.keys())
 
         self.vb.addItem(self.base_layer)
         for i in range(4):
             self.vb.addItem(self.image_list[i])
             self.image_list[i].setVisible(False)
 
-        self.vb.addItem(self.overlay_img)
-        self.vb.addItem(self.overlay_contour)
-
-        self.vb.addItem(self.mask_img)
-
-        self.vb.addItem(self.tri_pnts)
-        self.vb.addItem(self.circle_follow)
-        self.vb.addItem(self.lasso_path)
-
-        self.vb.addItem(self.virus_img)
-        self.vb.addItem(self.contour_img)
-
-        self.vb.addItem(self.probe_pnts)
-
-        self.vb.addItem(self.cell_pnts)
-        self.vb.addItem(self.blob_pnts)
-
-        self.vb.addItem(self.drawing_pnts)
-        # self.vb.addItem(self.contour_pnts)
+        for i in range(len(self.image_dict)):
+            self.vb.addItem(self.image_dict[self.image_dict_keys[i]])
 
     def set_data(self, data, scale=None):
         self.data = data
@@ -164,7 +164,6 @@ class ImageStacks(pg.GraphicsLayoutWidget):
 
     def boundingRect(self):
         return self.base_layer.boundingRect()
-
 
     def mouse_hovered(self, event):
         if event.isExit():

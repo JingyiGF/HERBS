@@ -12,10 +12,11 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from pyqtgraph.Qt import QtGui, QtCore
+import scipy.ndimage as ndi
 
 from .image_stacks import ImageStacks
 from .image_curves import CurveWidget, ChannelSelector
-from .uuuuuu import hsv2rgb, gamma_line, color_img, make_color_lut, get_corner_line_from_rect
+from .uuuuuu import hsv2rgb, gamma_line, color_img, make_color_lut, get_corner_line_from_rect, rotate, rotate_bound
 
 
 sidebar_button_style = '''
@@ -82,6 +83,8 @@ class ImageView(QObject):
 
         self.side_lines = None
         self.corner_points = None
+
+        self.rotation_angle = 0
 
         self.current_mode = 'rgb'
 
@@ -178,7 +181,7 @@ class ImageView(QObject):
 
         self.current_img = copy.deepcopy(self.image_file.data['scene {}'.format(scene_ind)])
         self.img_size = self.current_img.shape[:2]
-        self.img_stacks.tri_pnts.set_range(self.img_size[1], self.img_size[0])
+        self.img_stacks.image_dict['tri_pnts'].set_range(self.img_size[1], self.img_size[0])
 
         scale_factor = np.max(np.ravel(self.img_size) / 80)
         self.tb_size = (int(self.img_size[1] / scale_factor), int(self.img_size[0] / scale_factor))
@@ -244,9 +247,9 @@ class ImageView(QObject):
             self.current_img = copy.deepcopy(self.image_file.data['scene {}'.format(scene_index)])
 
             self.img_size = self.current_img.shape[:2]
-            self.img_stacks.tri_pnts.set_range(self.img_size[1], self.img_size[0])
-            self.img_stacks.set_data(self.current_img, self.image_file.pixel_type)
-            self.img_stacks.set_lut(self.color_lut_list, self.image_file.pixel_type)
+            self.img_stacks.image_dict['tri_pnts'].set_range(self.img_size[1], self.img_size[0])
+            self.img_stacks.set_data(self.current_img)
+            self.img_stacks.set_lut(self.color_lut_list, self.image_file.level)
             self.get_corner_and_lines()
             self.update_curves()
             # reset gamma and channels and black/white slider
@@ -267,7 +270,7 @@ class ImageView(QObject):
                 self.current_img = copy.deepcopy(self.image_file.data['scene %d' % scene_index])
 
                 self.img_size = self.current_img.shape[:2]
-                self.img_stacks.tri_pnts.set_range(self.img_size[1], self.img_size[0])
+                self.img_stacks.image_dict['tri_pnts'].set_range(self.img_size[1], self.img_size[0])
                 self.set_data_to_img_stacks()
                 self.get_corner_and_lines()
 
@@ -333,8 +336,8 @@ class ImageView(QObject):
         for i in range(self.image_file.n_channels):
             self.current_img[:, :, i] = cv2.flip(self.current_img[:, :, i], 0)
         self.img_size = self.current_img.shape[:2]
-        self.img_stacks.tri_pnts.set_range(self.img_size[1], self.img_size[0])
-        self.img_stacks.set_data(self.current_img, self.image_file.is_rgb)
+        self.img_stacks.image_dict['tri_pnts'].set_range(self.img_size[1], self.img_size[0])
+        self.img_stacks.set_data(self.current_img)
 
     def image_horizon_flip(self):
         if self.image_file is None:
@@ -344,27 +347,27 @@ class ImageView(QObject):
         # else:
         for i in range(self.image_file.n_channels):
             self.current_img[:, :, i] = cv2.flip(self.current_img[:, :, i], 1)
-        self.img_stacks.set_data(self.current_img, self.image_file.is_rgb)
+        self.img_stacks.set_data(self.current_img)
         self.img_size = self.current_img.shape[:2]
-        self.img_stacks.tri_pnts.set_range(self.img_size[1], self.img_size[0])
+        self.img_stacks.image_dict['tri_pnts'].set_range(self.img_size[1], self.img_size[0])
 
     def image_90_rotate(self):
         if self.image_file is None:
             return
-        scene_index = self.scene_slider.value()
         # if self.image_file.is_rgb:
         #     self.current_img = cv2.rotate(self.current_img, cv2.ROTATE_90_CLOCKWISE)
         # else:
+        # scene_index = self.scene_slider.value()
         temp = []
         for i in range(self.image_file.n_channels):
             self.img_stacks.image_list[i].clear()
             temp.append(cv2.rotate(self.current_img[:, :, i], cv2.ROTATE_90_CLOCKWISE))
         self.current_img = np.dstack(temp)
-        self.img_stacks.set_data(self.current_img, self.image_file.is_rgb)
+        self.img_stacks.set_data(self.current_img)
         self.img_size = self.current_img.shape[:2]
-        self.img_stacks.tri_pnts.set_range(self.img_size[1], self.img_size[0])
+        self.img_stacks.image_dict['tri_pnts'].set_range(self.img_size[1], self.img_size[0])
         self.get_corner_and_lines()
-        self.image_file.data['scene %d' % scene_index] = self.current_img.copy()
+        # self.image_file.data['scene %d' % scene_index] = self.current_img.copy()
         self.tb_size = np.flip(self.tb_size, 0)
 
     def image_180_rotate(self):
@@ -378,9 +381,9 @@ class ImageView(QObject):
             self.img_stacks.image_list[i].clear()
             temp.append(cv2.rotate(self.current_img[:, :, i], cv2.ROTATE_180))
         self.current_img = np.dstack(temp)
-        self.img_stacks.set_data(self.current_img, self.image_file.is_rgb)
+        self.img_stacks.set_data(self.current_img)
         self.img_size = self.current_img.shape[:2]
-        self.img_stacks.tri_pnts.set_range(self.img_size[1], self.img_size[0])
+        self.img_stacks.image_dict['tri_pnts'].set_range(self.img_size[1], self.img_size[0])
 
     def image_90_counter_rotate(self):
         if self.image_file is None:
@@ -393,39 +396,51 @@ class ImageView(QObject):
             self.img_stacks.image_list[i].clear()
             temp.append(cv2.rotate(self.current_img[:, :, i], cv2.ROTATE_90_COUNTERCLOCKWISE))
         self.current_img = np.dstack(temp)
-        self.img_stacks.set_data(self.current_img, self.image_file.is_rgb)
+        self.img_stacks.set_data(self.current_img)
         self.img_size = self.current_img.shape[:2]
-        self.img_stacks.tri_pnts.set_range(self.img_size[1], self.img_size[0])
+        self.img_stacks.image_dict['tri_pnts'].set_range(self.img_size[1], self.img_size[0])
         self.get_corner_and_lines()
         self.tb_size = np.flip(self.tb_size, 0)
 
-    def image_1_rotate(self):
-        print('1')
-
-    def image_1_counter_rotate(self):
-        print('1')
-
-    # merge image
-    def turn_current_to_process(self):
+    def image_1_rotate(self, rotate_direction):
         if self.image_file is None:
             return
-        if self.image_file.is_rgb:
-            self.current_img = cv2.merge([self.current_img[:, :, 0], self.current_img[:, :, 1], self.current_img[:, :, 2]])
-            self.image_merged = True
-            for i in range(1, 3):
-                self.img_stacks.image_list[i].clear()
-                self.img_stacks.image_list[i].setVisible(False)
-            self.img_stacks.set_data(self.current_img, self.image_merged)
-            self.chn_widget_wrap.setVisible(False)
+        if rotate_direction == 'clockwise':
+            rotation_angle = - 1
+        else:
+            rotation_angle = 1
+        temp = []
+        for i in range(self.image_file.n_channels):
+            self.img_stacks.image_list[i].clear()
+            temp.append(rotate(self.current_img[:, :, i], rotation_angle))
+        self.current_img = np.dstack(temp)
+        self.img_stacks.set_data(self.current_img)
+        self.img_size = self.current_img.shape[:2]
+        self.img_stacks.image_dict['tri_pnts'].set_range(self.img_size[1], self.img_size[0])
+        self.get_corner_and_lines()
 
-    def reset_current_image(self):
-        if not self.image_merged:
-            return
-        scene_index = self.scene_slider.value()
-        self.current_img = copy.deepcopy(self.image_file.data['scene {}'.format(scene_index)])
-        self.image_merged = False
-        self.set_data_to_img_stacks()
-        self.chn_widget_wrap.setVisible(True)
+
+    # merge image
+    # def turn_current_to_process(self):
+    #     if self.image_file is None:
+    #         return
+    #     if self.image_file.is_rgb:
+    #         self.current_img = cv2.merge([self.current_img[:, :, 0], self.current_img[:, :, 1], self.current_img[:, :, 2]])
+    #         self.image_merged = True
+    #         for i in range(1, 3):
+    #             self.img_stacks.image_list[i].clear()
+    #             self.img_stacks.image_list[i].setVisible(False)
+    #         self.img_stacks.set_data(self.current_img, self.image_merged)
+    #         self.chn_widget_wrap.setVisible(False)
+    #
+    # def reset_current_image(self):
+    #     if not self.image_merged:
+    #         return
+    #     scene_index = self.scene_slider.value()
+    #     self.current_img = copy.deepcopy(self.image_file.data['scene {}'.format(scene_index)])
+    #     self.image_merged = False
+    #     self.set_data_to_img_stacks()
+    #     self.chn_widget_wrap.setVisible(True)
 
     # mode change
     def image_mode_changed(self, mode):
