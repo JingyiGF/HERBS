@@ -79,17 +79,12 @@ class ImageView(QObject):
         self.max_num_channels = 4
         self.channel_visible = [False, False, False, False]
         self.channel_color = [None, None, None, None]
-        self.image_merged = False
+        print(len(self.channel_color))
 
         self.side_lines = None
         self.corner_points = None
 
-        self.rotation_angle = 0
-
         self.current_mode = 'rgb'
-
-        # make empty space taker, width 300 according to width of sidebar
-        space_item = QSpacerItem(300, 10, QSizePolicy.Expanding)
 
         # scene control
         self.check_scenes = QPushButton('Load ALL Scenes')
@@ -101,12 +96,13 @@ class ImageView(QObject):
         self.scene_slider.valueChanged.connect(self.scene_index_changed)
         self.scene_label = QLabel('0/ 0')
         self.scene_wrap = QFrame()
+        # self.scene_wrap.setFixedWidth(290)
         scene_wrap_layout = QHBoxLayout(self.scene_wrap)
         # scene_wrap_layout.setContentsMargins(0, 0, 0, 0)
-        # scene_wrap_layout.setSpacing(0)
+        # scene_wrap_layout.setSpacing(5)
         scene_wrap_layout.addWidget(QLabel('Scene: '))
         scene_wrap_layout.addWidget(self.scene_slider)
-        scene_wrap_layout.addWidget(self.scene_label, alignment=Qt.AlignRight)
+        scene_wrap_layout.addWidget(self.scene_label)
         # self.scene_wrap.setVisible(False)
 
         # scale control
@@ -120,28 +116,32 @@ class ImageView(QObject):
         self.scale_slider.sliderReleased.connect(self.scale_slider_released)
         self.scale_label = QLabel('{}%'.format(10))
         self.scale_wrap = QFrame()
+        # self.scale_wrap.setFixedWidth(290)
         scale_wrap_layout = QHBoxLayout(self.scale_wrap)
         # scale_wrap_layout.setContentsMargins(0, 0, 0, 0)
-        # scale_wrap_layout.setSpacing(0)
+        # scale_wrap_layout.setSpacing(5)
         scale_wrap_layout.addWidget(QLabel('Scale: '))
         scale_wrap_layout.addWidget(self.scale_slider)
-        scale_wrap_layout.addWidget(self.scale_label, alignment=Qt.AlignRight)
+        scale_wrap_layout.addWidget(self.scale_label)
 
         # image stacks
         self.img_stacks = ImageStacks()
 
         # curve widget
         self.curve_widget = CurveWidget()
+        self.curve_widget.setEnabled(False)
         self.curve_widget.setFixedHeight(280)
         self.curve_widget.sig_table_changed.connect(self.image_curve_changed)
-        # self.curve_widget.sig_line_changed.connect(self.image_curve_type_changed)
-        # self.curve_widget.sig_reset.connect(self.image_curve_reset)
-        self.curve_widget.setEnabled(False)
+        self.curve_widget.sig_reset.connect(self.image_curve_reset)
+        self.curve_widget.sig_line_type_changed.connect(self.image_curve_type_changed)
 
         # channel buttons
         self.chn_widget_wrap = QFrame()
+        # self.chn_widget_wrap.setFixedWidth(280)
         self.chn_widget_wrap.setStyleSheet('QFrame{border: 1px solid #747a80; border-radius: 5px;}')
         chn_widget_layout = QHBoxLayout(self.chn_widget_wrap)
+        # chn_widget_layout.setContentsMargins(0, 0, 0, 0)
+        # chn_widget_layout.setSpacing(5)
         self.chn_widget_list = []
         for i in range(self.max_num_channels):
             self.chn_widget_list.append(ChannelSelector())
@@ -152,7 +152,6 @@ class ImageView(QObject):
             self.chn_widget_list[i].setVisible(False)
         self.chn_widget_wrap.setVisible(False)
 
-        # outer_outer_layout = QHBoxLayout()
         self.outer_frame = QFrame()
         outer_layout = QVBoxLayout(self.outer_frame)
         outer_layout.setContentsMargins(0, 0, 0, 0)
@@ -161,30 +160,30 @@ class ImageView(QObject):
         outer_layout.addWidget(self.scale_wrap)
         outer_layout.addWidget(self.scene_wrap)
         outer_layout.addWidget(self.curve_widget)
-        outer_layout.addSpacerItem(space_item)
+        outer_layout.addSpacing(10)
         outer_layout.addWidget(self.chn_widget_wrap)
 
     def set_data(self, image_file):
         if self.image_file is not None:
-            if not self.image_file.is_rgb:
-                for i in range(self.image_file.n_channels):
-                    self.chn_widget_list[i].delete_item()
+            self.chn_widget_wrap.setVisible(False)
+            self.curve_widget.reset_pressed()
+            self.curve_widget.setEnabled(False)
+            for i in range(self.image_file.n_channels):
+                self.chn_widget_list[i].delete_item()
             for i in range(self.max_num_channels):
                 self.channel_color[i] = None
                 self.channel_visible[i] = False
-                self.img_stacks.image_list[i].setVisible(False)
+                self.img_stacks.image_list[i].clear()
                 self.chn_widget_list[i].setVisible(False)
-
-        self.image_file = image_file
 
         scene_ind = self.scene_slider.value()
 
+        self.image_file = image_file
         self.current_img = copy.deepcopy(self.image_file.data['scene {}'.format(scene_ind)])
+
         self.img_size = self.current_img.shape[:2]
         self.img_stacks.image_dict['tri_pnts'].set_range(self.img_size[1], self.img_size[0])
-
-        scale_factor = np.max(np.ravel(self.img_size) / 80)
-        self.tb_size = (int(self.img_size[1] / scale_factor), int(self.img_size[0] / scale_factor))
+        self.tb_size = self.get_tb_size(self.img_size)
 
         if self.image_file.n_scenes != 1:
             self.scene_slider.setMaximum(self.image_file.n_scenes-1)
@@ -193,9 +192,20 @@ class ImageView(QObject):
         else:
             self.scene_wrap.setVisible(False)
 
-        if self.image_file.is_czi:   ## ???????
-            self.scale_wrap.setVisible(True)
+        self.set_channel_widgets()
 
+        # set data to curves
+        self.update_curves()
+        # set data to image stacks
+        self.set_data_to_img_stacks()
+        self.get_corner_and_lines()
+
+    def get_tb_size(self, img_size):
+        scale_factor = np.max(np.ravel(img_size) / 80)
+        tb_size = (int(img_size[1] / scale_factor), int(img_size[0] / scale_factor))
+        return tb_size
+
+    def set_channel_widgets(self):
         # set color and names to channels
         self.chn_widget_wrap.setVisible(True)
         for i in range(self.image_file.n_channels):
@@ -210,13 +220,6 @@ class ImageView(QObject):
             self.chn_widget_list[i].add_item(self.channel_color[i])
             self.channel_visible[i] = True
 
-        # set data to curves
-        self.update_curves()
-
-        # set data to image stacks
-        self.set_data_to_img_stacks()
-        self.get_corner_and_lines()
-
     def set_data_to_img_stacks(self):
         self.img_stacks.set_data(self.current_img)
         self.img_stacks.set_lut(self.color_lut_list, self.image_file.level)
@@ -229,7 +232,7 @@ class ImageView(QObject):
     def update_curves(self):
         self.curve_widget.setEnabled(True)
         img_layers = self.current_img.copy()
-        self.curve_widget.set_data(img_layers, self.image_file.rgb_colors, self.image_file.level, self.image_file.data_type)
+        self.curve_widget.set_data(img_layers, self.image_file.rgb_colors, self.image_file.level)
 
     def scene_index_changed(self):
         scene_index = self.scene_slider.value()
@@ -289,10 +292,9 @@ class ImageView(QObject):
         if self.image_file is None:
             return
         table = table.astype(int)
-        scene_index = self.scene_slider.value()
-        da_img = copy.deepcopy(self.image_file.data['scene %d' % scene_index])
+        print(np.max(table))
         if self.image_file.pixel_type == 'rgb24':
-            da_img = cv2.LUT(self.current_img, table)
+            da_img = cv2.LUT(self.current_img.astype('uint8'), table)
             self.img_stacks.set_data(da_img)
         else:
             for i in range(self.image_file.n_channels):
@@ -306,9 +308,8 @@ class ImageView(QObject):
         signal function after change line type
         set to the original 2 points linear type
         """
-        # if self.image_file.is_rgb:
-        #     print('curve type changed for rgb image')
-        # else:
+        if self.image_file is None:
+            return
         for i in range(self.image_file.n_channels):
             self.img_stacks.image_list[i].setLookupTable(self.color_lut_list[i])
 
@@ -317,8 +318,8 @@ class ImageView(QObject):
         signal function after press button 'Reset'
         """
         original_hsv_list = self.image_file.hsv_colors.copy()
-        self.channel_color = original_hsv_list
         for i in range(self.image_file.n_channels):
+            self.channel_color[i] = original_hsv_list[i]
             self.chn_widget_list[i].color_combo.setCurrentIndex(
                 len(self.chn_widget_list[i].color_combo.hsv_color_list) - 1)
             self.curve_widget.curve_plot.change_hist_color(self.channel_color[i], i)
@@ -419,29 +420,6 @@ class ImageView(QObject):
         self.img_stacks.image_dict['tri_pnts'].set_range(self.img_size[1], self.img_size[0])
         self.get_corner_and_lines()
 
-
-    # merge image
-    # def turn_current_to_process(self):
-    #     if self.image_file is None:
-    #         return
-    #     if self.image_file.is_rgb:
-    #         self.current_img = cv2.merge([self.current_img[:, :, 0], self.current_img[:, :, 1], self.current_img[:, :, 2]])
-    #         self.image_merged = True
-    #         for i in range(1, 3):
-    #             self.img_stacks.image_list[i].clear()
-    #             self.img_stacks.image_list[i].setVisible(False)
-    #         self.img_stacks.set_data(self.current_img, self.image_merged)
-    #         self.chn_widget_wrap.setVisible(False)
-    #
-    # def reset_current_image(self):
-    #     if not self.image_merged:
-    #         return
-    #     scene_index = self.scene_slider.value()
-    #     self.current_img = copy.deepcopy(self.image_file.data['scene {}'.format(scene_index)])
-    #     self.image_merged = False
-    #     self.set_data_to_img_stacks()
-    #     self.chn_widget_wrap.setVisible(True)
-
     # mode change
     def image_mode_changed(self, mode):
         if self.image_file is None:
@@ -476,11 +454,20 @@ class ImageView(QObject):
                 'scale_val': self.scale_slider.value(),
                 'channel_visible': self.channel_visible,
                 'channel_color': self.channel_color,
-                'image_merged': self.image_merged,
                 'side_lines': self.side_lines,
                 'corner_points': self.corner_points,
                 'current_mode': self.current_mode}
         return data
+
+    def clear_image_stacks(self):
+        for i in range(self.image_file.n_channels):
+            self.img_stacks.image_list[i].clear()
+
+        for da_key in self.image_dict_keys:
+            self.img_stacks.image_dict[da_key].clear()
+
+    # def clear_curve_widget(self):
+
 
 
 

@@ -132,6 +132,21 @@ def process_atlas_raw_data(atlas_folder, data_file=None, segmentation_file=None,
     if not os.path.exists(atlas_path) or not os.path.exists(segmentation_path):
         return
 
+    # pre-process segmentation
+    segmentation = nib.load(segmentation_path)
+    segmentation_data = segmentation.get_fdata()
+    if mask_data is not None:
+        # make segmentation with mask
+        for i in range(len(mask_data)):
+            segmentation_data[i][mask_data[i] == 0] = 0
+        segmentation_data = segmentation_data.astype('int')
+
+    segment = {'data': segmentation_data}
+
+    outfile = open(os.path.join(atlas_folder, 'segment_pre_made.pkl'), 'wb')
+    pickle.dump(segment, outfile)
+    outfile.close()
+
     # pre-process atlas
     atlas = nib.load(atlas_path)
     atlas_header = atlas.header
@@ -164,21 +179,6 @@ def process_atlas_raw_data(atlas_folder, data_file=None, segmentation_file=None,
 
     outfile = open(os.path.join(atlas_folder, 'atlas_pre_made.pkl'), 'wb')
     pickle.dump(atlas, outfile)
-    outfile.close()
-
-    # pre-process segmentation
-    segmentation = nib.load(segmentation_path)
-    segmentation_data = segmentation.get_fdata()
-    if mask_data is not None:
-        # make segmentation with mask
-        for i in range(len(mask_data)):
-            segmentation_data[i][mask_data[i] == 0] = 0
-        segmentation_data = segmentation_data.astype('int')
-
-    segment = {'data': segmentation_data}
-
-    outfile = open(os.path.join(atlas_folder, 'segment_pre_made.pkl'), 'wb')
-    pickle.dump(segment, outfile)
     outfile.close()
 
     sagital_contour_img = np.zeros(atlas_data.shape, 'i')

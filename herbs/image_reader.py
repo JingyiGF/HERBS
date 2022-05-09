@@ -12,6 +12,9 @@ class ImageReader(object):
         if self.file_name_list[0][-1] == '.':
             self.file_name_list[0] = self.file_name_list[0][:-1]
         self.n_scenes = 1
+
+        file_type = image_file_path[-4:].lower()
+
         self.is_rgb = True
         self.pixel_type = 'rgb24'
         self.level = 255
@@ -26,16 +29,13 @@ class ImageReader(object):
             self.hsv_colors.append(hsv_color)
         self.gamma_val = []
 
-        file_type = image_file_path[-4:].lower()
-
         self.data = {}
         if file_type in ['.jpg', 'jpeg', '.png', '.bmp']:
             img_data = cv2.imread(image_file_path)
+            img_data = cv2.cvtColor(img_data, cv2.COLOR_BGR2RGB)
         else:
-            print('TIFF file is testing')
+            print('tiff test')
             img_data = tifffile.imread(image_file_path)
-
-        img_data = cv2.cvtColor(img_data, cv2.COLOR_BGR2RGB)
         self.data['scene 0'] = img_data
 
 

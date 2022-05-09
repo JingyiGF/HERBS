@@ -610,7 +610,6 @@ class AtlasView(QObject):
         self.Lambda = (inverse_l2, atlas_info[3]['Lambda'][0], atlas_info[3]['Lambda'][1])
         self.rotate_origin_3d = np.array(atlas_info[3]['Bregma'])
         self.origin_3d = np.array(atlas_info[3]['Bregma'])
-        print(self.origin_3d)
 
         self.current_coronal_index = self.origin_3d[1]
         self.current_sagital_index = self.origin_3d[0]

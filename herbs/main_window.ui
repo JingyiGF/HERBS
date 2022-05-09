@@ -267,7 +267,7 @@ border-color: rgb(75, 78, 84);</string>
     <addaction name="menuTranslation"/>
     <addaction name="menuRotation"/>
     <addaction name="separator"/>
-    <addaction name="actionCrop"/>
+    <addaction name="actionClear"/>
    </widget>
    <widget class="QMenu" name="menuImage">
     <property name="styleSheet">
@@ -280,15 +280,6 @@ border-color: rgb(75, 78, 84);</string>
     <property name="title">
      <string>Image</string>
     </property>
-    <widget class="QMenu" name="menuGray_Mode">
-     <property name="title">
-      <string>Mode</string>
-     </property>
-     <addaction name="actionRGB_Mode"/>
-     <addaction name="actionGray_Mode"/>
-     <addaction name="actionHSV_Mode"/>
-    </widget>
-    <addaction name="menuGray_Mode"/>
     <addaction name="separator"/>
     <addaction name="action180"/>
     <addaction name="action90_Clockwise"/>
@@ -300,6 +291,7 @@ border-color: rgb(75, 78, 84);</string>
     <addaction name="actionFlip_Vertical"/>
     <addaction name="separator"/>
     <addaction name="actionProcess_Image"/>
+    <addaction name="actionCut"/>
     <addaction name="actionReset_Image"/>
    </widget>
    <widget class="QMenu" name="menuAtlas">
@@ -525,29 +517,14 @@ selection-background-color: rgb(50, 50, 50);</string>
     <string>4 Windows</string>
    </property>
   </action>
-  <action name="actionHSV_Mode">
-   <property name="text">
-    <string>HSV Mode</string>
-   </property>
-  </action>
-  <action name="actionGray_Mode">
-   <property name="text">
-    <string>Gray Mode</string>
-   </property>
-  </action>
-  <action name="actionRGB_Mode">
-   <property name="text">
-    <string>RGB Mode</string>
-   </property>
-  </action>
   <action name="actionProcess_Image">
    <property name="text">
-    <string>Process Current Image</string>
+    <string>Process Image</string>
    </property>
   </action>
   <action name="actionReset_Image">
    <property name="text">
-    <string>Reset Current Image</string>
+    <string>Reset</string>
    </property>
   </action>
   <action name="actionAtlas_Processor">
@@ -690,11 +667,6 @@ selection-background-color: rgb(50, 50, 50);</string>
     <string>Hide Grids</string>
    </property>
   </action>
-  <action name="actionCrop">
-   <property name="text">
-    <string>Crop</string>
-   </property>
-  </action>
   <action name="actionLoad_Image_Atlas">
    <property name="text">
     <string>Load Slice(s) ...</string>
@@ -703,6 +675,16 @@ selection-background-color: rgb(50, 50, 50);</string>
   <action name="actionMerge_Slices">
    <property name="text">
     <string>Merge Slices</string>
+   </property>
+  </action>
+  <action name="actionCut">
+   <property name="text">
+    <string>Crop</string>
+   </property>
+  </action>
+  <action name="actionClear">
+   <property name="text">
+    <string>Clear</string>
    </property>
   </action>
  </widget>

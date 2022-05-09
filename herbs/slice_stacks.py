@@ -170,7 +170,7 @@ class SliceStacks(pg.GraphicsLayoutWidget):
 
         probe_pnts = pg.ScatterPlotItem(pen=(0, 0, 255), brush=(0, 0, 255), symbol='s', size=5, hoverSize=8)
         cell_pnts = pg.ScatterPlotItem(pen=(0, 255, 0), brush=(0, 255, 0), size=5, hoverSize=8)
-        drawing_pnts = pg.ScatterPlotItem(pen='b', symbol='o', symbolSize=2, brush=None)
+        drawing_pnts = pg.PlotDataItem(pen=pg.mkPen(color=(128, 128, 128), width=3), brush=None)
         contour_pnts = pg.ScatterPlotItem(pen=(188, 118, 254), brush=(188, 118, 254), size=5, hoverSize=8)
 
         self.image_dict = {'atlas-overlay': overlay_img,

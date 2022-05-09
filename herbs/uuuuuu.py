@@ -94,22 +94,28 @@ def line_fit(points):
 def get_angles(direction):
     direction = direction / np.linalg.norm(direction)
     
-    vertical_vec = np.array([0, 0, -1])
-    horizon_vec = np.array([1, 0, 0])
+    vertical_vec = np.array([0, 0, 1])
     
-    dir_proj = direction.copy()
-    dir_proj[2] = 0
-    dir_proj = dir_proj / np.linalg.norm(dir_proj)
-    
-    theta = math.acos(np.max([np.min([np.dot(direction, vertical_vec), 1]), -1]))
-    phi = math.acos(np.max([np.min([np.dot(dir_proj, horizon_vec), 1]), -1]))
-    
-    theta = theta * 180 / np.pi
-    if theta > 90:
-        theta = 180 - theta
-    phi = phi * 180 / np.pi
+    ap_proj = direction.copy()
+    ap_proj[1] = 0
+    ap_proj = ap_proj / np.linalg.norm(ap_proj)
 
-    return theta, phi
+    ml_proj = direction.copy()
+    ml_proj[0] = 0
+    ml_proj = ml_proj / np.linalg.norm(ml_proj)
+
+    ap_val = math.acos(np.max([np.min([np.dot(ap_proj, vertical_vec), 1]), -1]))
+    ml_val = math.acos(np.max([np.min([np.dot(ml_proj, vertical_vec), 1]), -1]))
+
+    ap_angle = np.degrees(ap_val)
+    ml_angle = np.degrees(ml_val)
+
+    if ap_angle > 90:
+        ap_angle  = 180 - ap_angle
+    if ml_angle > 90:
+        ml_angle = 180 - ml_angle
+
+    return ap_angle, ml_angle
 
 
 def pandas_to_str(label_name, label_ano, length, channels):
@@ -123,20 +129,26 @@ def pandas_to_str(label_name, label_ano, length, channels):
 
 
 def get_probe_length(segmentation_data, sp, ep, direction, resolution, tip_length, channel_size, bregma):
-    probe_length = np.sqrt(np.sum((sp - ep)**2)) * resolution - tip_length
-    pix_probe_length = probe_length / resolution
+    probe_length_with_tip = np.sqrt(np.sum((sp - ep)**2)) * resolution
+    print('old length', probe_length_with_tip)
+    probe_length_without_tip = probe_length_with_tip - tip_length
+    pix_probe_length_without_tip = probe_length_without_tip / resolution
+    pix_probe_length_with_tip = probe_length_with_tip / resolution
 
     if tip_length != 0:
-        if probe_length > 9600:
-            probe_length = 9600
-        total_chn_lines = int(np.round(probe_length / channel_size))
+        if probe_length_without_tip > 9600:
+            probe_length_without_tip = 9600
+            probe_length_with_tip = probe_length_without_tip + tip_length
+        total_chn_lines = int(np.round(probe_length_without_tip / channel_size))
         chk_pnts = np.zeros((total_chn_lines, 3))
-        step_length = pix_probe_length / total_chn_lines
+        step_length = pix_probe_length_without_tip / total_chn_lines
 
         for i in range(total_chn_lines):
             chk_pnts[i] = sp + step_length * i * direction
 
-        new_ep = chk_pnts[-1]
+        new_ep = sp + pix_probe_length_with_tip * direction
+
+        print('new length', np.sqrt(np.sum((sp - new_ep) ** 2)) * resolution)
         # chk_vox = chk_vox + 0.5 * (chk_vox[1] - chk_vox[0])
         chk_vox = chk_pnts + bregma
         chk_vox = chk_vox.astype(int)
@@ -156,9 +168,9 @@ def get_probe_length(segmentation_data, sp, ep, direction, resolution, tip_lengt
         region_label = None
         region_length = None
         region_channels = None
-        new_ep = None
+        new_ep = ep
         
-    return probe_length, chn_lines_labels, region_label, region_length, region_channels, new_ep
+    return probe_length_with_tip, chn_lines_labels, region_label, region_length, region_channels, new_ep
 
 
 def get_label_name(label_info, unique_label, chn_lines_labels):
@@ -211,12 +223,15 @@ def correct_start_pnt(label_data, start_pnt, direction):
     temp = start_pnt - direction
     if temp[2] < start_pnt[2]:
         direction = - direction
+        print('reverse direction')
 
     for i in range(1000):
         temp = start_pnt - i * direction
         check_vox = temp.astype(int)
         if label_data[check_vox[0], check_vox[1], check_vox[2]] == 0:
             break
+    if i == 999:
+        print('something went wrong, please contact maintainer')
     new_sp = start_pnt - (i - 1) * direction
     return new_sp, direction
 
@@ -225,23 +240,34 @@ def calculate_probe_info(data, label_data, label_info, vxsize_um, tip_length, ch
     start_pnt, end_pnt, avg, direction = line_fit(data)
     start_vox = start_pnt + bregma
     end_vox = end_pnt + bregma
-    theta, phi = get_angles(direction)
-    # print(theta, phi)
+    ap_angle, ml_angle = get_angles(direction)
+    print(ap_angle, ml_angle)
     new_start_vox, direction = correct_start_pnt(label_data, start_vox, direction)
     new_sp = new_start_vox - bregma
     probe_length, chn_lines_labels, region_label, region_length, region_channels, new_ep = \
         get_probe_length(label_data, new_sp, end_pnt, direction, vxsize_um, tip_length, channel_size, bregma)
     # print(chn_lines_labels, region_label, region_length, region_channels, new_ep)
     enter_coords = new_sp * vxsize_um
+    end_coords = new_ep * vxsize_um
+    new_end_vox = new_ep + bregma
+    new_end_vox = new_end_vox.astype(int)
+
+    dv = (new_end_vox[2] - new_start_vox[2]) * vxsize_um
+    print('dv', dv)
+
     label_names, label_acronym, label_color, chn_line_color = get_label_name(label_info, region_label, chn_lines_labels)
     # print(label_names, label_acronym, label_color, chn_line_color)
 
     merged_labels, merged_colors, block_count = block_same_label(chn_lines_labels, chn_line_color)
     # print(merged_labels, merged_colors, block_count)
 
-    da_dict = {'object_name': 'probe', 'data': data, 'sp': start_pnt, 'ep': end_pnt, 'direction': direction,
-               'probe_length': probe_length, 'new_sp': new_sp, 'new_ep': new_ep, 'theta': theta, 'phi': phi,
-               'coords': enter_coords, 'enter_vox': new_start_vox,
+    da_dict = {'object_name': 'probe', 'data': data,
+               'insertion_coords_3d': start_pnt, 'terminus_coords_3d': end_pnt,
+               'new_insertion_coords_3d': new_sp, 'new_terminus_coords_3d': new_ep,
+               'direction': direction, 'probe_length': probe_length, 'dv': dv,
+               'ap_angle': ap_angle, 'ml_angle': ml_angle,
+               'insertion_coords': enter_coords, 'insertion_vox': new_start_vox,
+               'terminus_coords': end_coords, 'terminus_vox': new_end_vox,
                'chn_lines_labels': merged_labels, 'chn_lines_color': merged_colors, 'block_count': block_count,
                'region_label': region_label, 'region_length': region_length, 'region_channels': region_channels,
                'label_name': label_names, 'label_acronym': label_acronym, 'label_color': label_color}
@@ -425,17 +451,13 @@ def get_qhsv_from_czi_hsv(hsv_color: tuple):
     return da_color
 
 
-def gamma_line(input, lims, gamma, dtype='uint16'):
-    if dtype == 'uint16':
-        const = 65535
-    else:
-        const = 255
+def gamma_line(input, lims, gamma, depth_level):
     inv_gamma = 1.0 / gamma
     y = np.zeros(len(input))
-    y[np.logical_and(input >= lims[0], input <= lims[1])] = np.power((input[np.logical_and(input >= lims[0], input <= lims[1])] - lims[0]) / (lims[1] - lims[0]), gamma) * const
+    inds = np.logical_and(input >= lims[0], input <= lims[1])
+    y[inds] = np.power((input[inds] - lims[0]) / (lims[1] - lims[0]), gamma) * depth_level
     y[input <= lims[0]] = 0
-    y[input >= lims[1]] = const
-    y.astype(dtype)
+    y[input >= lims[1]] = depth_level
     return y
 
 
@@ -546,7 +568,6 @@ def warp_triangle(img1, img2, t1, t2, is_rgb=False):
     size = (r2[2], r2[3])
 
     warp_mat = get_warp_matrix(t1_rect, t2_rect)
-
     img2_rect = apply_affine_transform(img1_rect, warp_mat, size)
     img2_rect = img2_rect * mask
 
@@ -811,7 +832,7 @@ def make_contour_img(lable_img):
 def get_tri_lines(rect, pnts):
     subdiv = cv2.Subdiv2D(rect)
     for p in pnts:
-        subdiv.insert(p)
+        subdiv.insert((int(p[0]), int(p[1])))
     edge_list = subdiv.getEdgeList()
     lines_list = []
     # special_pnt = []

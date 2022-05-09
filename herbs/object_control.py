@@ -88,14 +88,15 @@ QLineEdit {
 
 
 class CellsInfoWindow(QDialog):
-    def __init__(self, group_id, data):
+    def __init__(self, name, data):
         super().__init__()
 
         self.setWindowTitle("Cell Information Window")
 
         layout = QVBoxLayout()
-        self.label = QLabel("Cell % d " % group_id)
-        label_style = 'QLabel {background-color: ' + QColor(data['vis_color']).name() + '; font-size: 20px}'
+        self.label = QLabel(name)
+        color = QColor(data['vis_color'][0], data['vis_color'][1], data['vis_color'][2], data['vis_color'][3])
+        label_style = 'QLabel {background-color: ' + color.name() + '; font-size: 20px}'
         self.label.setStyleSheet(label_style)
 
         sec_group = QGroupBox('Total Count: {}'.format(len(data['data'])))
@@ -137,14 +138,15 @@ class CellsInfoWindow(QDialog):
 
 
 class VirusInfoWindow(QDialog):
-    def __init__(self, group_id, data):
+    def __init__(self, name, data):
         super().__init__()
 
         self.setWindowTitle("Virus Information Window")
 
         layout = QVBoxLayout()
-        self.label = QLabel("Virus % d " % group_id)
-        label_style = 'QLabel {background-color: ' + QColor(data['vis_color']).name() + '; font-size: 20px}'
+        self.label = QLabel(name)
+        color = QColor(data['vis_color'][0], data['vis_color'][1], data['vis_color'][2], data['vis_color'][3])
+        label_style = 'QLabel {background-color: ' + color.name() + '; font-size: 20px}'
         self.label.setStyleSheet(label_style)
 
         sec_group = QGroupBox()
@@ -188,49 +190,65 @@ class ProbeInfoWindow(QDialog):
 
         self.setWindowTitle("Probe Information Window")
 
-        layout = QGridLayout()
         self.label = QLabel(name)
         # self.label = QLabel("Probe % d " % group_id)
         color = QColor(data['vis_color'][0], data['vis_color'][1], data['vis_color'][2], data['vis_color'][3])
         label_style = 'QLabel {background-color: ' + color.name() + '; font-size: 20px}'
         self.label.setStyleSheet(label_style)
 
-        ang_label = QLabel()
-        ang_pixmap = QPixmap('icons/angle_illustration.png')
-        ang_label.setPixmap(ang_pixmap)
+        ap_angle_label = QLabel('AP Angle : ')
+        ap_angle_label.setAlignment(Qt.AlignCenter)
+        ml_angle_label = QLabel('ML Angle : ')
+        ml_angle_label.setAlignment(Qt.AlignCenter)
+        probe_length_label = QLabel('Probe Length : ')
+        probe_length_label.setAlignment(Qt.AlignCenter)
+        dv_label = QLabel('DV : ')
+        dv_label.setAlignment(Qt.AlignCenter)
+        insertion_coords_label = QLabel('Insertion coordinates : ')
+        insertion_coords_label.setAlignment(Qt.AlignCenter)
+        insertion_voxels_label = QLabel('Insertion voxels : ')
+        insertion_voxels_label.setAlignment(Qt.AlignCenter)
 
-        theta_label = QLabel('\u03f4 : ')
-        theta_label.setAlignment(Qt.AlignCenter)
-        phi_label = QLabel('\u03d5 : ')
-        phi_label.setAlignment(Qt.AlignCenter)
-        r_label = QLabel('r : ')
-        r_label.setAlignment(Qt.AlignCenter)
-        coords_label = QLabel('Enter coordinates : ')
-        coords_label.setAlignment(Qt.AlignCenter)
-        voxels_label = QLabel('Enter voxels : ')
-        voxels_label.setAlignment(Qt.AlignCenter)
+        terminus_coords_label = QLabel('Terminus coordinates : ')
+        terminus_coords_label.setAlignment(Qt.AlignCenter)
+        terminus_voxels_label = QLabel('Terminus voxels : ')
+        terminus_voxels_label.setAlignment(Qt.AlignCenter)
 
+        ap_angle_value = QLabel('{} \u00B0'.format(np.round(data['ap_angle'], 2)))
+        ml_angle_value = QLabel('{} \u00B0'.format(np.round(data['ml_angle'], 2)))
+        probe_length = QLabel('{} \u03BCm'.format(np.round(data['probe_length'], 2)))
+        dv = QLabel('{} \u03BCm'.format(np.round(data['dv'], 2)))
+        ic_val = np.round(data['insertion_coords'], 2)
+        insertion_coords = QLabel('ML: {}\u03BCm,  AP: {}\u03BCm'.format(ic_val[0], ic_val[1]))
+        iv_val = data['insertion_vox'].astype(int)
+        insertion_vox = QLabel('({} {} {})'.format(iv_val[0], iv_val[1], iv_val[2]))
 
-        alpha_value = QLabel('{} \u00B0'.format(data['theta']))
-        phi_value = QLabel('{} \u00B0'.format(data['phi']))
-        total_length = QLabel('{} \u03BCm'.format(data['probe_length']))
-        cval = np.round(data['coords'], 2)
-        enter_coords = QLabel('ML: {}\u03BCm,  AP: {}\u03BCm,  DV: {}\u03BCm'.format(cval[0], cval[1], cval[2]))
-        sval = data['new_sp'].astype(int)
-        enter_vox = QLabel('({} {} {})'.format(sval[0], sval[1], sval[2]))
+        tc_val = np.round(data['terminus_coords'], 2)
+        terminus_coords = QLabel('ML: {}\u03BCm,  AP: {}\u03BCm'.format(tc_val[0], tc_val[1]))
+        tv_val = data['terminus_vox']
+        terminus_vox = QLabel('({} {} {})'.format(tv_val[0], tv_val[1], tv_val[2]))
 
-        angle_length_group = QGroupBox()
-        anglen_layout = QGridLayout(angle_length_group)
-        anglen_layout.addWidget(theta_label, 0, 0, 1, 1)
-        anglen_layout.addWidget(phi_label, 1, 0, 1, 1)
-        anglen_layout.addWidget(r_label, 2, 0, 1, 1)
-        anglen_layout.addWidget(coords_label, 3, 0, 1, 1)
-        anglen_layout.addWidget(voxels_label, 4, 0, 1, 1)
-        anglen_layout.addWidget(alpha_value, 0, 1, 1, 1)
-        anglen_layout.addWidget(phi_value, 1, 1, 1, 1)
-        anglen_layout.addWidget(total_length, 2, 1, 1, 1)
-        anglen_layout.addWidget(enter_coords, 3, 1, 1, 1)
-        anglen_layout.addWidget(enter_vox, 4, 1, 1, 1)
+        coords_info_group = QGroupBox()
+        coords_info_layout = QGridLayout(coords_info_group)
+        coords_info_layout.addWidget(ap_angle_label, 0, 0, 1, 1)
+        coords_info_layout.addWidget(ap_angle_value, 0, 1, 1, 1)
+        coords_info_layout.addWidget(ml_angle_label, 0, 2, 1, 1)
+        coords_info_layout.addWidget(ml_angle_value, 0, 3, 1, 1)
+
+        coords_info_layout.addWidget(probe_length_label, 1, 0, 1, 1)
+        coords_info_layout.addWidget(probe_length, 1, 1, 1, 1)
+        coords_info_layout.addWidget(dv_label, 1, 2, 1, 1)
+        coords_info_layout.addWidget(dv, 1, 3, 1, 1)
+
+        coords_info_layout.addWidget(insertion_coords_label, 2, 0, 1, 1)
+        coords_info_layout.addWidget(insertion_coords, 2, 1, 1, 1)
+        coords_info_layout.addWidget(terminus_coords_label, 2, 2, 1, 1)
+        coords_info_layout.addWidget(terminus_coords, 2, 3, 1, 1)
+
+        coords_info_layout.addWidget(insertion_voxels_label, 3, 0, 1, 1)
+        coords_info_layout.addWidget(insertion_vox, 3, 1, 1, 1)
+        coords_info_layout.addWidget(terminus_voxels_label, 3, 2, 1, 1)
+        coords_info_layout.addWidget(terminus_vox, 3, 3, 1, 1)
 
         sec_group = QGroupBox()
         slayout = QGridLayout(sec_group)
@@ -263,7 +281,7 @@ class ProbeInfoWindow(QDialog):
         plot_frame = QFrame()
         plot_frame.setMaximumWidth(300)
         plot_frame.setMinimumWidth(300)
-        view_layout = QGridLayout(plot_frame)
+        view_layout = QHBoxLayout(plot_frame)
         view_layout.setSpacing(0)
         view_layout.setContentsMargins(0, 0, 0, 0)
 
@@ -286,24 +304,26 @@ class ProbeInfoWindow(QDialog):
             self.bg_list.append(bg)
             view.addItem(self.bg_list[i])
 
-        view_layout.addWidget(w, 0, 0, 1, 1)
+        view_layout.addWidget(w)
+
+        channel_info_frame = QFrame()
+        channel_info_layout = QHBoxLayout(channel_info_frame)
+        channel_info_layout.setContentsMargins(0, 0, 0, 0)
+        channel_info_layout.setSpacing(10)
+        channel_info_layout.addWidget(plot_frame)
+        channel_info_layout.addWidget(sec_group)
 
         # ok button, used to close window
         ok_btn = QDialogButtonBox(QDialogButtonBox.Ok)
         ok_btn.accepted.connect(self.accept)
 
         # add widget to layout
-        layout.addWidget(self.label, 0, 0, 1, 4)
-        layout.addWidget(ang_label, 1, 0, 1, 1)
-
-        layout.addWidget(angle_length_group, 1, 1, 1, 3)
-
-        layout.addWidget(QLabel(), 1, 2, 1, 1)
-        layout.addWidget(QLabel(), 1, 3, 1, 1)
-
-        layout.addWidget(plot_frame, 3, 0, 1, 1)
-        layout.addWidget(sec_group, 3, 1, 1, 3)
-        layout.addWidget(ok_btn, 4, 0, 1, 4)
+        layout = QVBoxLayout()
+        layout.addWidget(self.label)
+        layout.addWidget(coords_info_group)
+        layout.addSpacing(10)
+        layout.addWidget(channel_info_frame)
+        layout.addWidget(ok_btn)
         self.setLayout(layout)
 
     def accept(self) -> None:

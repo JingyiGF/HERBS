@@ -7,9 +7,9 @@ from pyqtgraph.Qt import QtGui, QtCore
 
 
 class MovablePoints(pg.GraphItem):
-    mouseHovered = QtCore.Signal(object)
-    mouseDragged = QtCore.Signal(object)
-    mouseClicked = QtCore.Signal(object)
+    mouseHovered = pyqtSignal(object)
+    mouseDragged = pyqtSignal(object)
+    mouseClicked = pyqtSignal(object)
 
     def __init__(self):
         self.dragPoint = None
@@ -69,6 +69,10 @@ class MovablePoints(pg.GraphItem):
         self.updateGraph()
         self.mouseDragged.emit((ev, ind))
         ev.accept()
+
+    def clear(self):
+        self.scatter.clear()
+
 
 
 class TriangulationPoints(pg.GraphItem):

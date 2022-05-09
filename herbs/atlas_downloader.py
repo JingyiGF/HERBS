@@ -60,6 +60,8 @@ class AtlasDownloader(QDialog):
         self.mask_local = "WHS_SD_rat_brainmask_v1.01.nii.gz"
         self.segmentation_local = "WHS_SD_rat_atlas_v4.nii.gz"
 
+        self.saving_folder = None
+
         self.finish = [False, False, False, False]
         self.process_finished = False
 
@@ -161,17 +163,22 @@ class AtlasDownloader(QDialog):
     def process_start(self):
         # if not np.all(self.finish):
         #     return
+        if self.saving_folder is not None:
+            saving_folder = self.saving_folder
+        else:
+            saving_folder = str(QFileDialog.getExistingDirectory(self, "Select Atlas Folder"))
 
-        atlas_data, atlas_info, segmentation_data, boundary = \
-            process_atlas_raw_data(self.saving_folder, data_file=self.data_local,
-                                   segmentation_file=self.segmentation_local, mask_file=self.mask_local,
-                                   bregma_coordinates=(246, 653, 440), lambda_coordinates=(244, 442, 464),
-                                   return_file=True)
-        render_volume(atlas_data, self.saving_folder, factor=2, level=0.1)
-        render_small_volume(atlas_data, segmentation_data, self.saving_folder, factor=2, level=0.1)
-        self.process_btn.setVisible(False)
+        if saving_folder != '':
+            atlas_data, atlas_info, segmentation_data, boundary = \
+                process_atlas_raw_data(saving_folder, data_file=self.data_local,
+                                       segmentation_file=self.segmentation_local, mask_file=self.mask_local,
+                                       bregma_coordinates=(246, 653, 440), lambda_coordinates=(244, 442, 464),
+                                       return_file=True)
+            # render_volume(atlas_data, self.saving_folder, factor=2, level=0.1)
+            # render_small_volume(atlas_data, segmentation_data, self.saving_folder, factor=2, level=0.1)
+            self.process_btn.setVisible(False)
 
-        self.close()
+            self.close()
 
     # def accept(self) -> None:
     #     if self.process_finished:

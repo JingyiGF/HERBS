@@ -91,6 +91,8 @@ class ImageStacks(pg.GraphicsLayoutWidget):
         circle_follow = pg.PlotDataItem(pen=pg.mkPen('r', width=2, style=Qt.DashLine))
         lasso_path = pg.PlotDataItem(pen=pg.mkPen(color='r', width=3, style=Qt.DashLine),
                                      symbolPen='r', symbol='o', symbolSize=4)
+        cut_rect = pg.PlotDataItem(pen=pg.mkPen(color='r', width=3, style=Qt.DashLine),
+                                    symbolPen='r', symbol='o', symbolSize=4)
 
         overlay_img = pg.ImageItem()
         overlay_img.setCompositionMode(QPainter.CompositionMode_Plus)
@@ -131,7 +133,8 @@ class ImageStacks(pg.GraphicsLayoutWidget):
                            'img-probe': probe_pnts,
                            'img-cells': cell_pnts,
                            'img-blob': blob_pnts,
-                           'img-drawing': drawing_pnts}
+                           'img-drawing': drawing_pnts,
+                           'cut_rect': cut_rect}
         self.image_dict_keys = list(self.image_dict.keys())
 
         self.vb.addItem(self.base_layer)
@@ -185,6 +188,9 @@ class ImageStacks(pg.GraphicsLayoutWidget):
         if event.key() == QtCore.Qt.Key_Backspace:
             print("Killing")
             self.sig_key_pressed.emit('delete')
+        # elif event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
+        #     print('enter')
+        #     self.sig_key_pressed.emit('enter')
 
 
 
