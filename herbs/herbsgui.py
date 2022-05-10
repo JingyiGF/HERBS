@@ -2323,7 +2323,7 @@ class HERBS(QMainWindow, FORM_Main):
         self.print_message('Transform accepted, start transferring...', 'white', 0)
         self.sidebar_tab_state(3)
         subdiv = cv2.Subdiv2D(self.atlas_rect)
-        self.atlas_tri_data = self.atlas_view.working_atlas.image_dict['tri_pnts'].data['pos'].copy()
+        self.atlas_tri_data = list(self.atlas_view.working_atlas.image_dict['tri_pnts'].data['pos'].astype(int))
         for p in self.atlas_tri_data:
             subdiv.insert((int(p[0]), int(p[1])))
 

@@ -193,12 +193,11 @@ class ImageView(QObject):
             self.scene_wrap.setVisible(False)
 
         self.set_channel_widgets()
-
-        # set data to curves
-        self.update_curves()
         # set data to image stacks
         self.set_data_to_img_stacks()
         self.get_corner_and_lines()
+        # set data to curves
+        self.update_curves()
 
     def get_tb_size(self, img_size):
         scale_factor = np.max(np.ravel(img_size) / 80)
