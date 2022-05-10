@@ -8,6 +8,54 @@ from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 
 
+class LayerSettingDialog(QDialog):
+    def __init__(self, window_name, min_val, max_val, val):
+        super().__init__()
+
+        self.setWindowTitle(window_name)
+
+        self.val = val
+
+        self.val_slider = QSlider(Qt.Horizontal)
+        self.val_slider.setValue(val)
+        self.val_slider.setMinimum(min_val)
+        self.val_slider.setMaximum(max_val)
+        self.val_slider.setSingleStep(1)
+        self.val_slider.sliderMoved.connect(self.val_spinbox_changed)
+
+        self.val_spinbox = QSpinBox()
+        self.val_spinbox.setValue(val)
+        self.val_spinbox.setMaximum(max_val)
+        self.val_spinbox.setMinimum(min_val)
+        self.val_spinbox.setSingleStep(1)
+        self.val_spinbox.valueChanged.connect(self.value_changed)
+
+        # ok button, used to close window
+        ok_btn = QDialogButtonBox(QDialogButtonBox.Ok)
+        ok_btn.accepted.connect(self.accept)
+
+        # add widget to layout
+        layout = QHBoxLayout()
+        layout.addWidget(self.val_slider)
+        layout.addWidget(self.val_spinbox)
+        layout.addSpacing(10)
+        layout.addWidget(ok_btn)
+        self.setLayout(layout)
+
+    def accept(self) -> None:
+        self.close()
+
+    def val_spinbox_changed(self):
+        val = self.val_slider.value()
+        self.val = val
+        self.val_spinbox.setValue(val)
+
+    def value_changed(self):
+        val = self.val_spinbox.value()
+        self.val = val
+        self.val_slider.setValue(val)
+
+
 class QDoubleButton2(QPushButton):
     doubleClicked = pyqtSignal()
     clicked = pyqtSignal()

@@ -64,6 +64,7 @@ from .label_tree import *
 from .layers_control import *
 from .object_control import *
 from .toolbox import ToolBox
+from .wtiles import LayerSettingDialog
 from .styles import Styles
 
 
@@ -603,8 +604,8 @@ class HERBS(QMainWindow, FORM_Main):
         self.project_method = 'pre plan'
         self.register_method = 0
 
-        self.action_after_projection = {}
         self.action_list = []
+        self.layer_action_after_matching = []
 
         self.probe_lines_2d_list = []
 
@@ -620,15 +621,21 @@ class HERBS(QMainWindow, FORM_Main):
         self.drawing_img = None
         self.cell_img = None
 
+
         self.processing_img = None
+        self.processing_img_size = None
+        self.processing_tb_size = None
+
         self.overlay_img = None
 
         self.error_message_color = '#ff6e6e'
         self.reminder_color = 'gray'
         self.normal_color = 'white'
 
-        self.moving_step_val = 1
-        self.rotating_step_val = 1
+        self.layer_shift_val = 1
+        self.layer_rotate_val = 1
+        self.undo_count = 0
+        self.redo_count = 0
 
         # ---------------------
         self.tool_box = ToolBox()
@@ -756,6 +763,8 @@ class HERBS(QMainWindow, FORM_Main):
         self.actionLoad_Object.triggered.connect(self.load_object)
 
         # edit menu related
+        self.actionDistance.triggered.connect(self.shift_setting_changed)
+        self.actionAngle.triggered.connect(self.rotate_setting_changed)
         self.actionUp.triggered.connect(lambda: self.vertical_translation_pressed('up'))
         self.actionDown.triggered.connect(lambda: self.vertical_translation_pressed('down'))
         self.actionLeft.triggered.connect(lambda: self.horizontal_translation_pressed('left'))
@@ -1157,49 +1166,20 @@ class HERBS(QMainWindow, FORM_Main):
     #                  Menu Bar ---- Edit ----- related
     #
     # ------------------------------------------------------------------
-    def moving_img_tri_pnts(self, moving_vec):
-        temp = np.asarray(self.histo_tri_inside_data).copy()
-        temp = temp + moving_vec
-        self.histo_tri_inside_data = temp.tolist()
-        self.histo_tri_data = self.histo_tri_onside_data + self.histo_tri_inside_data
-        self.image_view.img_stacks.image_dict['tri_pnts'].setData(pos=np.asarray(self.histo_tri_data))
-        for i in range(len(self.working_img_text)):
-            self.working_img_text[i].setPos(self.histo_tri_data[i][0], self.histo_tri_data[i][1])
+    def clear_all_layers(self):
+        if not self.layer_ctrl.layer_link:
+            self.print_message('No layer data can be removed.', self.reminder_color, 0)
+            return
+        for i in range(len(self.layer_ctrl.layer_link)):
+            self.layers_exist_changed(self.layer_ctrl.layer_link[i])
 
-    def moving_atlas_tri_pnts(self, moving_vec):
-        temp = np.asarray(self.atlas_tri_inside_data).copy()
-        temp = temp + moving_vec
-        self.atlas_tri_inside_data = temp.tolist()
-        self.atlas_tri_data = self.atlas_tri_onside_data + self.atlaso_tri_inside_data
-        self.atlas_view.working_atlas.image_dict['tri_pnts'].setData(pos=np.asarray(self.atlas_tri_data))
-        for i in range(len(self.working_atlas_text)):
-            self.working_atlas_text[i].setPos(self.atlas_tri_data[i][0], self.atlas_tri_data[i][1])
+    def shift_setting_changed(self):
+        shift_setting = LayerSettingDialog('Layer Shifting Setting', 0, 100, self.layer_shift_val)
+        self.layer_shift_val = shift_setting.val
 
-    def rotating_img_tri_pnts(self, origin, rot_mat):
-        temp = np.asarray(self.histo_tri_inside_data).copy() - origin
-        temp = np.dot(rot_mat, temp) + origin
-        self.histo_tri_inside_data = temp.tolist()
-        self.histo_tri_data = self.histo_tri_onside_data + self.histo_tri_inside_data
-        self.image_view.img_stacks.image_dict['tri_pnts'].setData(pos=np.asarray(self.histo_tri_data))
-        for i in range(len(self.working_img_text)):
-            self.working_img_text[i].setPos(self.histo_tri_data[i][0], self.histo_tri_data[i][1])
-
-    def rotating_atlas_tri_pnts(self, origin, rot_mat):
-        temp = np.asarray(self.atlas_tri_inside_data).copy() - origin
-        temp = np.dot(rot_mat, temp) + origin
-        self.atlas_tri_inside_data = temp.tolist()
-        self.atlas_tri_data = self.atlas_tri_onside_data + self.atlas_tri_inside_data
-        self.atlas_view.working_atlas.image_dict['tri_pnts'].setData(pos=np.asarray(self.atlas_tri_data))
-        for i in range(len(self.working_atlas_text)):
-            self.working_atlas_text[i].setPos(self.atlas_tri_data[i][0], self.atlas_tri_data[i][1])
-
-    def moving_overlay(self, moving_vec):
-        shift_mat = np.float32([[1, 0, moving_vec[0]], [0, 1, moving_vec[1]]])
-        da_img = self.overlay_img.copy()
-        self.overlay_img = cv2.warpAffine(da_img, shift_mat, da_img.shape[:2])
-
-    def rotating_overlay(self, rotate_angle):
-        self.overlay_img = ndi.rotate(self.overlay_img, rotate_angle, mode='mirror')
+    def rotate_setting_changed(self):
+        rotate_setting = LayerSettingDialog('Layer Rotating Setting', 0, 50, self.layer_rotate_val)
+        self.layer_rotate_val = rotate_setting.val
 
     def get_valid_layer(self):
         if not self.layer_ctrl.current_layer_index or not self.h2a_transferred:
@@ -1210,116 +1190,96 @@ class HERBS(QMainWindow, FORM_Main):
         return valid_links
 
     def move_layers(self, da_link, moving_vec):
-        if 'probe' in da_link:
-            temp = np.asarray(self.working_atlas_data['atlas-probe']).copy()
-            temp = temp + moving_vec
-            self.working_atlas_data['atlas-probe'] = temp.tolist()
-            self.atlas_view.working_atlas.image_dict['atlas-probe'].setData(
-                pos=np.asarray(self.working_atlas_data['atlas-probe']))
-        elif 'virus' in da_link:
-            temp = np.asarray(self.working_atlas_data['atlas-virus']).copy()
-            temp = temp + moving_vec
-            self.working_atlas_data['atlas-virus'] = temp.tolist()
-            self.atlas_view.working_atlas.image_dict['atlas-virus'].setData(
-                pos=np.asarray(self.working_atlas_data['atlas-virus']))
-        elif 'cell' in da_link:
-            temp = np.asarray(self.working_atlas_data['atlas-cells']).copy()
-            temp = temp + moving_vec
-            self.working_atlas_data['atlas-cells'] = temp.tolist()
-            self.atlas_view.working_atlas.image_dict['atlas-cells'].setData(
-                pos=np.asarray(self.working_atlas_data['atlas-cells']))
-        elif 'contour' in da_link:
-            temp = np.asarray(self.working_atlas_data['atlas-contour']).copy()
-            temp = temp + moving_vec
-            self.working_atlas_data['atlas-contour'] = temp.tolist()
-            self.atlas_view.working_atlas.image_dict['atlas-contour'].setData(
-                pos=np.asarray(self.working_atlas_data['atlas-contour']))
-        elif 'drawing' in da_link:
-            temp = np.asarray(self.working_atlas_data['atlas-drawing']).copy()
-            temp = temp + moving_vec
-            self.working_atlas_data['atlas-drawing'] = temp.tolist()
-            self.atlas_view.working_atlas.image_dict['atlas-drawing'].setData(
-                pos=np.asarray(self.working_atlas_data['atlas-drawing']))
-        elif 'overlay' in da_link:
-            self.moving_overlay(moving_vec)
-            if 'img' in da_link:
-                self.image_view.img_stacks.image_dict['img-overlay'].setImage(self.overlay_img)
-                self.moving_atlas_tri_pnts(moving_vec)
-            else:
-                self.atlas_view.working_atlas.image_dict['atlas-overlay'].setImage(self.overlay_img)
-                self.moving_img_tri_pnts(moving_vec)
+        if da_link == 'img-process':
+            print('img-process')
         else:
-            return
+            if 'img-' in da_link:
+                if self.working_img_type[da_link] == 'vector':
+                    temp = np.asarray(self.working_img_data[da_link]).copy()
+                    temp = temp + moving_vec
+                    self.working_img_data[da_link] = temp.tolist()
+                    self.image_view.img_stacks.image_dict[da_link].setData(
+                        pos=np.asarray(self.working_img_data[da_link]))
+                else:
+                    shift_mat = np.float32([[1, 0, moving_vec[0]], [0, 1, moving_vec[1]]])
+                    da_img = self.working_img_data[da_link].copy()
+                    self.working_img_data[da_link] = cv2.warpAffine(da_img, shift_mat, da_img.shape[:2])
+                    self.image_view.img_stacks.image_dict[da_link].setImage(self.working_img_data[da_link])
+            else:
+                if self.working_atlas_type[da_link] == 'vector':
+                    temp = np.asarray(self.working_atlas_data[da_link]).copy()
+                    temp = temp + moving_vec
+                    self.working_atlas_data[da_link] = temp.tolist()
+                    self.atlas_view.working_atlas.image_dict[da_link].setData(
+                        pos=np.asarray(self.working_atlas_data[da_link]))
+                else:
+                    shift_mat = np.float32([[1, 0, moving_vec[0]], [0, 1, moving_vec[1]]])
+                    da_img = self.working_atlas_data[da_link].copy()
+                    self.working_atlas_data[da_link] = cv2.warpAffine(da_img, shift_mat, da_img.shape[:2])
+                    self.atlas_view.working_atlas.image_dict[da_link].setImage(self.working_atlas_data[da_link])
 
     def rotate_layers(self, da_link, rotate_angle):
-        atlas_rotation_origin = 0.5 * np.ravel(self.atlas_view.slice_size)
         theta = np.radians(rotate_angle)
-
         rot_mat = np.array(((np.cos(theta), -np.sin(theta)), (np.sin(theta), np.cos(theta))))
 
-        if 'probe' in da_link:
-            temp = np.asarray(self.working_atlas_data['atlas-probe']).copy() - atlas_rotation_origin
-            temp = np.dot(rot_mat, temp) + atlas_rotation_origin
-            self.working_atlas_data['atlas-probe'] = temp.tolist()
-            self.atlas_view.working_atlas.image_dict['atlas-probe'].setData(
-                pos=np.asarray(self.working_atlas_data['atlas-probe']))
-        elif 'virus' in da_link:
-            temp = np.asarray(self.working_atlas_data['atlas-virus']).copy() - atlas_rotation_origin
-            temp = np.dot(rot_mat, temp) + atlas_rotation_origin
-            self.working_atlas_data['atlas-virus'] = temp.tolist()
-            self.atlas_view.working_atlas.image_dict['atlas-virus'].setData(
-                pos=np.asarray(self.working_atlas_data['atlas-virus']))
-        elif 'cell' in da_link:
-            temp = np.asarray(self.working_atlas_data['atlas-cells']).copy() - atlas_rotation_origin
-            temp = np.dot(rot_mat, temp) + atlas_rotation_origin
-            self.working_atlas_data['atlas-cells'] = temp.tolist()
-            self.atlas_view.working_atlas.image_dict['atlas-cells'].setData(
-                pos=np.asarray(self.working_atlas_data['atlas-cells']))
-        elif 'contour' in da_link:
-            temp = np.asarray(self.working_atlas_data['atlas-contour']).copy() - atlas_rotation_origin
-            temp = np.dot(rot_mat, temp) + atlas_rotation_origin
-            self.working_atlas_data['atlas-contour'] = temp.tolist()
-            self.atlas_view.working_atlas.image_dict['atlas-contour'].setData(
-                pos=np.asarray(self.working_atlas_data['atlas-contour']))
-        elif 'drawing' in da_link:
-            temp = np.asarray(self.working_atlas_data['atlas-drawing']).copy() - atlas_rotation_origin
-            temp = np.dot(rot_mat, temp) + atlas_rotation_origin
-            self.working_atlas_data['atlas-drawing'] = temp.tolist()
-            self.atlas_view.working_atlas.image_dict['atlas-drawing'].setData(
-                pos=np.asarray(self.working_atlas_data['atlas-drawing']))
-        elif 'overlay' in da_link:
-            self.rotating_overlay(rotate_angle)
-            if 'img' in da_link:
-                self.image_view.img_stacks.image_dict['img-overlay'].setImage(self.overlay_img)
-                self.rotating_atlas_tri_pnts(atlas_rotation_origin, rot_mat)
-            else:
-                img_rotation_origin = 0.5 * np.ravel(self.image_view.img_size)
-                self.atlas_view.working_atlas.image_dict['atlas-overlay'].setImage(self.overlay_img)
-                self.rotating_img_tri_pnts(img_rotation_origin, rot_mat)
+        if da_link == 'img-process':
+            print('img-process')
         else:
-            return
+            if 'img-' in da_link:
+                img_rect = cv2.boundingRect(self.histo_tri_onside_data)
+                img_center = np.array([img_rect[0] + 0.5 * img_rect[2], img_rect[1] + 0.5 * img_rect[3]]).astype(int)
+                if self.working_img_type[da_link] == 'vector':
+                    temp = np.asarray(self.working_img_data[da_link]).copy() - img_center
+                    temp = np.dot(rot_mat, temp) + img_center
+                    self.working_img_data[da_link] = temp.tolist()
+                    self.image_view.img_stacks.image_dict[da_link].setData(
+                        pos=np.asarray(self.working_img_data[da_link]))
+                else:
+                    temp = rotate(self.working_img_data[da_link], rotate_angle, img_center)
+                    self.working_img_data[da_link] = temp.copy()
+                    self.image_view.img_stacks.image_dict[da_link].setImage(self.working_img_data[da_link])
+            else:
+                atlas_rect = cv2.boundingRect(self.histo_tri_onside_data)
+                atlas_center = np.array([atlas_rect[0] + 0.5 * atlas_rect[2], atlas_rect[1] + 0.5 * atlas_rect[3]])
+                atlas_center = atlas_center.astype(int)
+                if self.working_atlas_type[da_link] == 'vector':
+                    temp = np.asarray(self.working_atlas_data[da_link]).copy() - atlas_center
+                    temp = np.dot(rot_mat, temp) + atlas_center
+                    self.working_atlas_data[da_link] = temp.tolist()
+                    self.atlas_view.working_atlas.image_dict[da_link].setData(
+                        pos=np.asarray(self.working_atlas_data[da_link]))
+                else:
+                    temp = rotate(self.working_atlas_data[da_link], rotate_angle, atlas_center)
+                    self.working_atlas_data[da_link] = temp.copy()
+                    self.atlas_view.working_atlas.image_dict[da_link].setImage(self.working_atlas_data[da_link])
 
     def vertical_translation_pressed(self, moving_direction):
         valid_links = self.get_valid_layer()
 
         if moving_direction == 'up':
-            moving_vec = np.array([0, - self.moving_step_val])
+            moving_vec = np.array([0, - self.layer_shift_val])
         else:
-            moving_vec = np.array([0, self.moving_step_val])
+            moving_vec = np.array([0, self.layer_shift_val])
 
         for da_link in valid_links:
             self.move_layers(da_link, moving_vec)
+
+        if self.a2h_transferred or self.h2a_transferred:
+            self.layer_action_after_matching.append({'action': 'shift', 'val': moving_vec})
 
     def horizontal_translation_pressed(self, moving_direction):
         valid_links = self.get_valid_layer()
 
         if moving_direction == 'right':
-            moving_vec = np.array([self.moving_step_val, 0])
+            moving_vec = np.array([self.layer_shift_val, 0])
         else:
-            moving_vec = np.array([- self.moving_step_val, 0])
+            moving_vec = np.array([- self.layer_shift_val, 0])
 
         for da_link in valid_links:
             self.move_layers(da_link, moving_vec)
+
+        if self.a2h_transferred or self.h2a_transferred:
+            self.layer_action_after_matching.append({'action': 'shift', 'val': moving_vec})
 
     def layer_rotation_pressed(self, rotating_direction):
         valid_links = self.get_valid_layer()
@@ -1332,8 +1292,11 @@ class HERBS(QMainWindow, FORM_Main):
         for da_link in valid_links:
             self.rotate_layers(da_link, rotating_val)
 
-    def save_current_action(self, current_btn, btn_checked, sub_action, data):
-        current_action = {'tool': current_btn, 'check': btn_checked, 'sub-action': sub_action, 'data': data}
+        if self.a2h_transferred or self.h2a_transferred:
+            self.layer_action_after_matching.append({'action': 'rotate', 'val': rotating_val})
+
+    def save_current_action(self, current_tool, layer_link, data):
+        current_action = {'tool': current_tool, 'link': layer_link, 'data': data}
         self.action_list.append(current_action)
         if len(self.action_list) > 6:
             del self.action_list[0]
@@ -1390,11 +1353,10 @@ class HERBS(QMainWindow, FORM_Main):
             for i in range(self.image_view.image_file.n_channels):
                 self.image_view.img_stacks.image_list[i].clear()
             self.image_view.img_stacks.set_data(self.processing_img)
-            img_size = self.processing_img.shape
-            self.img_stacks.image_dict['tri_pnts'].set_range(img_size[1], img_size[0])
-            self.histo_tb_size = self.image_view.get_tb_size(img_size)
-
-            res = cv2.resize(self.processing_img, self.histo_tb_size, interpolation=cv2.INTER_AREA)
+            self.processing_img_size = self.processing_img.shape
+            self.img_stacks.image_dict['tri_pnts'].set_range(self.processing_img_size[1], self.processing_img_size[0])
+            self.processing_tb_size = self.image_view.get_tb_size(self.processing_img_size)
+            res = cv2.resize(self.processing_img, self.processing_tb_size, interpolation=cv2.INTER_AREA)
             self.master_layers(res, layer_type='img-process', color=[])
             self.inactive_lasso()
 
@@ -1589,8 +1551,6 @@ class HERBS(QMainWindow, FORM_Main):
         else:
             self.current_checked_tool = None
             self.toolbar_wrap_action_dict['{}_act'.format(current_btn)].setVisible(False)
-
-        self.save_current_action(current_btn, btn_checked, None, None)
 
     def vis_eraser_symbol(self, vis):
         self.image_view.img_stacks.image_dict['circle_follow'].setVisible(vis)
@@ -1841,10 +1801,14 @@ class HERBS(QMainWindow, FORM_Main):
     # ------------------------------------------------------------------
     def change_cell_color(self, ev):
         self.cell_color = np.ravel(ev.color().getRgb())
-        self.image_view.img_stacks.image_dict['img-cells'].setData(pen=self.cell_color, brush=self.cell_color)
-        self.atlas_view.cimg.image_dict['atlas-cells'].setData(pen=self.cell_color, brush=self.cell_color)
-        self.atlas_view.himg.image_dict['atlas-cells'].setData(pen=self.cell_color, brush=self.cell_color)
-        self.atlas_view.simg.image_dict['atlas-cells'].setData(pen=self.cell_color, brush=self.cell_color)
+        self.image_view.img_stacks.image_dict['img-cells'].setPen(color=self.cell_color)
+        self.image_view.img_stacks.image_dict['img-cells'].setBrush(color=self.cell_color)
+        self.atlas_view.cimg.image_dict['atlas-cells'].setPen(color=self.cell_color)
+        self.atlas_view.himg.image_dict['atlas-cells'].setPen(color=self.cell_color)
+        self.atlas_view.simg.image_dict['atlas-cells'].setPen(color=self.cell_color)
+        self.atlas_view.cimg.image_dict['atlas-cells'].setBrush(color=self.cell_color)
+        self.atlas_view.himg.image_dict['atlas-cells'].setBrush(color=self.cell_color)
+        self.atlas_view.simg.image_dict['atlas-cells'].setBrush(color=self.cell_color)
 
     def cell_select_btn_clicked(self):
         if self.tool_box.cell_aim_btn.isChecked():
@@ -1854,10 +1818,8 @@ class HERBS(QMainWindow, FORM_Main):
         if self.tool_box.cell_selector_btn.isChecked():
             self.tool_box.cell_selector_btn.setChecked(False)
 
-    def cell_detect_btn_clicked(self):
+    def cell_detect_btn_clicked(self):   # ??????????
         if not self.working_img_data['img-blob']:
-            return
-        if self.image_view.current_mode == 'hsv':
             return
 
         locs = np.asarray(self.working_img_data['img-blob']).astype(int)
@@ -2363,7 +2325,7 @@ class HERBS(QMainWindow, FORM_Main):
         subdiv = cv2.Subdiv2D(self.atlas_rect)
         self.atlas_tri_data = self.atlas_view.working_atlas.image_dict['tri_pnts'].data['pos'].copy()
         for p in self.atlas_tri_data:
-            subdiv.insert(p)
+            subdiv.insert((int(p[0]), int(p[1])))
 
         tri_vet_inds = get_vertex_ind_in_triangle(subdiv)
 
@@ -2449,7 +2411,8 @@ class HERBS(QMainWindow, FORM_Main):
     def update_histo_tri_onside_data(self):
         print('image_changed')
         self.reset_corners_hist()
-        self.working_img_data['img-mask'] = np.zeros(self.image_view.img_size).astype('uint8')
+        self.black_img = np.zeros(self.image_view.img_size).astype('uint8')
+        self.white_img = np.ones(self.image_view.img_size).astype('uint8')
         if self.processing_img is not None:
             self.processing_img = None
             print('delete img-copy layer')
@@ -2470,7 +2433,10 @@ class HERBS(QMainWindow, FORM_Main):
                 end_pnt = np.ravel([x, y]).astype(int)
                 cv2.line(self.drawing_img, tuple(start_pnt), tuple(end_pnt), 255, 2)
             self.working_img_data['img-drawing'].append([x, y])
-            self.image_view.img_stacks.image_dict['img-drawing'].setData(np.asarray(self.working_img_data['img-drawing']))
+            self.image_view.img_stacks.image_dict['img-drawing'].setData(
+                np.asarray(self.working_img_data['img-drawing']))
+            current_data = {'data': self.working_img_data['img-drawing'].copy()}
+            self.save_current_action('pencil_btn', 'img-drawing', current_data)
             if self.is_pencil_allowed:
                 self.is_pencil_allowed = False
             else:
@@ -2489,22 +2455,25 @@ class HERBS(QMainWindow, FORM_Main):
             else:
                 da_link = self.layer_ctrl.layer_link[self.layer_ctrl.current_layer_index[0]]
                 if da_link not in ['img-mask', 'img-contour', 'img-virus', 'img-process']:
-                    self.print_message('Eraser only works on image layers, mask, contour, virus and process.',
+                    self.print_message('Eraser only works on image layers, mask, contour, virus and process so far.',
                                        self.error_message_color, 0)
 
                 if da_link in ['img-mask', 'img-contour', 'img-virus']:
-                    print('sdfasdfasd')
                     temp = self.working_img_data[da_link].astype(np.uint8)
                     dst = cv2.bitwise_and(temp, temp, mask=mask_img)
                     res = cv2.resize(dst, self.image_view.tb_size, interpolation=cv2.INTER_AREA)
                     self.image_view.img_stacks.image_dict[da_link].setImage(dst)
                     self.working_img_data[da_link] = dst
+                    current_data = {'data': self.working_img_data[da_link].copy()}
+                    self.save_current_action('eraser_btn', da_link, current_data)
                 else:
                     temp = self.processing_img.copy()
                     dst = cv2.bitwise_and(temp, temp, mask=mask_img)
                     res = cv2.resize(dst, self.image_view.tb_size, interpolation=cv2.INTER_AREA)
                     self.image_view.img_stacks.set_data(dst)
                     self.processing_img = dst
+                    current_data = {'data': self.processing_img.copy()}
+                    self.save_current_action('eraser_btn', 'img-process', current_data)
                 self.layer_ctrl.layer_list[self.layer_ctrl.current_layer_index[0]].set_thumbnail_data(res)
         # ------------------------- magic wand -- virus
         elif self.tool_box.checkable_btn_dict['magic_wand_btn'].isChecked():
@@ -2539,7 +2508,11 @@ class HERBS(QMainWindow, FORM_Main):
                     mask_img = cv2.bitwise_and(mask_img, mask_img, mask=thresh.astype(np.uint8))
             modifiers = QApplication.keyboardModifiers()
             if modifiers == Qt.ShiftModifier:
-                self.working_img_data['img-mask'] = cv2.bitwise_or(self.working_img_data['img-mask'], mask_img, mask=white_img)
+                if self.working_img_data['img-mask'] is None:
+                    self.working_img_data['img-mask'] = cv2.bitwise_or(mask_img, mask_img, mask=white_img)
+                else:
+                    self.working_img_data['img-mask'] = cv2.bitwise_or(self.working_img_data['img-mask'],
+                                                                       mask_img, mask=white_img)
             else:
                 self.working_img_data['img-mask'] = mask_img.copy()
 
@@ -2556,7 +2529,8 @@ class HERBS(QMainWindow, FORM_Main):
                 open_img = cv2.morphologyEx(temp, cv2.MORPH_OPEN, kernel)
                 close_img = cv2.morphologyEx(open_img, cv2.MORPH_CLOSE, kernel)
                 self.working_img_data['img-mask'] = close_img.copy()
-
+            current_data = {'data': self.working_img_data['img-mask'].copy()}
+            self.save_current_action('magic_wand_btn', 'img-mask', current_data)
             self.image_view.img_stacks.image_dict['img-mask'].setImage(self.working_img_data['img-mask'])
             res = cv2.resize(self.working_img_data['img-mask'], self.image_view.tb_size, interpolation=cv2.INTER_AREA)
             self.master_layers(res, layer_type='img-mask', color=self.magic_wand_color)
@@ -2578,6 +2552,8 @@ class HERBS(QMainWindow, FORM_Main):
             else:
                 self.lasso_pnts.append([x, y])
             drawing_pnts = np.asarray(self.lasso_pnts)
+            current_data = {'data': self.lasso_pnts.copy()}
+            self.save_current_action('lasso_btn', 'lasso_path', current_data)
             self.image_view.img_stacks.image_dict['lasso_path'].setData(drawing_pnts)
         # ------------------------- triang -- triangulation pnts
         elif self.tool_box.checkable_btn_dict['triang_btn'].isChecked():
@@ -2620,6 +2596,13 @@ class HERBS(QMainWindow, FORM_Main):
                 self.image_view.img_stacks.image_dict['img-cells'].setData(
                     pos=np.asarray(self.working_img_data['img-cells']), symbol=self.working_img_data['cell_symbol'])
 
+                current_data = {'data': self.working_img_data['img-cells'].copy(),
+                                'size': self.working_img_data['cell_size'].copy(),
+                                'symbol': self.working_img_data['cell_symbol'].copy(),
+                                'index': self.working_img_data['cell_layer_index'].copy(),
+                                'count': self.working_img_data['cell_count'].copy()}
+                self.save_current_action('loc_btn', 'img-cells', current_data)
+
                 self.cell_img[int(y), int(x)] = 255
                 res = cv2.resize(self.cell_img, self.image_view.tb_size, interpolation=cv2.INTER_AREA)
                 self.master_layers(res, layer_type='img-cells', color=self.cell_color)
@@ -2627,6 +2610,8 @@ class HERBS(QMainWindow, FORM_Main):
                 self.working_img_data['img-blob'].append([x, y])
                 self.image_view.img_stacks.image_dict['img-blob'].setData(
                     pos=np.asarray(self.working_img_data['img-blob']))
+                current_data = {'data': self.working_img_data['img-blob'].copy()}
+                self.save_current_action('loc_btn', 'img-blob', current_data)
 
         # ------------------------- probe
         elif self.tool_box.checkable_btn_dict['probe_btn'].isChecked():
@@ -2635,8 +2620,11 @@ class HERBS(QMainWindow, FORM_Main):
             mask = np.zeros(self.image_view.img_size, dtype="uint8")
             locs = np.asarray(self.working_img_data['img-probe']).astype(int)
             mask[locs[:, 1], locs[:, 0]] = 255
+            current_data = {'data': self.working_img_data['img-probe'].copy()}
+            self.save_current_action('probe_btn', 'img-probe', current_data)
             res = cv2.resize(mask, self.image_view.tb_size, interpolation=cv2.INTER_AREA)
             self.master_layers(res, layer_type='img-probe', color=self.probe_color)
+
         else:
             return
 
@@ -3677,6 +3665,7 @@ class HERBS(QMainWindow, FORM_Main):
         image_file_path = file_dialog.getOpenFileName(self, file_title, file_path, file_filter, options=file_options)
 
         if image_file_path[0] != '':
+
             image_file_type = image_file_path[0][-4:].lower()
             self.current_img_path = image_file_path[0]
             self.current_img_name = os.path.basename(os.path.realpath(image_file_path[0]))
@@ -3761,7 +3750,7 @@ class HERBS(QMainWindow, FORM_Main):
         else:
             da_img = self.working_img_data['img-mask']
         if da_img is None:
-            self.print_message('No required image is created.'.format(image_type), '#ff6e6e', 0.1)
+            self.print_message('No required {} image is created.'.format(image_type), self.error_message_color, 0.1)
             return
         if image_type in ['Processed', 'Overlay']:
             da_img = cv2.cvtColor(da_img, cv2.COLOR_RGB2BGR)
@@ -3771,7 +3760,7 @@ class HERBS(QMainWindow, FORM_Main):
             cv2.imwrite(path[0], da_img)
             self.print_message('{} Image is saved successfully ...'.format(image_type), 'white', 0.1)
         else:
-            self.print_message('No file name is given to save.', '#ff6e6e', 0.1)
+            self.print_message('No file name is given to save.', self.error_message_color, 0.1)
 
     # save triangle points for the atlas
     def save_triangulation_points(self):

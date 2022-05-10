@@ -345,6 +345,7 @@ class LayersControl(QWidget):
         self.layer_opacity.append(100)
         self.layer_blend_mode.append('Plus')
         self.layer_color.append(color)
+        # self.layer_data.append(data)
 
         new_layer = SingleLayer(layer_id=self.layer_count, link=widget_link)
         new_layer.sig_clicked.connect(self.layer_clicked)
@@ -380,6 +381,7 @@ class LayersControl(QWidget):
         del self.layer_link[delete_index]
         del self.layer_opacity[delete_index]
         del self.layer_blend_mode[delete_index]
+        # del self.layer_data[delete_index]
 
         if delete_index in self.current_layer_index:
             remove_ind = np.where(np.ravel(self.current_layer_index) == delete_index)[0][0]
