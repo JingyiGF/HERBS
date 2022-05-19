@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtCore import Qt, QSize, QObject
 
+from .image_stacks import SliceStack
 from .slice_stacks import SliceStacks
 from .label_tree import LabelTree
 from .uuuuuu import *
@@ -321,6 +322,7 @@ class AtlasView(QObject):
     def __init__(self):
         super(AtlasView, self).__init__()
         QObject.__init__(self)
+
         self.atlas_data = None
         self.atlas_label = None
         self.atlas_info = None
@@ -336,6 +338,8 @@ class AtlasView(QObject):
         self.sagital_tb_size = None
         self.horizontal_tb_size = None
         self.slice_tb_size = None
+
+        self.slice_image_data = None
 
         self.label_level = None
 
@@ -409,8 +413,6 @@ class AtlasView(QObject):
         self.ml_plate_mesh = gl.GLMeshItem(meshdata=self.ml_plate_md, smooth=False, color=plate_color)
         self.ml_plate_mesh.setGLOptions('additive')
 
-
-
         self.cimg = SliceStacks()  # ap - coronal
         self.cproxy = pg.SignalProxy(self.cimg.vb.scene().sigMouseMoved, rateLimit=60, slot=self.coronal_crosshair)
         self.cpage_ctrl = PageController()
@@ -437,7 +439,7 @@ class AtlasView(QObject):
         self.working_atlas = self.cimg
         self.working_page_control = self.cpage_ctrl
 
-
+        self.slice_stack = SliceStack()
 
 
         # radio buttons
@@ -449,7 +451,7 @@ class AtlasView(QObject):
         radio_group_layout.setAlignment(Qt.AlignCenter)
         self.section_rabnt1 = QRadioButton('Coronal')
         self.section_rabnt1.setChecked(True)
-        self.section_rabnt2 = QRadioButton('Sagital')
+        self.section_rabnt2 = QRadioButton('Sagittal')
         self.section_rabnt3 = QRadioButton('Horizontal')
         self.section_rabnt1.setStyleSheet('color: white')
         self.section_rabnt2.setStyleSheet('color: white')
@@ -527,7 +529,7 @@ class AtlasView(QObject):
         coronal_wrap_layout.addWidget(self.crotation_ctrl.v_spinbox, 1, 3, 1, 1)
 
         # sagital section control
-        sagital_rotation_wrap = QGroupBox('Sagital Section')
+        sagital_rotation_wrap = QGroupBox('Sagittal Section')
         sagital_rotation_wrap.setStyleSheet(atlas_rotation_gb_style)
         sagital_wrap_layout = QGridLayout(sagital_rotation_wrap)
         sagital_wrap_layout.setContentsMargins(0, 0, 0, 0)
@@ -591,6 +593,20 @@ class AtlasView(QObject):
 
         # self.lut.sigLookupTableChanged.connect(self.histlut_changed)
         # self.lut.sigLevelsChanged.connect(self.histlut_changed)
+    def set_slice_data(self, slice_data):
+        self.slice_image_data = slice_data.copy()
+        self.slice_stack.set_data(slice_data)
+        self.slice_size = np.ravel(self.slice_stack.img_layer.image.shape[:2])
+        slice_scale = np.max(self.slice_size / self.slice_tb_size_base)
+        self.slice_tb_size = self.slice_size / slice_scale
+        self.slice_tb_size = self.slice_tb_size[::-1].astype(int)
+
+        self.working_atlas = self.slice_stack
+
+        rect = (0, 0, int(self.slice_size[1]), int(self.slice_size[0]))
+        self.corner_points, self.side_lines = get_corner_line_from_rect(rect)
+        self.working_atlas.image_dict['tri_pnts'].set_range(x_range=self.slice_size[1] - 1,
+                                                            y_range=self.slice_size[0] - 1)
 
     def set_data(self, atlas_data, atlas_label, atlas_info, label_info, boundaries):
         self.atlas_data = atlas_data
@@ -670,7 +686,7 @@ class AtlasView(QObject):
             self.working_page_control = self.cpage_ctrl
             self.slice_tb_size = self.coronal_tb_size
             self.slice_size = self.c_size
-        elif atlas_display == "sagital":
+        elif atlas_display == "sagittal":
             self.working_atlas = self.simg
             self.working_page_control = self.spage_ctrl
             self.slice_tb_size = self.sagital_tb_size

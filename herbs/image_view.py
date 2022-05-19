@@ -16,7 +16,8 @@ import scipy.ndimage as ndi
 
 from .image_stacks import ImageStacks
 from .image_curves import CurveWidget, ChannelSelector
-from .uuuuuu import hsv2rgb, gamma_line, color_img, make_color_lut, get_corner_line_from_rect, rotate, rotate_bound
+from .uuuuuu import hsv2rgb, gamma_line, color_img, make_color_lut, get_corner_line_from_rect, \
+    rotate, rotate_bound, get_tb_size
 
 
 sidebar_button_style = '''
@@ -72,6 +73,7 @@ class ImageView(QObject):
         # define the initials
         self.image_file = None
         self.current_img = None
+        self.current_scale = None
         self.img_size = None
         self.tb_size = None
         self.color_lut_list = []
@@ -79,7 +81,6 @@ class ImageView(QObject):
         self.max_num_channels = 4
         self.channel_visible = [False, False, False, False]
         self.channel_color = [None, None, None, None]
-        print(len(self.channel_color))
 
         self.side_lines = None
         self.corner_points = None
@@ -165,6 +166,7 @@ class ImageView(QObject):
 
     def set_data(self, image_file):
         if self.image_file is not None:
+            self.clear_image_stacks()
             self.chn_widget_wrap.setVisible(False)
             self.curve_widget.reset_pressed()
             self.curve_widget.setEnabled(False)
@@ -175,15 +177,15 @@ class ImageView(QObject):
                 self.channel_visible[i] = False
                 self.img_stacks.image_list[i].clear()
                 self.chn_widget_list[i].setVisible(False)
+            self.image_file = None
 
         scene_ind = self.scene_slider.value()
 
         self.image_file = image_file
         self.current_img = copy.deepcopy(self.image_file.data['scene {}'.format(scene_ind)])
+        self.current_scale = self.image_file.scale['scene {}'.format(scene_ind)]
 
-        self.img_size = self.current_img.shape[:2]
-        self.img_stacks.image_dict['tri_pnts'].set_range(self.img_size[1], self.img_size[0])
-        self.tb_size = self.get_tb_size(self.img_size)
+
 
         if self.image_file.n_scenes != 1:
             self.scene_slider.setMaximum(self.image_file.n_scenes-1)
@@ -192,17 +194,13 @@ class ImageView(QObject):
         else:
             self.scene_wrap.setVisible(False)
 
+        # set data to curves
+        self.update_curves()
+
         self.set_channel_widgets()
         # set data to image stacks
         self.set_data_to_img_stacks()
         self.get_corner_and_lines()
-        # set data to curves
-        self.update_curves()
-
-    def get_tb_size(self, img_size):
-        scale_factor = np.max(np.ravel(img_size) / 80)
-        tb_size = (int(img_size[1] / scale_factor), int(img_size[0] / scale_factor))
-        return tb_size
 
     def set_channel_widgets(self):
         # set color and names to channels
@@ -219,8 +217,14 @@ class ImageView(QObject):
             self.chn_widget_list[i].add_item(self.channel_color[i])
             self.channel_visible[i] = True
 
+    def set_data_and_size(self, img_data):
+        self.img_stacks.set_data(img_data)
+        self.img_size = img_data.shape[:2]
+        self.img_stacks.image_dict['tri_pnts'].set_range(self.img_size[1], self.img_size[0])
+        self.tb_size = get_tb_size(self.img_size)
+
     def set_data_to_img_stacks(self):
-        self.img_stacks.set_data(self.current_img)
+        self.set_data_and_size(self.current_img)
         self.img_stacks.set_lut(self.color_lut_list, self.image_file.level)
 
     def get_corner_and_lines(self):
@@ -247,8 +251,10 @@ class ImageView(QObject):
                 else:
                     print('not czi files')
             self.current_img = copy.deepcopy(self.image_file.data['scene {}'.format(scene_index)])
+            self.current_scale = self.image_file.scale['scene {}'.format(scene_index)]
 
             self.img_size = self.current_img.shape[:2]
+            self.clear_image_stacks()
             self.img_stacks.image_dict['tri_pnts'].set_range(self.img_size[1], self.img_size[0])
             self.img_stacks.set_data(self.current_img)
             self.img_stacks.set_lut(self.color_lut_list, self.image_file.level)
@@ -270,8 +276,10 @@ class ImageView(QObject):
             with pg.BusyCursor():
                 self.image_file.read_data(scale_val, scene_index)
                 self.current_img = copy.deepcopy(self.image_file.data['scene %d' % scene_index])
+                self.current_scale = self.image_file.scale['scene {}'.format(scene_index)]
 
                 self.img_size = self.current_img.shape[:2]
+                self.clear_image_stacks()
                 self.img_stacks.image_dict['tri_pnts'].set_range(self.img_size[1], self.img_size[0])
                 self.set_data_to_img_stacks()
                 self.get_corner_and_lines()
@@ -335,6 +343,7 @@ class ImageView(QObject):
         # else:
         for i in range(self.image_file.n_channels):
             self.current_img[:, :, i] = cv2.flip(self.current_img[:, :, i], 0)
+        self.clear_image_stacks()
         self.img_size = self.current_img.shape[:2]
         self.img_stacks.image_dict['tri_pnts'].set_range(self.img_size[1], self.img_size[0])
         self.img_stacks.set_data(self.current_img)
@@ -347,6 +356,7 @@ class ImageView(QObject):
         # else:
         for i in range(self.image_file.n_channels):
             self.current_img[:, :, i] = cv2.flip(self.current_img[:, :, i], 1)
+        self.clear_image_stacks()
         self.img_stacks.set_data(self.current_img)
         self.img_size = self.current_img.shape[:2]
         self.img_stacks.image_dict['tri_pnts'].set_range(self.img_size[1], self.img_size[0])
@@ -363,6 +373,7 @@ class ImageView(QObject):
             self.img_stacks.image_list[i].clear()
             temp.append(cv2.rotate(self.current_img[:, :, i], cv2.ROTATE_90_CLOCKWISE))
         self.current_img = np.dstack(temp)
+        self.clear_image_stacks()
         self.img_stacks.set_data(self.current_img)
         self.img_size = self.current_img.shape[:2]
         self.img_stacks.image_dict['tri_pnts'].set_range(self.img_size[1], self.img_size[0])
@@ -381,6 +392,7 @@ class ImageView(QObject):
             self.img_stacks.image_list[i].clear()
             temp.append(cv2.rotate(self.current_img[:, :, i], cv2.ROTATE_180))
         self.current_img = np.dstack(temp)
+        self.clear_image_stacks()
         self.img_stacks.set_data(self.current_img)
         self.img_size = self.current_img.shape[:2]
         self.img_stacks.image_dict['tri_pnts'].set_range(self.img_size[1], self.img_size[0])
@@ -396,6 +408,7 @@ class ImageView(QObject):
             self.img_stacks.image_list[i].clear()
             temp.append(cv2.rotate(self.current_img[:, :, i], cv2.ROTATE_90_COUNTERCLOCKWISE))
         self.current_img = np.dstack(temp)
+        self.clear_image_stacks()
         self.img_stacks.set_data(self.current_img)
         self.img_size = self.current_img.shape[:2]
         self.img_stacks.image_dict['tri_pnts'].set_range(self.img_size[1], self.img_size[0])
@@ -411,9 +424,9 @@ class ImageView(QObject):
             rotation_angle = 1
         temp = []
         for i in range(self.image_file.n_channels):
-            self.img_stacks.image_list[i].clear()
             temp.append(rotate(self.current_img[:, :, i], rotation_angle))
         self.current_img = np.dstack(temp)
+        self.clear_image_stacks()
         self.img_stacks.set_data(self.current_img)
         self.img_size = self.current_img.shape[:2]
         self.img_stacks.image_dict['tri_pnts'].set_range(self.img_size[1], self.img_size[0])
@@ -462,7 +475,10 @@ class ImageView(QObject):
         for i in range(self.image_file.n_channels):
             self.img_stacks.image_list[i].clear()
 
-        for da_key in self.image_dict_keys:
+        valid_keys = ['img-overlay', 'overlay_contour', 'img-mask', 'circle_follow', 'lasso_path', 'img-virus',
+                      'img-contour', 'img-probe', 'img-cells', 'img-blob', 'img-drawing', 'img-slice']
+
+        for da_key in valid_keys:
             self.img_stacks.image_dict[da_key].clear()
 
     # def clear_curve_widget(self):

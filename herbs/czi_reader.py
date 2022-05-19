@@ -20,6 +20,7 @@ class CZIReader(object):
         self.pixel_type = self.czi.pixel_type
         print(self.pixel_type)
         self.data = {}
+        self.scale = {}
 
         if 'A' in self.czi_info:
             self.is_rgb = True
@@ -62,10 +63,26 @@ class CZIReader(object):
         ds_tags = [metadata[ds_ind][i].tag for i in range(len(metadata[ds_ind]))]
         ch_ind = [ind for ind in range(len(ds_tags)) if ds_tags[ind] == 'Channels'][0]
         ch_tags = [metadata[ds_ind][ch_ind][i].tag for i in range(len(metadata[ds_ind][ch_ind]))]
+
+        scale_ind = [ind for ind in range(len(all_tags)) if all_tags[ind] == 'Scaling'][0]
+        scale_tags = [metadata[scale_ind][i].tag for i in range(len(metadata[scale_ind]))]
+        scale_item_ind = [ind for ind in range(len(scale_tags)) if scale_tags[ind] == 'Items'][0]
+        scale_item_tags = [metadata[scale_ind][scale_item_ind][i].tag for i in range(len(metadata[scale_ind][scale_item_ind]))]
+
+        scaling_vals = []
+        for i in range(len(scale_item_tags)):
+            scale_info = metadata[scale_ind][scale_item_ind]
+            single_scaling_tags = [scale_info[i][ind].tag for ind in range(len(scale_info[i]))]
+            for j in range(len(single_scaling_tags)):
+                scaling_vals.append(metadata[scale_ind][scale_item_ind][i][j].text)
+
+        self.scaling_val = float(scaling_vals[0]) * 1e6
+
         self.rgb_colors = []
         self.hsv_colors = []
         self.channel_name = []
         self.gamma_val = []
+
         if self.is_rgb:
             self.rgb_colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255)]
             self.channel_name = ['Red', 'Green', 'Blue']
@@ -124,6 +141,7 @@ class CZIReader(object):
                     img_data_temp = img.astype(np.uint16)
                 img_data_temp = cv2.cvtColor(img_data_temp, cv2.COLOR_BGR2RGB)
                 self.data['scene %d' % scind] = img_data_temp
+                self.scale['scene %d' % scind] = scale
             else:
                 if self.n_channels != 1:
                     temp = []
@@ -133,8 +151,10 @@ class CZIReader(object):
                         temp.append(img)
                     img_data_temp = np.dstack(temp)
                     self.data['scene %d' % scind] = img_data_temp
+                    self.scale['scene %d' % scind] = scale
                 else:
                     mosaic_data = self.czi.read_mosaic(C=0, scale_factor=scale, region=self.scene_bbox[scind])
                     img = mosaic_data[0].copy()
                     img_data_temp = img
                     self.data['scene %d' % scind] = img_data_temp.reshape(img.shape[0], img.shape[1], 1)
+                    self.scale['scene %d' % scind] = scale

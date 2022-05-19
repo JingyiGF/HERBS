@@ -15,6 +15,7 @@ class ImageReader(object):
 
         file_type = image_file_path[-4:].lower()
 
+        self.scaling_val = None
         self.is_rgb = True
         self.pixel_type = 'rgb24'
         self.level = 255
@@ -30,6 +31,7 @@ class ImageReader(object):
         self.gamma_val = []
 
         self.data = {}
+        self.scale = {}
         if file_type in ['.jpg', 'jpeg', '.png', '.bmp']:
             img_data = cv2.imread(image_file_path)
             img_data = cv2.cvtColor(img_data, cv2.COLOR_BGR2RGB)
@@ -37,6 +39,7 @@ class ImageReader(object):
             print('tiff test')
             img_data = tifffile.imread(image_file_path)
         self.data['scene 0'] = img_data
+        self.scale['scene 0'] = 1
 
 
 class ImagesReader(object):

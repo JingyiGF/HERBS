@@ -18,18 +18,19 @@ QLineEdit {
 class ToolBox(QObject):
 
     def __init__(self):
+
         QObject.__init__(self)
 
-        self.moving_px = 0
-        self.base_lut = np.array([[0, 0, 0, 0], [128, 128, 128, 255]])
-
         self.pencil_mask = np.ones((3, 3), 'uint8')
+        self.is_closed = False
+
+        self.remove_inside = True
 
         # action version
         self.add_atlas = QAction(QIcon('icons/toolbar/atlas_icon.png'), 'Upload Waxholm Rat Brain Atlas', self)
         self.add_image_stack = QAction(QIcon('icons/toolbar/image_icon.svg'), 'upload histological image', self)
 
-        self.vis2 = QAction(QIcon( 'icons/toolbar/two_window.png'), 'show 2 windows', self)
+        self.vis2 = QAction(QIcon('icons/toolbar/two_window.png'), 'show 2 windows', self)
         self.vis4 = QAction(QIcon('icons/toolbar/window4.png'), 'show 4 windows', self)
         self.vis3 = QAction(QIcon('icons/toolbar/window3.png'), 'show 3 windows', self)
 
@@ -43,12 +44,6 @@ class ToolBox(QObject):
         self.toh_btn = QAction(QIcon('icons/toolbar/toh.svg'), 'transform to histologist image window', self)
         self.check_btn = QAction(QIcon('icons/toolbar/accept.svg'), 'accept transformation', self)
 
-        moving_btn = QAction(QIcon('icons/toolbar/moving.png'), 'move image 1px', self)
-        moving_btn.setCheckable(True)
-
-        rotation_btn = QAction(QIcon('icons/toolbar/rotation.svg'), 'rotate image 1°', self)
-        rotation_btn.setCheckable(True)
-
         lasso_btn = QAction(QIcon('icons/toolbar/lasso.svg'), 'polygon lasso', self)
         lasso_btn.setCheckable(True)
 
@@ -61,22 +56,23 @@ class ToolBox(QObject):
         eraser_btn = QAction(QIcon('icons/toolbar/eraser.svg'), 'eraser', self)
         eraser_btn.setCheckable(True)
 
-        mask_btn = QAction(QIcon('icons/toolbar/mask.svg'), 'mask', self)
+        mask_btn = QAction(QIcon('icons/toolbar/mask.svg'), 'mask maker', self)
         mask_btn.setCheckable(True)
 
-        probe_btn = QAction(QIcon('icons/toolbar/probe.svg'), 'probe', self)
+        probe_btn = QAction(QIcon('icons/toolbar/probe.svg'), 'probe maker', self)
         probe_btn.setCheckable(True)
-
-        # anchor_btn = QAction(QIcon('icons/toolbar/gps.svg'), 'anchor', self)
-        # anchor_btn.setCheckable(True)
 
         triang_btn = QAction(QIcon('icons/toolbar/triangulation.svg'), 'triangulation', self)
         triang_btn.setCheckable(True)
 
-        loc_btn = QAction(QIcon('icons/toolbar/location.svg'), 'location', self)
+        loc_btn = QAction(QIcon('icons/toolbar/location.svg'), 'cell selector', self)
         loc_btn.setCheckable(True)
 
-        self.checkable_btn_dict = {'pencil_btn': pencil_btn,
+        ruler_btn = QAction(QIcon('icons/toolbar/ruler.svg'), 'ruler', self)
+        ruler_btn.setCheckable(True)
+
+        self.checkable_btn_dict = {'ruler_btn': ruler_btn,
+                                   'pencil_btn': pencil_btn,
                                    'eraser_btn': eraser_btn,
                                    'lasso_btn': lasso_btn,
                                    'magic_wand_btn': magic_wand_btn,
@@ -84,75 +80,49 @@ class ToolBox(QObject):
                                    'triang_btn': triang_btn,
                                    'loc_btn': loc_btn}
 
-        # 'moving_btn': moving_btn,
-        # 'rotation_btn': rotation_btn,
-
         self.toolbox_btn_keys = list(self.checkable_btn_dict.keys())
 
-        # for moving_btn, moving wrap
-        self.left_button = QPushButton()
-        # self.left_button.setStyleSheet(toolbox_bnt_style)
-        self.left_button.setFocusPolicy(Qt.NoFocus)
-        self.left_button.setIcon(QIcon('icons/toolbar/move_left.png'))
-        self.right_button = QPushButton()
-        self.right_button.setFocusPolicy(Qt.NoFocus)
-        self.right_button.setIcon(QIcon('icons/toolbar/move_right.png'))
-        self.up_button = QPushButton()
-        self.up_button.setFocusPolicy(Qt.NoFocus)
-        self.up_button.setIcon(QIcon('icons/toolbar/move_up.png'))
-        self.down_button = QPushButton()
-        self.down_button.setFocusPolicy(Qt.NoFocus)
-        self.down_button.setIcon(QIcon('icons/toolbar/move_down.png'))
-        self.moving_valt = QSpinBox()
-        self.moving_valt.lineEdit().setStyleSheet(toolbar_spinbox_textedit_style)
-        self.moving_valt.setFixedSize(80, 22)
-        self.moving_valt.setAlignment(Qt.AlignLeft)
-        self.moving_valt.setRange(0, 50)
-        self.moving_valt.setSingleStep(1)
-        self.moving_valt.setValue(0)
-        self.moving_valt.valueChanged.connect(self.moving_dist_changed)
+        # for ruler_btn, ruler wrap
+        ruler_color_label = QLabel('Color:')
+        self.ruler_color_btn = pg.ColorButton(padding=0)
+        self.ruler_color_btn.setColor('yellow')
+        self.ruler_color_btn.setFixedSize(60, 15)
+        ruler_width_label = QLabel('Size:')
+        self.ruler_width_slider = QSlider(Qt.Horizontal)
+        self.ruler_width_slider.setFixedWidth(100)
+        self.ruler_width_slider.setMinimum(1)
+        self.ruler_width_slider.setMaximum(5)
+        self.ruler_width_slider.setValue(3)
+        self.ruler_width_slider.sliderMoved.connect(self.change_ruler_slider)
 
-        self.moving_wrap = QFrame()
-        moving_layout = QHBoxLayout(self.moving_wrap)
-        moving_layout.setAlignment(Qt.AlignVCenter)
-        moving_layout.setContentsMargins(0, 0, 0, 0)
-        moving_layout.addWidget(self.left_button)
-        moving_layout.addWidget(self.right_button)
-        moving_layout.addWidget(self.up_button)
-        moving_layout.addWidget(self.down_button)
-        moving_layout.addWidget(self.moving_valt)
+        self.ruler_size_valt = QLineEdit()
+        self.ruler_size_valt.setFixedSize(50, 24)
+        self.ruler_size_valt.setAlignment(Qt.AlignLeft)
+        self.ruler_size_valt.setValidator(QIntValidator(1, 5))
+        self.ruler_size_valt.setText('3')
 
-        # for rotation_btn, rotation wrap
-        rotation_label = QLabel("Angle: ")
-        self.rotation_slider = QSlider(Qt.Horizontal)
-        self.rotation_slider.setFixedWidth(200)
-        self.rotation_slider.setMinimum(-1800)
-        self.rotation_slider.setMaximum(1800)
-        self.rotation_slider.setSingleStep(1)
-        self.rotation_slider.setValue(0)
-        self.rotation_valt = QDoubleSpinBox()
-        self.rotation_valt.lineEdit().setStyleSheet(toolbar_spinbox_textedit_style)
-        self.rotation_valt.setFixedSize(80, 22)
-        self.rotation_valt.setAlignment(Qt.AlignLeft)
-        self.rotation_valt.setDecimals(2)
-        self.rotation_valt.setRange(-45, 45)
-        self.rotation_valt.setSingleStep(0.05)
-        self.rotation_valt.setValue(0)
+        self.ruler_length_label = QLabel('Length: ')
 
-        self.rotation_wrap = QFrame()
-        rotation_layout = QHBoxLayout(self.rotation_wrap)
-        rotation_layout.setAlignment(Qt.AlignVCenter)
-        rotation_layout.setContentsMargins(0, 0, 0, 0)
-        rotation_layout.setSpacing(10)
-        rotation_layout.addWidget(rotation_label)
-        rotation_layout.addWidget(self.rotation_slider)
-        rotation_layout.addWidget(self.rotation_valt)
-        rotation_layout.addStretch(1)
+        self.ruler_wrap = QFrame()
+        ruler_layout = QHBoxLayout(self.ruler_wrap)
+        ruler_layout.setAlignment(Qt.AlignVCenter)
+        ruler_layout.setContentsMargins(0, 0, 0, 0)
+        ruler_layout.setSpacing(10)
+        ruler_layout.addWidget(ruler_color_label)
+        ruler_layout.addWidget(self.ruler_color_btn)
+        ruler_layout.addSpacing(15)
+        ruler_layout.addWidget(ruler_width_label)
+        ruler_layout.addWidget(self.ruler_width_slider)
+        ruler_layout.addWidget(self.ruler_size_valt)
+        ruler_layout.addSpacing(25)
+        ruler_layout.addWidget(self.ruler_length_label)
+        ruler_layout.addStretch(1)
 
         # for magic wand, magic wand wrap
         magic_color_label = QLabel('Color:')
         self.magic_color_btn = pg.ColorButton(padding=0)
         self.magic_color_btn.setFixedSize(60, 15)
+        self.magic_color_btn.setColor(QColor(255, 0, 255, 255))
         magic_tol_label = QLabel('Tolerance:')
         self.magic_tol_val = QLineEdit()
         self.magic_tol_val.setFixedWidth(40)
@@ -161,15 +131,14 @@ class ToolBox(QObject):
         self.magic_tol_val.setText('0')
 
         self.magic_wand_kernel = QComboBox()
-        self.magic_wand_kernel.setFixedSize(150, 22)
+        self.magic_wand_kernel.setFixedSize(150, 20)
         self.magic_wand_kernel.addItems(["Kernel", "Rectangular", "Elliptical", "Cross-shaped"])
 
         magic_wand_ksize_label = QLabel('Size:')
-        self.magic_wand_ksize = QLineEdit()
-        self.magic_wand_ksize.setFixedWidth(40)
-        # self.magic_tol_val.setAlignment(Qt.AlignLeft)
-        self.magic_wand_ksize.setValidator(QIntValidator())
-        self.magic_wand_ksize.setText('0')
+        self.magic_wand_ksize = QSpinBox()
+        self.magic_wand_ksize.setFixedSize(80, 20)
+        self.magic_wand_ksize.setValue(0)
+        self.magic_wand_ksize.setMinimum(0)
 
         self.magic_wand_virus_register = QPushButton()
         self.magic_wand_virus_register.setFocusPolicy(Qt.NoFocus)
@@ -204,19 +173,30 @@ class ToolBox(QObject):
         self.pencil_size_slider = QSlider(Qt.Horizontal)
         self.pencil_size_slider.setFixedWidth(100)
         self.pencil_size_slider.setMinimum(1)
-        self.pencil_size_slider.setMaximum(30)
-        self.pencil_size_slider.setValue(1)
+        self.pencil_size_slider.setMaximum(5)
+        self.pencil_size_slider.setValue(2)
         self.pencil_size_slider.sliderMoved.connect(self.change_pencil_slider)
 
         self.pencil_size_valt = QLineEdit()
         self.pencil_size_valt.setFixedSize(50, 24)
         self.pencil_size_valt.setAlignment(Qt.AlignLeft)
-        self.pencil_size_valt.setValidator(QIntValidator(1, 30))
-        self.pencil_size_valt.setText('3')
+        self.pencil_size_valt.setValidator(QIntValidator(1, 5))
+        self.pencil_size_valt.setText('2')
 
         pencil_color_label = QLabel('Color:')
         self.pencil_color_btn = pg.ColorButton(padding=0)
         self.pencil_color_btn.setFixedSize(60, 15)
+        self.pencil_color_btn.setColor(QColor(255, 102, 0))
+
+        pencil_path_label = QLabel('Path Type:')
+        self.pencil_path_btn = QPushButton()
+        self.pencil_path_btn.setCheckable(True)
+        da_icon = QIcon()
+        da_icon.addPixmap(QPixmap("icons/toolbar/closed_path.svg"), QIcon.Normal, QIcon.On)
+        da_icon.addPixmap(QPixmap("icons/toolbar/open_path.svg"), QIcon.Normal, QIcon.Off)
+        self.pencil_path_btn.setIcon(da_icon)
+        self.pencil_path_btn.setIconSize(QSize(20, 20))
+        self.pencil_path_btn.clicked.connect(self.pencil_path_btn_clicked)
 
         self.pencil_wrap = QFrame()
         pencil_layout = QHBoxLayout(self.pencil_wrap)
@@ -229,6 +209,9 @@ class ToolBox(QObject):
         pencil_layout.addWidget(pencil_size_label)
         pencil_layout.addWidget(self.pencil_size_slider)
         pencil_layout.addWidget(self.pencil_size_valt)
+        pencil_layout.addSpacing(15)
+        pencil_layout.addWidget(pencil_path_label)
+        pencil_layout.addWidget(self.pencil_path_btn)
         pencil_layout.addStretch(1)
 
         # for eraser_btn, eraser wrap
@@ -268,6 +251,16 @@ class ToolBox(QObject):
         lasso_color_label = QLabel('Color:')
         self.lasso_color_btn = pg.ColorButton(padding=0)
         self.lasso_color_btn.setFixedSize(60, 15)
+        self.lasso_color_btn.setColor(QColor(0, 255, 255))
+
+        self.lasso_type_btn = QPushButton()
+        self.lasso_type_btn.setCheckable(True)
+        lt_icon = QIcon()
+        lt_icon.addPixmap(QPixmap('icons/toolbar/outpart.svg'), QIcon.Normal, QIcon.On)
+        lt_icon.addPixmap(QPixmap('icons/toolbar/inpart.svg'), QIcon.Normal, QIcon.Off)
+        self.lasso_type_btn.setIcon(lt_icon)
+        self.lasso_type_btn.setIconSize(QSize(20, 20))
+        self.lasso_type_btn.clicked.connect(self.lasso_type_changed)
 
         self.lasso_wrap = QFrame()
         lasso_layout = QHBoxLayout(self.lasso_wrap)
@@ -276,6 +269,8 @@ class ToolBox(QObject):
         lasso_layout.setSpacing(10)
         lasso_layout.addWidget(lasso_color_label)
         lasso_layout.addWidget(self.lasso_color_btn)
+        lasso_layout.addSpacing(10)
+        lasso_layout.addWidget(self.lasso_type_btn)
         lasso_layout.addStretch(1)
 
         # mask wrap
@@ -443,13 +438,20 @@ class ToolBox(QObject):
         # triangle style
         self.tri_line_style = pg.mkPen(color=(128, 128, 128), width=0.5, style=Qt.DashLine)
 
-        # probe style
-        # self.probe_style =
-
-
         # ---------------------------- define all cursor shape
         # self.eraser_cursor = QCursor(QPixmap('icons/eraser_cursor.png'), hotX=7, hotY=27)
 
+    def lasso_type_changed(self):
+        if self.lasso_type_btn.isChecked():
+            self.remove_inside = False
+        else:
+            self.remove_inside = True
+
+    def pencil_path_btn_clicked(self):
+        if self.pencil_path_btn.isChecked():
+            self.is_closed = True
+        else:
+            self.is_closed = False
 
     def change_pencil_slider(self):
         val = self.pencil_size_slider.value()
@@ -464,8 +466,9 @@ class ToolBox(QObject):
         val = int(self.eraser_size_valt.text())
         self.eraser_size_slider.setValue(val)
 
-    def moving_dist_changed(self):
-        self.moving_px = self.moving_valt.value()
+    def change_ruler_slider(self):
+        val = self.ruler_width_slider.value()
+        self.ruler_size_valt.setText(str(val))
 
     def get_tool_data(self):
         data = {'pencil_color': self.pencil_color_btn.color(),
@@ -475,7 +478,7 @@ class ToolBox(QObject):
                 'magic_wand_color': self.magic_color_btn.color(),
                 'magic_wand_tol': self.magic_tol_val.text(),
                 'magic_wand_kernel': self.magic_wand_kernel.currentText(),
-                'magic_wand_ksize': self.magic_wand_ksize.text(),
+                'magic_wand_ksize': self.magic_wand_ksize.value(),
                 'probe_color': self.probe_color_btn.color(),
                 'triangle_color': self.triang_color_btn.color(),
                 'cell_color': self.cell_color_btn.color()}
@@ -493,7 +496,7 @@ class ToolBox(QObject):
         self.magic_color_btn.setColor(data['magic_wand_color'])
         self.magic_tol_val.setText(data['magic_wand_tol'])
         self.magic_wand_kernel.setCurrentText(data['magic_wand_kernel'])
-        self.magic_wand_ksize.setText(data['magic_wand_ksize'])
+        self.magic_wand_ksize.setValue(data['magic_wand_ksize'])
         self.probe_color_btn.setColor(data['probe_color'])
         self.triang_color_btn.setColor(data['triangle_color'])
         self.cell_color_btn.setColor(data['cell_color'])

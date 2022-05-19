@@ -352,7 +352,7 @@ class LayersControl(QWidget):
         new_layer.eye_clicked.connect(self.layer_eye_clicked)
         new_layer.sig_delete.connect(self.delete_layer_btn_clicked)
 
-        active_index = np.where(np.ravel(self.layer_id) == self.layer_count)[0][0]
+        active_index = len(self.layer_id) - 1
         print('add', active_index)
         if self.current_layer_index:
             for da_ind in self.current_layer_index:
@@ -382,7 +382,9 @@ class LayersControl(QWidget):
         del self.layer_opacity[delete_index]
         del self.layer_blend_mode[delete_index]
         # del self.layer_data[delete_index]
+        self.correct_current_layer_index(delete_index)
 
+    def correct_current_layer_index(self, delete_index):
         if delete_index in self.current_layer_index:
             remove_ind = np.where(np.ravel(self.current_layer_index) == delete_index)[0][0]
             del self.current_layer_index[remove_ind]
@@ -467,6 +469,23 @@ class LayersControl(QWidget):
 
         for i in range(len(self.layer_list)):
             self.layer_layout.addWidget(self.layer_list[i])
+
+    def clear_all(self):
+        ind = np.arange(len(self.layer_list))[::-1]
+        for i in ind:
+            self.layer_layout.removeWidget(self.layer_list[i])
+            self.layer_list[i].deleteLater()
+            del self.layer_list[i]
+        self.layer_link = []
+        self.layer_id = []
+        self.layer_link = []
+        self.layer_color = []
+        self.layer_opacity = []
+        self.layer_blend_mode = []
+        self.layer_count = []
+        self.current_layer_index = []
+        self.layer_count = 0
+
 
 
 

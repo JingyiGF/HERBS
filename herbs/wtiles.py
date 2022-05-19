@@ -7,12 +7,27 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 
+dialog_style = '''
+QDialog {
+    background-color: rgb(50, 50, 50);
+    color: white;
+    font-size: 12px;
+    width: 50px;
+}
+
+QLabel {
+    color: white;
+    width: 50px;
+}
+'''
+
 
 class LayerSettingDialog(QDialog):
     def __init__(self, window_name, min_val, max_val, val):
         super().__init__()
 
         self.setWindowTitle(window_name)
+        self.setStyleSheet(dialog_style)
 
         self.val = val
 
@@ -54,6 +69,75 @@ class LayerSettingDialog(QDialog):
         val = self.val_spinbox.value()
         self.val = val
         self.val_slider.setValue(val)
+
+
+class SliceSettingDialog(QDialog):
+    def __init__(self):
+        super().__init__()
+
+        self.setWindowTitle('Current Slice Settings')
+        self.setStyleSheet(dialog_style)
+
+        self.cut = 'Coronal'
+        self.width = 0
+        self.height = 0
+        self.distance = 0
+
+        self.cut_combo = QComboBox()
+        self.cut_combo.addItems(['Coronal', 'Sagittal', 'Horizontal'])
+        self.cut_combo.currentIndexChanged.connect(self.cut_changed)
+
+        width_label = QLabel('Width (mm):')
+        height_label = QLabel('Height (mm):')
+        distance_label = QLabel('Distance w.r.t. Bregma (mm):')
+
+        self.width_val = QDoubleSpinBox()
+        self.width_val.setValue(0)
+        self.width_val.setRange(-20, 20)
+        self.width_val.valueChanged.connect(self.width_val_changed)
+        self.height_val = QDoubleSpinBox()
+        self.height_val.setValue(0)
+        self.height_val.setRange(-20, 20)
+        self.height_val.valueChanged.connect(self.height_val_changed)
+        self.distance_val = QDoubleSpinBox()
+        self.distance_val.setValue(0)
+        self.distance_val.setRange(-20, 20)
+        self.distance_val.valueChanged.connect(self.distance_val_changed)
+
+        # ok button, used to close window
+        ok_btn = QDialogButtonBox(QDialogButtonBox.Ok)
+        ok_btn.accepted.connect(self.accept)
+
+        # add widget to layout
+        content_frame = QFrame()
+        content_layout = QGridLayout(content_frame)
+        content_layout.addWidget(self.cut_combo, 0, 0, 1, 2)
+        content_layout.addWidget(width_label, 1, 0, 1, 1)
+        content_layout.addWidget(self.width_val, 1, 1, 1, 1)
+        content_layout.addWidget(height_label, 2, 0, 1, 1)
+        content_layout.addWidget(self.height_val, 2, 1, 1, 1)
+        content_layout.addWidget(distance_label, 3, 0, 1, 1)
+        content_layout.addWidget(self.distance_val, 3, 1, 1, 1)
+
+        layout = QVBoxLayout()
+        layout.addWidget(content_frame)
+        layout.addWidget(ok_btn)
+        self.setLayout(layout)
+
+    def accept(self) -> None:
+        self.close()
+
+    def cut_changed(self):
+        self.cut = self.cut_combo.currentText()
+
+    def width_val_changed(self):
+        self.width = self.width_val.value()
+
+    def height_val_changed(self):
+        self.height = self.height_val.value()
+
+    def distance_val_changed(self):
+        self.distance = self.distance_val.value()
 
 
 class QDoubleButton2(QPushButton):

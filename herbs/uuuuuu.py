@@ -111,7 +111,7 @@ def get_angles(direction):
     ml_angle = np.degrees(ml_val)
 
     if ap_angle > 90:
-        ap_angle  = 180 - ap_angle
+        ap_angle = 180 - ap_angle
     if ml_angle > 90:
         ml_angle = 180 - ml_angle
 
@@ -236,6 +236,36 @@ def correct_start_pnt(label_data, start_pnt, direction):
     return new_sp, direction
 
 
+def get_tilt_info(sp, ep):
+    if ep[0] < sp[0]:
+        ap_tilt = 'posterior'
+    elif ep[0] > sp[0]:
+        ap_tilt = 'anterior'
+    else:
+        ap_tilt = 'no tilt'
+
+    if sp[1] > 0:
+        if ep[1] < sp[1]:
+            ml_tilt = 'medial'
+        elif ep[1] > sp[1]:
+            ml_tilt = 'lateral'
+        else:
+            ml_tilt = 'no tilt'
+    elif sp[1] < 0:
+        if ep[1] < sp[1]:
+            ml_tilt = 'lateral'
+        elif ep[1] > sp[1]:
+            ml_tilt = 'medial'
+        else:
+            ml_tilt = 'no tilt'
+    else:
+        if ep[1] != sp[1]:
+            ml_tilt = 'lateral'
+        else:
+            ml_tilt = 'no tilt'
+    return ap_tilt, ml_tilt
+
+
 def calculate_probe_info(data, label_data, label_info, vxsize_um, tip_length, channel_size, bregma):
     start_pnt, end_pnt, avg, direction = line_fit(data)
     start_vox = start_pnt + bregma
@@ -253,7 +283,7 @@ def calculate_probe_info(data, label_data, label_info, vxsize_um, tip_length, ch
     new_end_vox = new_end_vox.astype(int)
 
     dv = (new_end_vox[2] - new_start_vox[2]) * vxsize_um
-    print('dv', dv)
+    ap_tilt, ml_tilt = get_tilt_info(new_sp, new_ep)
 
     label_names, label_acronym, label_color, chn_line_color = get_label_name(label_info, region_label, chn_lines_labels)
     # print(label_names, label_acronym, label_color, chn_line_color)
@@ -261,7 +291,7 @@ def calculate_probe_info(data, label_data, label_info, vxsize_um, tip_length, ch
     merged_labels, merged_colors, block_count = block_same_label(chn_lines_labels, chn_line_color)
     # print(merged_labels, merged_colors, block_count)
 
-    da_dict = {'object_name': 'probe', 'data': data,
+    da_dict = {'object_name': 'probe', 'data': data, 'ap_tilt': ap_tilt, 'ml_tilt': ml_tilt,
                'insertion_coords_3d': start_pnt, 'terminus_coords_3d': end_pnt,
                'new_insertion_coords_3d': new_sp, 'new_terminus_coords_3d': new_ep,
                'direction': direction, 'probe_length': probe_length, 'dv': dv,
@@ -973,3 +1003,115 @@ def rotate_bound(image, angle):
     rot_mat[1, 2] += (bound_h / 2) - center_y
 
     return cv2.warpAffine(image, rot_mat, (bound_w, bound_h))
+
+
+def center_resize(img, dim):
+    img_shape = img.shape
+    width, height = img_shape[1], img_shape[0]
+    scale_factor = np.min(np.array([dim[0] / width, dim[1] / height]))
+    resize_dim = (int(width * scale_factor), int(height * scale_factor))
+    resize_img = cv2.resize(img, resize_dim, interpolation=cv2.INTER_LINEAR)
+
+    y = int(0.5 * (dim[0] - resize_dim[0]))
+    x = int(0.5 * (dim[1] - resize_dim[1]))
+
+    if len(img_shape) == 3:
+        center_img = np.zeros((dim[1], dim[0], img.shape[2])).astype(img.dtype)
+    else:
+        center_img = np.zeros((dim[1], dim[0])).astype(img.dtype)
+
+    center_img[x:(x + resize_dim[1]), y:(y + resize_dim[0])] = resize_img
+
+    return center_img
+
+
+def get_tb_size(img_size):
+    scale_factor = np.max(np.ravel(img_size) / 80)
+    tb_size = (int(img_size[1] / scale_factor), int(img_size[0] / scale_factor))
+    return tb_size
+
+
+def get_slice_atlas_coord(points, cut, size, width, height, distance, origin):
+    """
+
+    :param points: pnts on image
+    :param cut: the cut of slice image
+    :param size: the size (height, width) of slice image in pixel
+    :param width: width of image in mm
+    :param height: height of image in mm
+    :param distance: distance of slice with respect to Bregma in mm
+    :param origin: the coord of bregma on the current slice image
+    :return:
+    """
+    width_factor = width / size[1] * 1000
+    height_factor = height / size[0] * 1000
+    if cut == 'Coronal':
+        y_val = np.repeat(distance * 1000, len(points))
+        x_val = (points[:, 0] - origin[0]) * width_factor
+        z_val = (points[:, 1] - origin[1]) * height_factor
+    elif cut == 'Sagittal':
+        x_val = np.repeat(distance * 1000, len(points))
+        y_val = (points[:, 0] - origin[0]) * width_factor
+        z_val = (points[:, 1] - origin[1]) * height_factor
+    else:
+        z_val = np.repeat(distance * 1000, len(points))
+        y_val = (points[:, 0] - origin[0]) * width_factor
+        x_val = (points[:, 1] - origin[1]) * height_factor
+    return x_val, y_val, z_val
+
+
+def delete_points_inside_eraser(points, ct, r):
+    x_min, y_min, x_max, y_max = ct[0] - r, ct[1] - r, ct[0] + r, ct[1] + r
+    x_bool = np.logical_and(points[:, 0] <= x_max, points[:, 0] >= x_min)
+    y_bool = np.logical_and(points[:, 1] <= y_max, points[:, 1] >= y_min)
+    chk_inds = np.where(np.logical_and(x_bool, y_bool))[0]
+    if len(chk_inds) == 0:
+        return None, None
+    chk_pnt = points[chk_inds]
+    dist = np.sum(np.power(chk_pnt - ct, 2), 1)
+    del_ind = np.where(dist < np.power(r, 2))[0]
+    if len(del_ind) == 0:
+        return None, None
+    real_del_ind = chk_inds[del_ind]
+    remain_inds = np.zeros(len(points)) < 1
+    remain_inds[real_del_ind] = False
+    remain_points = points[remain_inds]
+    return remain_points, real_del_ind
+
+
+def interpolate_contour_points(points):
+    if not np.all(points[-1] == points[0]):
+        points[:, 0] = np.r_[points[:, 0], points[:, 0]]
+        points[:, 1] = np.r_[points[:, 1], points[:, 1]]
+
+    tck = splprep([points[:, 0], points[:, 1]], s=0, per=True)
+
+    xi, yi = splev(np.linspace(0, 1, 1000), tck[0])
+    return xi, yi
+
+
+def create_vis_img(size, point_data, color, vis_type='p', closed=False):
+    img = np.zeros((size[0], size[1], 3), 'uint8')
+    da_color = (int(color[0]), int(color[1]), int(color[2]))
+    if vis_type == 'p':
+        for i in range(len(point_data)):
+            cv2.circle(img, (int(point_data[i][0]), int(point_data[i][1])), radius=2, color=da_color, thickness=-1)
+    else:
+        if closed:
+            cv2.fillPoly(img, pts=point_data, color=da_color)
+        else:
+            for i in range(len(point_data) - 1):
+                cv2.line(img, (int(point_data[i][0]), int(point_data[i][1])),
+                         (int(point_data[i + 1][0]), int(point_data[i + 1][1])),
+                         color=da_color, thickness=8)
+    return img
+
+
+def color_vis_img(img, color):
+    temp = np.zeros((img.shape[0], img.shape[1], 3), 'uint8')
+    temp[img != 0, 0] = color[0]
+    temp[img != 0, 1] = color[1]
+    temp[img != 0, 2] = color[2]
+    return temp
+
+

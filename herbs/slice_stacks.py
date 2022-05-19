@@ -52,74 +52,6 @@ class ClickableSlice(pg.ImageItem):
         # self.mouseClicked.emit([event, id])
 
 
-# class SliceStack(QGraphicsItemGroup):
-#     class SignalProxy(QtCore.QObject):
-#         mouseHovered = QtCore.Signal(object)  # id
-#         mouseClicked = QtCore.Signal(object)  # id
-#
-#     def __init__(self):
-#         self._sigprox = SliceStack.SignalProxy()
-#         self.mouseHovered = self._sigprox.mouseHovered
-#         self.mouseClicked = self._sigprox.mouseClicked
-#
-#         QGraphicsItemGroup.__init__(self)
-#         self.atlas_img = pg.ImageItem(levels=[0, 1])
-#         self.label_img = pg.ImageItem()
-#         self.atlas_img.setParentItem(self)
-#         self.label_img.setParentItem(self)
-#         self.label_img.setZValue(10)
-#         self.label_img.setOpacity(0.5)
-#         self.set_overlay('Multiply')
-#
-#         self.label_colors = {}
-#         self.setAcceptHoverEvents(True)
-#
-#     def set_data(self, atlas, label, scale=None):
-#         self.label_data = label
-#         self.atlas_data = atlas
-#         if scale is not None:
-#             self.resetTransform()
-#             self.scale(*scale)
-#         self.atlas_img.setImage(self.atlas_data, autoLevels=False)
-#         self.label_img.setImage(self.label_data, autoLevels=False)
-#
-#     def set_lut(self, lut):
-#         self.label_img.setLookupTable(lut)
-#
-#     def set_overlay(self, overlay):
-#         mode = getattr(QtGui.QPainter, 'CompositionMode_' + overlay)
-#         self.label_img.setCompositionMode(mode)
-#
-#     def set_label_opacity(self, o):
-#         self.label_img.setOpacity(o)
-#
-#     def setLabelColors(self, colors):
-#         self.label_colors = colors
-#
-#     def hoverEvent(self, event):
-#         if event.isExit():
-#             return
-#         try:
-#             pos = (event.pos())
-#             id = self.label_data[int(event.pos().x()), int(event.pos().y())]
-#             # print(('pos', pos))
-#         except (IndexError, AttributeError):
-#             return
-#         self.mouseHovered.emit([id, pos])
-#
-#     def mouseClickEvent(self, event):
-#         pos = (event.pos().x(), event.pos().y())
-#         # id = self.label_data[int(event.pos().x()), int(event.pos().y())]
-#         self.mouseClicked.emit(pos)
-#         # self.mouseClicked.emit([event, id])
-#
-#     def boundingRect(self):
-#         return self.label_img.boundingRect()
-#
-#     def shape(self):
-#         return self.label_img.shape
-
-
 class SliceStacks(pg.GraphicsLayoutWidget):
     class SignalProxy(QObject):
         mouseHovered = pyqtSignal(object)  # id
@@ -151,8 +83,10 @@ class SliceStacks(pg.GraphicsLayoutWidget):
         self.tri_lines_list = []
 
         circle_follow = pg.PlotDataItem(pen=pg.mkPen('r', width=2, style=Qt.DashLine))
-        lasso_path = pg.PlotDataItem(pen=pg.mkPen(color='r', width=3, style=Qt.DashLine),
-                                          symbolPen='r', symbol='o', symbolSize=4)
+        lasso_path = pg.PlotDataItem(pen=pg.mkPen(color=(0, 255, 255), width=3, style=Qt.DashLine),
+                                     symbolPen=(0, 255, 255), symbol='o', symbolSize=4)
+        ruler_path = pg.PlotDataItem(pen=pg.mkPen(color='y', width=3, style=Qt.DashLine),
+                                     symbolPen='y', symbolBrush='y', symbol='s', symbolSize=3)
 
         overlay_img = pg.ImageItem()
 
@@ -165,13 +99,11 @@ class SliceStacks(pg.GraphicsLayoutWidget):
         grid_lines = pg.GridItem(pen=(128, 128, 128))
         grid_lines.setVisible(False)
 
-        virus_pnts = pg.ScatterPlotItem(pen=(133, 255, 117), symbolBrush=(133, 255, 117), symbolPen=(55, 55, 55),
-                                             symbol='s', symbolSize=1)
-
+        virus_pnts = pg.ScatterPlotItem(pen=(133, 255, 117), brush=(133, 255, 117), symbol='s', size=5, hoverSize=8)
         probe_pnts = pg.ScatterPlotItem(pen=(0, 0, 255), brush=(0, 0, 255), symbol='s', size=5, hoverSize=8)
         cell_pnts = pg.ScatterPlotItem(pen=(0, 255, 0), brush=(0, 255, 0), size=5, hoverSize=8)
-        drawing_pnts = pg.PlotDataItem(pen=pg.mkPen(color=(128, 128, 128), width=3), brush=None)
-        contour_pnts = pg.ScatterPlotItem(pen=(188, 118, 254), brush=(188, 118, 254), size=5, hoverSize=8)
+        drawing_pnts = pg.PlotDataItem(pen=pg.mkPen(color=(255, 102, 0), width=2), brush=None)
+        contour_pnts = pg.PlotDataItem(pen=pg.mkPen(color=(255, 0, 255), width=3), brush=None)
 
         self.image_dict = {'atlas-overlay': overlay_img,
                            'atlas-mask': mask_img,
@@ -183,6 +115,7 @@ class SliceStacks(pg.GraphicsLayoutWidget):
                            'atlas-contour': contour_pnts,
                            'atlas-probe': probe_pnts,
                            'atlas-cells': cell_pnts,
+                           'ruler_path': ruler_path,
                            'atlas-drawing': drawing_pnts}
         self.image_dict_keys = list(self.image_dict.keys())
 

@@ -452,13 +452,13 @@ class CurveWidget(QWidget):
         self.setLayout(widget_layout)
 
     def set_data(self, data, color, depth_level):
+        self.curve_plot.set_data(data, color, depth_level)
         if self.gray_max != depth_level:
+            self.gray_max = depth_level
             self.multi_handle_slider.setMaximum(depth_level)
             self.multi_handle_slider.setValue((0, depth_level))
             self.white_spinbox.spin_val.setMaximum(depth_level)
             self.white_spinbox.spin_val.setValue(depth_level)
-        self.gray_max = depth_level
-        self.curve_plot.set_data(data, color, self.gray_max)
 
     def slider_changed(self, ev):
         if self.curve_plot.pnts is None:
@@ -491,10 +491,6 @@ class CurveWidget(QWidget):
         self.curve_plot.set_plot(data, self.table_output)
         self.sig_table_changed.emit(self.table_output.astype(int))
 
-    def calculate_spline_table(self, point_values):
-        table = self.curve_plot.update_table(point_values)
-        return table
-
     def black_spinbox_changed(self):
         if self.curve_plot.pnts is None:
             return
@@ -509,7 +505,7 @@ class CurveWidget(QWidget):
         if line_type == 'gamma':
             table = gamma_line(xval, (val, slider_vals[1]), self.gamma, self.gray_max)
         else:
-            table = self.calculate_spline_table(point_values)
+            table = self.curve_plot.update_table(point_values)
         self.table_output = table.copy()
         self.curve_plot.set_plot(point_values, self.table_output)
         self.sig_table_changed.emit(self.table_output.astype(int))
@@ -528,7 +524,7 @@ class CurveWidget(QWidget):
         if line_type == 'gamma':
             table = gamma_line(xval, (slider_vals[0], val), self.gamma, self.gray_max)
         else:
-            table = self.calculate_spline_table(point_values)
+            table = self.curve_plot.update_table(point_values)
         self.table_output = table.copy()
         self.curve_plot.set_plot(point_values, self.table_output)
         self.sig_table_changed.emit(self.table_output.astype(int))

@@ -21,11 +21,81 @@
     <string notr="true"/>
    </property>
    <layout class="QGridLayout" name="gridLayout">
+    <item row="0" column="0">
+     <widget class="QTabWidget" name="sidebar">
+      <property name="minimumSize">
+       <size>
+        <width>300</width>
+        <height>0</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>300</width>
+        <height>16777215</height>
+       </size>
+      </property>
+      <property name="styleSheet">
+       <string notr="true"/>
+      </property>
+      <property name="tabPosition">
+       <enum>QTabWidget::North</enum>
+      </property>
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
+      <widget class="QWidget" name="atlascontrolpanel">
+       <property name="styleSheet">
+        <string notr="true"/>
+       </property>
+       <attribute name="title">
+        <string>Tab 1</string>
+       </attribute>
+      </widget>
+      <widget class="QWidget" name="treeviewpanel">
+       <attribute name="title">
+        <string>Tab 2</string>
+       </attribute>
+      </widget>
+      <widget class="QWidget" name="imagecontrolpanel">
+       <attribute name="title">
+        <string>Page</string>
+       </attribute>
+      </widget>
+      <widget class="QWidget" name="layerpanel">
+       <attribute name="title">
+        <string>Page</string>
+       </attribute>
+      </widget>
+      <widget class="QWidget" name="probecontrolpanel">
+       <attribute name="title">
+        <string>Page</string>
+       </attribute>
+      </widget>
+     </widget>
+    </item>
     <item row="0" column="1">
      <widget class="QSplitter" name="splitter_3">
       <property name="orientation">
        <enum>Qt::Horizontal</enum>
       </property>
+      <widget class="QFrame" name="sliceframe">
+       <property name="minimumSize">
+        <size>
+         <width>30</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">border: 1px solid rgb(39, 39, 39);</string>
+       </property>
+       <property name="frameShape">
+        <enum>QFrame::StyledPanel</enum>
+       </property>
+       <property name="frameShadow">
+        <enum>QFrame::Raised</enum>
+       </property>
+      </widget>
       <widget class="QSplitter" name="splitter">
        <property name="orientation">
         <enum>Qt::Vertical</enum>
@@ -98,59 +168,6 @@
          <string notr="true">border: 1px solid rgb(39, 39, 39);</string>
         </property>
        </widget>
-      </widget>
-     </widget>
-    </item>
-    <item row="0" column="0">
-     <widget class="QTabWidget" name="sidebar">
-      <property name="minimumSize">
-       <size>
-        <width>300</width>
-        <height>0</height>
-       </size>
-      </property>
-      <property name="maximumSize">
-       <size>
-        <width>300</width>
-        <height>16777215</height>
-       </size>
-      </property>
-      <property name="styleSheet">
-       <string notr="true"/>
-      </property>
-      <property name="tabPosition">
-       <enum>QTabWidget::North</enum>
-      </property>
-      <property name="currentIndex">
-       <number>4</number>
-      </property>
-      <widget class="QWidget" name="atlascontrolpanel">
-       <property name="styleSheet">
-        <string notr="true"/>
-       </property>
-       <attribute name="title">
-        <string>Tab 1</string>
-       </attribute>
-      </widget>
-      <widget class="QWidget" name="treeviewpanel">
-       <attribute name="title">
-        <string>Tab 2</string>
-       </attribute>
-      </widget>
-      <widget class="QWidget" name="imagecontrolpanel">
-       <attribute name="title">
-        <string>Page</string>
-       </attribute>
-      </widget>
-      <widget class="QWidget" name="layerpanel">
-       <attribute name="title">
-        <string>Page</string>
-       </attribute>
-      </widget>
-      <widget class="QWidget" name="probecontrolpanel">
-       <attribute name="title">
-        <string>Page</string>
-       </attribute>
       </widget>
      </widget>
     </item>
@@ -280,7 +297,6 @@ border-color: rgb(75, 78, 84);</string>
     <property name="title">
      <string>Image</string>
     </property>
-    <addaction name="separator"/>
     <addaction name="action180"/>
     <addaction name="action90_Clockwise"/>
     <addaction name="action90_Counter_Clockwise"/>
@@ -290,6 +306,7 @@ border-color: rgb(75, 78, 84);</string>
     <addaction name="actionFlip_Horizontal"/>
     <addaction name="actionFlip_Vertical"/>
     <addaction name="separator"/>
+    <addaction name="actionHide"/>
     <addaction name="actionProcess_Image"/>
     <addaction name="actionCut"/>
     <addaction name="actionReset_Image"/>
@@ -313,9 +330,14 @@ border-color: rgb(75, 78, 84);</string>
     <addaction name="actionLoad_Triangulation_Points"/>
     <addaction name="separator"/>
     <addaction name="actionLoad_Image_Atlas"/>
-    <addaction name="actionSave_Current_Slice"/>
+    <addaction name="actionRegister_Slice_Info"/>
+    <addaction name="actionCreate_Slice_Layer"/>
+    <addaction name="actionCrop"/>
+    <addaction name="actionBregma_Picker"/>
     <addaction name="actionSave_Slice"/>
     <addaction name="actionMerge_Slices"/>
+    <addaction name="separator"/>
+    <addaction name="actionSwitch_Atlas"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="styleSheet">
@@ -328,13 +350,20 @@ border-color: rgb(75, 78, 84);</string>
     <property name="title">
      <string>View</string>
     </property>
+    <widget class="QMenu" name="menu2_Windows">
+     <property name="title">
+      <string>2 Windows</string>
+     </property>
+     <addaction name="actionVolume_Histology"/>
+     <addaction name="actionSlice_Histology"/>
+    </widget>
     <addaction name="actionCoronal_Window"/>
     <addaction name="actionSagital_Window"/>
     <addaction name="actionHorizontal_Window"/>
     <addaction name="action3D_Window"/>
     <addaction name="actionImage_Window"/>
     <addaction name="separator"/>
-    <addaction name="action2_Windows"/>
+    <addaction name="menu2_Windows"/>
     <addaction name="action4_Windows"/>
     <addaction name="separator"/>
     <addaction name="actionShow_Grids"/>
@@ -463,11 +492,17 @@ selection-background-color: rgb(50, 50, 50);</string>
    </property>
   </action>
   <action name="actionDownload">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Download Waxholm Rat Atlas ...</string>
    </property>
+   <property name="toolTip">
+    <string>Download  and Process Waxholm Rat Atlas</string>
+   </property>
   </action>
-  <action name="actionSave_Current_Slice">
+  <action name="actionRegister_Slice_Info">
    <property name="text">
     <string>Register Slice Info ...</string>
    </property>
@@ -507,11 +542,6 @@ selection-background-color: rgb(50, 50, 50);</string>
     <string>Image Window</string>
    </property>
   </action>
-  <action name="action2_Windows">
-   <property name="text">
-    <string>2 Windows</string>
-   </property>
-  </action>
   <action name="action4_Windows">
    <property name="text">
     <string>4 Windows</string>
@@ -519,7 +549,7 @@ selection-background-color: rgb(50, 50, 50);</string>
   </action>
   <action name="actionProcess_Image">
    <property name="text">
-    <string>Process Image</string>
+    <string>Process</string>
    </property>
   </action>
   <action name="actionReset_Image">
@@ -530,6 +560,9 @@ selection-background-color: rgb(50, 50, 50);</string>
   <action name="actionAtlas_Processor">
    <property name="text">
     <string>Atlas Processor</string>
+   </property>
+   <property name="toolTip">
+    <string>Atlas Processor for other Atlas</string>
    </property>
   </action>
   <action name="actionSave_Overlay_Image">
@@ -669,12 +702,21 @@ selection-background-color: rgb(50, 50, 50);</string>
   </action>
   <action name="actionLoad_Image_Atlas">
    <property name="text">
-    <string>Load Slice(s) ...</string>
+    <string>Load Slice ...</string>
+   </property>
+   <property name="toolTip">
+    <string>Load Image as Atlas Slice</string>
    </property>
   </action>
   <action name="actionMerge_Slices">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Merge Slices</string>
+   </property>
+   <property name="toolTip">
+    <string>Currently not valid</string>
    </property>
   </action>
   <action name="actionCut">
@@ -687,12 +729,66 @@ selection-background-color: rgb(50, 50, 50);</string>
     <string>Clear</string>
    </property>
   </action>
+  <action name="actionProcess_Slice">
+   <property name="text">
+    <string>Process Slice</string>
+   </property>
+  </action>
+  <action name="actionHide">
+   <property name="text">
+    <string>Hide</string>
+   </property>
+  </action>
+  <action name="actionCrop">
+   <property name="text">
+    <string>Crop</string>
+   </property>
+   <property name="toolTip">
+    <string>Crop off the area not slected</string>
+   </property>
+  </action>
+  <action name="actionBlock_Volume_Atlas">
+   <property name="text">
+    <string>Block Volume Atlas</string>
+   </property>
+  </action>
+  <action name="actionSwitch_Atlas">
+   <property name="text">
+    <string>Switch Atlas: Volume</string>
+   </property>
+   <property name="toolTip">
+    <string>Switch between Volume Atlas and Slice Atlas</string>
+   </property>
+  </action>
+  <action name="actionBregma_Picker">
+   <property name="text">
+    <string>Bregma Picker</string>
+   </property>
+   <property name="toolTip">
+    <string>Check to slecte the location of Bregma</string>
+   </property>
+  </action>
+  <action name="actionVolume_Histology">
+   <property name="text">
+    <string>Volume + Histology</string>
+   </property>
+  </action>
+  <action name="actionSlice_Histology">
+   <property name="text">
+    <string>Slice + Histology</string>
+   </property>
+  </action>
+  <action name="actionCreate_Slice_Layer">
+   <property name="text">
+    <string>Create Slice Layer</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
    <class>GLViewWidget</class>
    <extends>QWidget</extends>
-   <header location="global">pyqtgraph.opengl</header>
+   <header>pyqtgraph.opengl</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

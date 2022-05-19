@@ -1066,6 +1066,21 @@ class ObjectControl(QObject):
         for i in range(len(self.obj_list)):
             self.layer_layout.addWidget(self.obj_list[i])
 
-
+    def clear_all(self):
+        ind = np.arange(len(self.obj_list))[::-1]
+        for i in ind:
+            self.layer_layout.removeWidget(self.obj_list[i])
+            self.obj_list[i].deleteLater()
+            del self.obj_list[i]
+        self.obj_id = []
+        self.obj_name = []
+        self.obj_type = []
+        self.obj_data = []
+        self.obj_group_id = []
+        self.obj_size = []
+        self.obj_opacity = []
+        self.obj_comp_mode = []
+        self.obj_count = []
+        self.current_obj_index = []
 
 
