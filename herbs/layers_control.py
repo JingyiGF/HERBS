@@ -392,7 +392,6 @@ class LayersControl(QWidget):
             if self.current_layer_index[i] > delete_index:
                 self.current_layer_index[i] -= 1
 
-
     def layer_clicked(self, clicked_id):
         clicked_index = np.where(np.ravel(self.layer_id) == clicked_id)[0][0]
 

@@ -223,7 +223,7 @@ class ToolBox(QObject):
         self.eraser_size_slider = QSlider(Qt.Horizontal)
         self.eraser_size_slider.setFixedWidth(100)
         self.eraser_size_slider.setMinimum(1)
-        self.eraser_size_slider.setMaximum(300)
+        self.eraser_size_slider.setMaximum(100)
         self.eraser_size_slider.setValue(20)
         self.eraser_size_slider.valueChanged.connect(self.change_eraser_slider)
 
@@ -231,7 +231,7 @@ class ToolBox(QObject):
         self.eraser_size_valt.setFixedSize(50, 24)
         self.eraser_size_valt.setAlignment(Qt.AlignLeft)
         self.eraser_size_valt.setValidator(QIntValidator(1, 100))
-        self.eraser_size_valt.setText('1')
+        self.eraser_size_valt.setText('20')
         self.eraser_size_valt.textChanged.connect(self.change_eraser_val)
 
         self.eraser_wrap = QFrame()
@@ -429,11 +429,12 @@ class ToolBox(QObject):
         self.sep_label.setPixmap(QPixmap('icons/toolbar/handle.png'))
 
         # circle
+        r = int(self.eraser_size_valt.text())
         angle = np.deg2rad(np.arange(0, 360, 1))
         x = np.cos(angle)
         y = np.sin(angle)
         self.original_circle = np.vstack([x, y]).T
-        self.circle = self.original_circle.copy()
+        self.circle = self.original_circle * r
 
         # triangle style
         self.tri_line_style = pg.mkPen(color=(128, 128, 128), width=0.5, style=Qt.DashLine)
@@ -482,13 +483,9 @@ class ToolBox(QObject):
                 'probe_color': self.probe_color_btn.color(),
                 'triangle_color': self.triang_color_btn.color(),
                 'cell_color': self.cell_color_btn.color()}
-        # 'moving_valt': self.moving_valt.value(),
-        # 'rotation_valt': self.rotation_valt.value(),
         return data
 
     def set_tool_data(self, data):
-        # self.moving_valt.setValue(data['moving_valt'])
-        # self.rotation_valt.setValue(data['rotation_valt'])
         self.pencil_color_btn.setColor(data['pencil_color'])
         self.pencil_size_valt.setText(data['pencil_size'])
         self.eraser_color_btn.setColor(data['eraser_color'])

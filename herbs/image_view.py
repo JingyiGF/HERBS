@@ -185,8 +185,6 @@ class ImageView(QObject):
         self.current_img = copy.deepcopy(self.image_file.data['scene {}'.format(scene_ind)])
         self.current_scale = self.image_file.scale['scene {}'.format(scene_ind)]
 
-
-
         if self.image_file.n_scenes != 1:
             self.scene_slider.setMaximum(self.image_file.n_scenes-1)
             self.scene_label.setText('0/{}'.format(self.image_file.n_scenes-1))
@@ -220,6 +218,8 @@ class ImageView(QObject):
     def set_data_and_size(self, img_data):
         self.img_stacks.set_data(img_data)
         self.img_size = img_data.shape[:2]
+        rect = (0, 0, self.img_size[1], self.img_size[0])
+        self.corner_points, self.side_lines = get_corner_line_from_rect(rect)
         self.img_stacks.image_dict['tri_pnts'].set_range(self.img_size[1], self.img_size[0])
         self.tb_size = get_tb_size(self.img_size)
 
@@ -433,42 +433,40 @@ class ImageView(QObject):
         self.get_corner_and_lines()
 
     # mode change
-    def image_mode_changed(self, mode):
-        if self.image_file is None:
-            return
-        if not self.image_file.is_rgb:
-            return
-        temp = self.current_img.copy()
-        scene_ind = self.scene_slider.value()
-        if mode == 'gray':
-            if self.current_mode != 'rgb':
-                temp = copy.deepcopy(self.image_file.data['scene {}'.format(scene_ind)])
-                temp = cv2.cvtColor(temp, cv2.COLOR_BGR2RGBA)
-            da_img = cv2.cvtColor(temp, cv2.COLOR_RGBA2GRAY)
-        elif mode == 'hsv':
-            if self.current_mode != 'rgb':
-                temp = copy.deepcopy(self.image_file.data['scene {}'.format(scene_ind)])
-                temp = cv2.cvtColor(temp, cv2.COLOR_BGR2RGBA)
-            da_temp = cv2.cvtColor(temp, cv2.COLOR_RGBA2RGB)
-            da_img = cv2.cvtColor(da_temp, cv2.COLOR_RGB2HSV)
-        else:
-            scene_ind = self.scene_slider.value()
-            temp = copy.deepcopy(self.image_file.data['scene {}'.format(scene_ind)])
-            da_img = cv2.cvtColor(temp, cv2.COLOR_BGR2RGBA)
-        # self.current_img = da_img.copy()
-        # self.img_stacks.set_data(self.current_img, is_rgb=True)
-        # self.current_mode = mode
+    # def image_mode_changed(self, mode):
+    #     if self.image_file is None:
+    #         return
+    #     if not self.image_file.is_rgb:
+    #         return
+    #     temp = self.current_img.copy()
+    #     scene_ind = self.scene_slider.value()
+    #     if mode == 'gray':
+    #         if self.current_mode != 'rgb':
+    #             temp = copy.deepcopy(self.image_file.data['scene {}'.format(scene_ind)])
+    #             temp = cv2.cvtColor(temp, cv2.COLOR_BGR2RGBA)
+    #         da_img = cv2.cvtColor(temp, cv2.COLOR_RGBA2GRAY)
+    #     elif mode == 'hsv':
+    #         if self.current_mode != 'rgb':
+    #             temp = copy.deepcopy(self.image_file.data['scene {}'.format(scene_ind)])
+    #             temp = cv2.cvtColor(temp, cv2.COLOR_BGR2RGBA)
+    #         da_temp = cv2.cvtColor(temp, cv2.COLOR_RGBA2RGB)
+    #         da_img = cv2.cvtColor(da_temp, cv2.COLOR_RGB2HSV)
+    #     else:
+    #         scene_ind = self.scene_slider.value()
+    #         temp = copy.deepcopy(self.image_file.data['scene {}'.format(scene_ind)])
+    #         da_img = cv2.cvtColor(temp, cv2.COLOR_BGR2RGBA)
+    #     # self.current_img = da_img.copy()
+    #     # self.img_stacks.set_data(self.current_img, is_rgb=True)
+    #     # self.current_mode = mode
 
     def get_image_control_data(self):
-        data = {'current_img': self.current_img,
-                'color_lut_list': self.color_lut_list,
+        data = {'image_file': self.image_file,
+                'current_img': self.current_img,
                 'scene_index': self.scene_index,
                 'scale_val': self.scale_slider.value(),
-                'channel_visible': self.channel_visible,
                 'channel_color': self.channel_color,
                 'side_lines': self.side_lines,
-                'corner_points': self.corner_points,
-                'current_mode': self.current_mode}
+                'corner_points': self.corner_points}
         return data
 
     def clear_image_stacks(self):
@@ -476,7 +474,7 @@ class ImageView(QObject):
             self.img_stacks.image_list[i].clear()
 
         valid_keys = ['img-overlay', 'overlay_contour', 'img-mask', 'circle_follow', 'lasso_path', 'img-virus',
-                      'img-contour', 'img-probe', 'img-cells', 'img-blob', 'img-drawing', 'img-slice']
+                      'img-contour', 'img-probe', 'img-cells', 'img-blob', 'img-drawing']
 
         for da_key in valid_keys:
             self.img_stacks.image_dict[da_key].clear()

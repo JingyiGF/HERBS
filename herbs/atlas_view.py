@@ -414,21 +414,18 @@ class AtlasView(QObject):
         self.ml_plate_mesh.setGLOptions('additive')
 
         self.cimg = SliceStacks()  # ap - coronal
-        self.cproxy = pg.SignalProxy(self.cimg.vb.scene().sigMouseMoved, rateLimit=60, slot=self.coronal_crosshair)
         self.cpage_ctrl = PageController()
         self.cpage_ctrl.sig_page_changed.connect(self.coronal_slice_page_changed)
         self.clut = pg.HistogramLUTWidget()
         self.clut.setImageItem(self.cimg.img)
 
         self.simg = SliceStacks()
-        self.sproxy = pg.SignalProxy(self.simg.vb.scene().sigMouseMoved, rateLimit=60, slot=self.sagital_crosshair)
         self.spage_ctrl = PageController()
         self.spage_ctrl.sig_page_changed.connect(self.sagital_slice_page_changed)
         self.slut = pg.HistogramLUTWidget()
         self.slut.setImageItem(self.simg.img)
 
         self.himg = SliceStacks()
-        self.hproxy = pg.SignalProxy(self.himg.vb.scene().sigMouseMoved, rateLimit=60, slot=self.horizontal_crosshair)
         self.hpage_ctrl = PageController()
         self.hpage_ctrl.sig_page_changed.connect(self.horizontal_slice_page_changed)
         self.hlut = pg.HistogramLUTWidget()
@@ -717,60 +714,6 @@ class AtlasView(QObject):
             self.simg.v_line.setVisible(False)
             self.simg.h_line.setVisible(False)
 
-    def coronal_crosshair(self, evt):
-        if self.radio_group.isVisible():
-            return
-        if self.navigation_btn.isChecked():
-            pos = evt[0]
-            if self.cimg.vb.sceneBoundingRect().contains(pos):
-                mouse_point = self.cimg.vb.mapSceneToView(pos)
-                da_pos = [int(mouse_point.x()), int(mouse_point.y())]
-                self.cimg.v_line.setPos(da_pos[0])
-                self.cimg.h_line.setPos(da_pos[1])
-                self.scimg.v_line.setPos(self.current_coronal_index)
-                self.scimg.h_line.setPos(da_pos[1])
-                self.himg.v_line.setPos(da_pos[0])
-                self.himg.h_line.setPos(self.current_coronal_index)
-
-                self.scpage_ctrl.set_val(da_pos[0])
-                self.hpage_ctrl.set_val(da_pos[1])
-
-    def sagital_crosshair(self, evt):
-        if self.radio_group.isVisible():
-            return
-        if self.navigation_btn.isChecked():
-            pos = evt[0]
-            if self.scimg.vb.sceneBoundingRect().contains(pos):
-                mouse_point = self.scimg.vb.mapSceneToView(pos)
-                da_pos = [int(mouse_point.x()), int(mouse_point.y())]
-                self.scimg.v_line.setPos(da_pos[0])
-                self.scimg.h_line.setPos(da_pos[1])
-                self.cimg.v_line.setPos(self.current_sagital_index)
-                self.cimg.h_line.setPos(da_pos[1])
-                self.himg.v_line.setPos(self.current_sagital_index)
-                self.himg.h_line.setPos(da_pos[0])
-
-                self.cpage_ctrl.set_val(da_pos[0])
-                self.hpage_ctrl.set_val(da_pos[1])
-
-    def horizontal_crosshair(self, evt):
-        if self.radio_group.isVisible():
-            return
-        if self.navigation_btn.isChecked():
-            pos = evt[0]
-            if self.himg.vb.sceneBoundingRect().contains(pos):
-                mouse_point = self.himg.vb.mapSceneToView(pos)
-                da_pos = [int(mouse_point.x()), int(mouse_point.y())]
-                self.himg.v_line.setPos(da_pos[0])
-                self.himg.h_line.setPos(da_pos[1])
-                self.cimg.v_line.setPos(da_pos[0])
-                self.cimg.h_line.setPos(self.current_horizontal_index)
-                self.scimg.v_line.setPos(da_pos[1])
-                self.scimg.h_line.setPos(self.current_horizontal_index)
-
-                self.cpage_ctrl.set_val(da_pos[1])
-                self.scpage_ctrl.set_val(da_pos[0])
-
     def change_opacity_spinbox_value(self):
         val = self.atlas_op_slider.value()
         self.atlas_op_spinbox.setValue(val / 100)
@@ -820,15 +763,6 @@ class AtlasView(QObject):
         ml_plate_md = gl.MeshData(vertexes=ml_plate_verts, faces=self.ml_plate_faces)
         self.ml_plate_mesh.setMeshData(meshdata=ml_plate_md)
         self.get_3d_origin()
-
-    # def sagital_copy_slice_page_changed(self, page_number):
-    #     if self.atlas_data is None or self.atlas_label is None:
-    #         return
-    #     da_atlas_slice = self.atlas_data[:, page_number, :]
-    #     da_atlas_label = self.atlas_label[:, page_number, :]
-    #     da_atlas_contour = self.atlas_boundary['s_contour'][:, page_number, :]
-    #     self.scimg.set_data(da_atlas_slice, da_atlas_label, da_atlas_contour, scale=None)
-    #     self.spage_ctrl.set_val(page_number)
 
     def horizontal_slice_page_changed(self, page_number):
         self.hrotation_ctrl.h_spinbox.setValue(0)

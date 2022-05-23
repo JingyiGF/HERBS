@@ -214,11 +214,10 @@ border-color: rgb(75, 78, 84);</string>
     </property>
     <widget class="QMenu" name="menuSave_Operating_Data">
      <property name="title">
-      <string>Save Operating Data</string>
+      <string>Save Layer</string>
      </property>
-     <addaction name="actionSave_Overlay_Image"/>
-     <addaction name="actionSave_Processed_Image"/>
-     <addaction name="actionSave_Mask_Image"/>
+     <addaction name="actionCurrent_Layer"/>
+     <addaction name="actionAll_Layers"/>
     </widget>
     <widget class="QMenu" name="menuSave_Object">
      <property name="title">
@@ -231,13 +230,6 @@ border-color: rgb(75, 78, 84);</string>
      <addaction name="actionSave_Contours"/>
      <addaction name="actionSave_Drawings"/>
     </widget>
-    <widget class="QMenu" name="menuLoad_Data">
-     <property name="title">
-      <string>Load Operating Data</string>
-     </property>
-     <addaction name="actionOverlay_Image_2"/>
-     <addaction name="actionMask_Image_2"/>
-    </widget>
     <addaction name="actionAtlas"/>
     <addaction name="actionSingle_Image"/>
     <addaction name="separator"/>
@@ -246,8 +238,8 @@ border-color: rgb(75, 78, 84);</string>
     <addaction name="menuSave_Object"/>
     <addaction name="separator"/>
     <addaction name="actionLoad_Project"/>
-    <addaction name="menuLoad_Data"/>
-    <addaction name="actionLoad_Object"/>
+    <addaction name="actionLoad_Layers"/>
+    <addaction name="actionLoad_Objects"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="styleSheet">
@@ -493,7 +485,7 @@ selection-background-color: rgb(50, 50, 50);</string>
   </action>
   <action name="actionDownload">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="text">
     <string>Download Waxholm Rat Atlas ...</string>
@@ -615,7 +607,7 @@ selection-background-color: rgb(50, 50, 50);</string>
     <string>Load Project</string>
    </property>
   </action>
-  <action name="actionLoad_Object">
+  <action name="actionLoad_Objects">
    <property name="text">
     <string>Load Objects</string>
    </property>
@@ -781,6 +773,21 @@ selection-background-color: rgb(50, 50, 50);</string>
   <action name="actionCreate_Slice_Layer">
    <property name="text">
     <string>Create Slice Layer</string>
+   </property>
+  </action>
+  <action name="actionCurrent_Layer">
+   <property name="text">
+    <string>Current Layer</string>
+   </property>
+  </action>
+  <action name="actionLoad_Layers">
+   <property name="text">
+    <string>Load Layers</string>
+   </property>
+  </action>
+  <action name="actionAll_Layers">
+   <property name="text">
+    <string>All Layers</string>
    </property>
   </action>
  </widget>
