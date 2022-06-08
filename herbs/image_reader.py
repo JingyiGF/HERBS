@@ -3,6 +3,7 @@ import cv2
 import tifffile
 import colorsys
 import numpy as np
+import imagecodecs
 
 
 class ImageReader(object):

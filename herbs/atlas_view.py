@@ -340,6 +340,14 @@ class AtlasView(QObject):
         self.slice_tb_size = None
 
         self.slice_image_data = None
+        self.processing_slice = None
+        self.slice_cut = 'Coronal'
+        self.slice_width = 0
+        self.slice_height = 0
+        self.slice_distance = 0
+        self.slice_bregma = []
+        self.slice_boundary_points = []
+        self.slice_info_ready = False
 
         self.label_level = None
 
@@ -353,7 +361,6 @@ class AtlasView(QObject):
         self.right_info = None
         self.vox_size_um = None
         self.Bregma = None
-        self.Lambda = None
         self.rotate_origin_3d = None
         self.origin_3d = None
 
@@ -362,8 +369,8 @@ class AtlasView(QObject):
         self.h_size = None
 
         self.c_rotm_2d = None
-        self.s_rotm = None
-        self.h_rotm = None
+        self.s_rotm_2d = None
+        self.h_rotm_2d = None
 
         self.c_rotm_3d = None
         self.s_rotm_3d = None
@@ -395,23 +402,43 @@ class AtlasView(QObject):
 
         # 3d things
         plate_color = [0.5, 0.5, 0.5, 0.2]
-        self.ap_plate_verts = np.array([[-1, 0, -1.6], [-1, 0, 0.15], [1, 0, 0.15], [1, 0, -1.6]])
+        # self.ap_plate_verts = np.array([[-1, 0, -1.6], [-1, 0, 0.15], [1, 0, 0.15], [1, 0, -1.6]])
+        # self.ap_plate_faces = np.array([[0, 1, 2], [0, 2, 3]])
+        # ap_plate_md = gl.MeshData(vertexes=self.ap_plate_verts, faces=self.ap_plate_faces)
+        # self.ap_plate_mesh = gl.GLMeshItem(meshdata=ap_plate_md, smooth=False, color=plate_color)
+        # self.ap_plate_mesh.setGLOptions('additive')
+        #
+        # self.dv_plate_verts = np.array([[-1, -1.4, 0], [-1, 0.6, 0], [1, 0.6, 0], [1, -1.4, 0]])
+        # self.dv_plate_faces = np.array([[0, 1, 2], [0, 2, 3]])
+        # dv_plate_md = gl.MeshData(vertexes=self.dv_plate_verts, faces=self.dv_plate_faces)
+        # self.dv_plate_mesh = gl.GLMeshItem(meshdata=dv_plate_md, smooth=False, color=plate_color)
+        # self.dv_plate_mesh.setGLOptions('additive')
+        #
+        # self.ml_plate_verts = np.array([[0, -1.4, -1.6], [0, 0.6, -1.6], [0, 0.6, 0.15], [0, -1.4, 0.15]])
+        # self.ml_plate_faces = np.array([[0, 1, 2], [0, 2, 3]])
+        # ml_plate_md = gl.MeshData(vertexes=self.ml_plate_verts, faces=self.ml_plate_faces)
+        # self.ml_plate_mesh = gl.GLMeshItem(meshdata=ml_plate_md, smooth=False, color=plate_color)
+        # self.ml_plate_mesh.setGLOptions('additive')
+
+        self.ap_plate_verts = np.array([[-1, 0, -1], [-1, 0, 1], [1, 0, 1], [1, 0, -1]])
         self.ap_plate_faces = np.array([[0, 1, 2], [0, 2, 3]])
-        self.ap_plate_md = gl.MeshData(vertexes=self.ap_plate_verts, faces=self.ap_plate_faces)
-        self.ap_plate_mesh = gl.GLMeshItem(meshdata=self.ap_plate_md, smooth=False, color=plate_color)
+        ap_plate_md = gl.MeshData(vertexes=self.ap_plate_verts, faces=self.ap_plate_faces)
+        self.ap_plate_mesh = gl.GLMeshItem(meshdata=ap_plate_md, smooth=False, color=plate_color)
         self.ap_plate_mesh.setGLOptions('additive')
 
-        self.dv_plate_verts = np.array([[-1, -1.4, 0], [-1, 0.6, 0], [1, 0.6, 0], [1, -1.4, 0]])
+        self.dv_plate_verts = np.array([[-1, -1, 0], [-1, 1, 0], [1, 1, 0], [1, -1, 0]])
         self.dv_plate_faces = np.array([[0, 1, 2], [0, 2, 3]])
-        self.dv_plate_md = gl.MeshData(vertexes=self.dv_plate_verts, faces=self.dv_plate_faces)
-        self.dv_plate_mesh = gl.GLMeshItem(meshdata=self.dv_plate_md, smooth=False, color=plate_color)
+        dv_plate_md = gl.MeshData(vertexes=self.dv_plate_verts, faces=self.dv_plate_faces)
+        self.dv_plate_mesh = gl.GLMeshItem(meshdata=dv_plate_md, smooth=False, color=plate_color)
         self.dv_plate_mesh.setGLOptions('additive')
 
-        self.ml_plate_verts = np.array([[0, -1.4, -1.6], [0, 0.6, -1.6], [0, 0.6, 0.15], [0, -1.4, 0.15]])
+        self.ml_plate_verts = np.array([[0, -1, -1], [0, 1, -1], [0, 1, 1], [0, -1, 1]])
         self.ml_plate_faces = np.array([[0, 1, 2], [0, 2, 3]])
-        self.ml_plate_md = gl.MeshData(vertexes=self.ml_plate_verts, faces=self.ml_plate_faces)
-        self.ml_plate_mesh = gl.GLMeshItem(meshdata=self.ml_plate_md, smooth=False, color=plate_color)
+        ml_plate_md = gl.MeshData(vertexes=self.ml_plate_verts, faces=self.ml_plate_faces)
+        self.ml_plate_mesh = gl.GLMeshItem(meshdata=ml_plate_md, smooth=False, color=plate_color)
         self.ml_plate_mesh.setGLOptions('additive')
+
+
 
         self.cimg = SliceStacks()  # ap - coronal
         self.cpage_ctrl = PageController()
@@ -590,6 +617,17 @@ class AtlasView(QObject):
 
         # self.lut.sigLookupTableChanged.connect(self.histlut_changed)
         # self.lut.sigLevelsChanged.connect(self.histlut_changed)
+
+    def reset_3d_plates(self):
+        self.ap_plate_verts = np.array([[-1, 0, -1], [-1, 0, 1], [1, 0, 1], [1, 0, -1]])
+        self.ap_plate_faces = np.array([[0, 1, 2], [0, 2, 3]])
+
+        self.dv_plate_verts = np.array([[-1, -1, 0], [-1, 1, 0], [1, 1, 0], [1, -1, 0]])
+        self.dv_plate_faces = np.array([[0, 1, 2], [0, 2, 3]])
+
+        self.ml_plate_verts = np.array([[0, -1, -1], [0, 1, -1], [0, 1, 1], [0, -1, 1]])
+        self.ml_plate_faces = np.array([[0, 1, 2], [0, 2, 3]])
+
     def set_slice_data(self, slice_data):
         self.slice_image_data = slice_data.copy()
         self.slice_stack.set_data(slice_data)
@@ -605,7 +643,63 @@ class AtlasView(QObject):
         self.working_atlas.image_dict['tri_pnts'].set_range(x_range=self.slice_size[1] - 1,
                                                             y_range=self.slice_size[0] - 1)
 
+    def set_slice_info(self, slice_info):
+        self.slice_cut = slice_info.cut
+        self.slice_width = slice_info.width
+        self.slice_height = slice_info.height
+        self.slice_distance = slice_info.distance
+        if self.slice_height == 0 or self.slice_width == 0 or self.slice_distance == 0 or not self.slice_bregma:
+            self.slice_info_ready = False
+        else:
+            self.slice_info_ready = True
+
+    def save_slice_data_and_info(self):
+        data = {'data': self.slice_image_data,
+                'cut': self.slice_cut,
+                'width': self.slice_width,
+                'heigth': self.slice_height,
+                'distance': self.slice_distance,
+                'Bregma': self.slice_bregma}
+        return data
+
+    def set_slice_data_and_info(self, slice_data):
+        img_data = slice_data['data'].copy()
+        self.slice_cut = slice_data['cut']
+        self.slice_width = slice_data['width']
+        self.slice_height = slice_data['height']
+        self.slice_distance = slice_data['distance']
+        self.slice_bregma = slice_data['Bregma']
+        self.set_slice_data(img_data)
+
+    def get_slice_coords(self, ruler_data):
+        x, y, z = get_slice_atlas_coord(ruler_data, self.slice_cut, self.slice_size,
+                                        self.slice_width, self.slice_height, self.slice_distance, self.slice_bregma)
+        return x, y, z
+
+    def check_info_ready(self):
+        if self.slice_height == 0 or self.slice_width == 0 or self.slice_distance == 0:
+            self.slice_info_ready = False
+        else:
+            self.slice_info_ready = True
+
+
+
+    def clear_slice_info(self):
+        if self.slice_image_data is not None:
+            self.slice_cut = 'Coronal'
+            self.slice_width = 0
+            self.slice_height = 0
+            self.slice_distance = 0
+            self.slice_bregma = []
+            self.slice_info_ready = False
+        else:
+            return
+
     def set_data(self, atlas_data, atlas_label, atlas_info, label_info, boundaries):
+        if self.atlas_data is not None:
+            print('sdfsdfd')
+            self.reset_3d_plates()
+
         self.atlas_data = atlas_data
         self.atlas_label = atlas_label
         self.label_info = label_info
@@ -617,12 +711,15 @@ class AtlasView(QObject):
         self.dorsal_info = atlas_info[1]
         self.right_info = atlas_info[2]
         self.vox_size_um = atlas_info[3]['vxsize']
-        inverse_b2 = self.atlas_size[0] - atlas_info[3]['Bregma'][2]
-        self.Bregma = (inverse_b2, atlas_info[3]['Bregma'][0], atlas_info[3]['Bregma'][1])
-        inverse_l2 = self.atlas_size[0] - atlas_info[3]['Lambda'][2]
-        self.Lambda = (inverse_l2, atlas_info[3]['Lambda'][0], atlas_info[3]['Lambda'][1])
-        self.rotate_origin_3d = np.array(atlas_info[3]['Bregma'])
-        self.origin_3d = np.array(atlas_info[3]['Bregma'])
+
+        if np.all(np.ravel(atlas_info[3]['Bregma']) == 0):
+            da_bregma = (int(self.atlas_size[1] / 2), int(self.atlas_size[2] / 2), int(self.atlas_size[0] / 2))
+        else:
+            da_bregma = atlas_info[3]['Bregma']
+        inverse_b2 = self.atlas_size[0] - 1 - da_bregma[2]
+        self.Bregma = (inverse_b2, da_bregma[0], da_bregma[1])
+        self.rotate_origin_3d = np.array(da_bregma)
+        self.origin_3d = np.array(da_bregma)
 
         self.current_coronal_index = self.origin_3d[1]
         self.current_sagital_index = self.origin_3d[0]
@@ -631,9 +728,24 @@ class AtlasView(QObject):
         self.cpage_ctrl.set_max(self.atlas_size[2] - 1)
         self.spage_ctrl.set_max(self.atlas_size[1] - 1)
         self.hpage_ctrl.set_max(self.atlas_size[0] - 1)
-        self.cpage_ctrl.set_val(self.current_coronal_index)
-        self.spage_ctrl.set_val(self.current_sagital_index)
-        self.hpage_ctrl.set_val(self.current_horizontal_index)
+
+        if self.current_coronal_index == 0:
+            self.coronal_slice_page_changed(self.current_coronal_index)
+            self.cpage_ctrl.page_label.setText('0')
+        else:
+            self.cpage_ctrl.set_val(self.current_coronal_index)
+
+        if self.current_sagital_index == 0:
+            self.sagital_slice_page_changed(self.current_sagital_index)
+            self.spage_ctrl.page_label.setText('0')
+        else:
+            self.spage_ctrl.set_val(self.current_sagital_index)
+
+        if self.current_horizontal_index == 0:
+            self.horizontal_slice_page_changed(self.current_horizontal_index)
+            self.hpage_ctrl.page_label.setText('0')
+        else:
+            self.hpage_ctrl.set_val(self.current_horizontal_index)
 
         self.cimg.label_img.setLevels(levels=[0, self.label_tree.label_level])
         self.simg.label_img.setLevels(levels=[0, self.label_tree.label_level])
@@ -664,16 +776,27 @@ class AtlasView(QObject):
     def update_3d_plate_component(self):
         self.ap_plate_verts[:, 0] = self.ap_plate_verts[:, 0] * self.atlas_size[1] * 0.5
         self.ap_plate_verts[:, 2] = self.ap_plate_verts[:, 2] * self.atlas_size[0] * 0.5
-        ap_plate_md = gl.MeshData(vertexes=self.ap_plate_verts, faces=self.ap_plate_faces)
-        self.ap_plate_mesh.setMeshData(meshdata=ap_plate_md)
 
         self.dv_plate_verts[:, 0] = self.dv_plate_verts[:, 0] * self.atlas_size[1] * 0.5
         self.dv_plate_verts[:, 1] = self.dv_plate_verts[:, 1] * self.atlas_size[2] * 0.5
-        dv_plate_md = gl.MeshData(vertexes=self.dv_plate_verts, faces=self.dv_plate_faces)
-        self.dv_plate_mesh.setMeshData(meshdata=dv_plate_md)
 
         self.ml_plate_verts[:, 1] = self.ml_plate_verts[:, 1] * self.atlas_size[2] * 0.5
         self.ml_plate_verts[:, 2] = self.ml_plate_verts[:, 2] * self.atlas_size[0] * 0.5
+
+        z_slide_dist = (self.atlas_size[0] * 0.5 - self.origin_3d[2])
+        y_slide_dist = (self.atlas_size[2] * 0.5 - self.origin_3d[1])
+        x_slide_dist = (self.atlas_size[1] * 0.5 - self.origin_3d[0])
+
+        self.ap_plate_verts = self.ap_plate_verts + np.array([x_slide_dist, 0, z_slide_dist])
+        self.dv_plate_verts = self.dv_plate_verts + np.array([x_slide_dist, y_slide_dist, 0])
+        self.ml_plate_verts = self.ml_plate_verts + np.array([0, y_slide_dist, z_slide_dist])
+
+        ap_plate_md = gl.MeshData(vertexes=self.ap_plate_verts, faces=self.ap_plate_faces)
+        self.ap_plate_mesh.setMeshData(meshdata=ap_plate_md)
+
+        dv_plate_md = gl.MeshData(vertexes=self.dv_plate_verts, faces=self.dv_plate_faces)
+        self.dv_plate_mesh.setMeshData(meshdata=dv_plate_md)
+
         ml_plate_md = gl.MeshData(vertexes=self.ml_plate_verts, faces=self.ml_plate_faces)
         self.ml_plate_mesh.setMeshData(meshdata=ml_plate_md)
 
@@ -746,7 +869,6 @@ class AtlasView(QObject):
     def sagital_slice_page_changed(self, page_number):
         self.srotation_ctrl.h_spinbox.setValue(0)
         self.srotation_ctrl.v_spinbox.setValue(0)
-        # self.scpage_ctrl.set_val(page_number)
         if self.atlas_data is None or self.atlas_label is None:
             return
         self.current_sagital_index = page_number
@@ -754,9 +876,6 @@ class AtlasView(QObject):
         da_atlas_label = self.atlas_label[:, page_number, :]
         da_atlas_contour = self.atlas_boundary['s_contour'][:, page_number, :]
         self.simg.set_data(da_atlas_slice, da_atlas_label, da_atlas_contour, scale=None)
-        # self.scimg.set_data(da_atlas_slice, da_atlas_label, da_atlas_contour, scale=None)
-        # if self.scpage_ctrl.page_slider.value() != page_number:
-        #     self.scpage_ctrl.set_val(page_number)
 
         slide_dist = (page_number - self.origin_3d[0])
         ml_plate_verts = self.ml_plate_verts + np.array([slide_dist, 0, 0])
@@ -770,7 +889,7 @@ class AtlasView(QObject):
         if self.atlas_data is None or self.atlas_label is None:
             return
         self.current_horizontal_index = page_number
-        slice_number = self.atlas_size[0] - page_number
+        slice_number = self.atlas_size[0] - 1 - page_number
         da_atlas_slice = self.atlas_data[slice_number, :, :]
         da_atlas_label = self.atlas_label[slice_number, :, :]
         da_atlas_contour = self.atlas_boundary['h_contour'][slice_number, :, :]
@@ -848,15 +967,15 @@ class AtlasView(QObject):
 
         z_angle = rads[0]
         y_angle = rads[1]
-        self.s_rotm = np.dot(rotation_x(z_angle), rotation_z(y_angle))
+        self.s_rotm_2d = np.dot(rotation_x(z_angle), rotation_z(y_angle))
 
         o_val = np.array([0, s_id, 0])
         o_rot = np.array([h_id, s_id, c_id])
 
-        oz_vector = np.dot(self.s_rotm, np.array([1, 0, 0]))
-        oy_vector = np.dot(self.s_rotm, np.array([0, 0, 1]))
+        oz_vector = np.dot(self.s_rotm_2d, np.array([1, 0, 0]))
+        oy_vector = np.dot(self.s_rotm_2d, np.array([0, 0, 1]))
 
-        oval_new = o_rot + np.dot(self.s_rotm, o_val - o_rot)
+        oval_new = o_rot + np.dot(self.s_rotm_2d, o_val - o_rot)
 
         oy_length = self.atlas_size[2]
         oz_length = self.atlas_size[0]
@@ -891,15 +1010,15 @@ class AtlasView(QObject):
 
         x_angle = rads[0]
         y_angle = rads[1]
-        self.h_rotm = np.dot(rotation_z(y_angle), rotation_y(x_angle))
+        self.h_rotm_2d = np.dot(rotation_z(y_angle), rotation_y(x_angle))
 
         o_val = np.array([h_id, 0, 0])
         o_rot = np.array([h_id, s_id, c_id])
 
-        ox_vector = np.dot(self.h_rotm, np.array([0, 1, 0]))
-        oy_vector = np.dot(self.h_rotm, np.array([0, 0, 1]))
+        ox_vector = np.dot(self.h_rotm_2d, np.array([0, 1, 0]))
+        oy_vector = np.dot(self.h_rotm_2d, np.array([0, 0, 1]))
 
-        oval_new = o_rot + np.dot(self.h_rotm, o_val - o_rot)
+        oval_new = o_rot + np.dot(self.h_rotm_2d, o_val - o_rot)
 
         oy_length = self.atlas_size[2]
         ox_length = self.atlas_size[1]
@@ -920,88 +1039,37 @@ class AtlasView(QObject):
         self.dv_plate_mesh.setMeshData(meshdata=dv_plate_md)
 
     def get_atlas_angles(self):
-        c_ang = (self.crotation_ctrl.h_slider.value(), self.crotation_ctrl.v_slider.value())
-        s_ang = (self.srotation_ctrl.h_slider.value(), self.srotation_ctrl.v_slider.value())
-        h_ang = (self.hrotation_ctrl.h_slider.value(), self.hrotation_ctrl.v_slider.value())
+        c_ang = (self.crotation_ctrl.h_spinbox.value(), self.crotation_ctrl.v_spinbox.value())
+        s_ang = (self.srotation_ctrl.h_spinbox.value(), self.srotation_ctrl.v_spinbox.value())
+        h_ang = (self.hrotation_ctrl.h_spinbox.value(), self.hrotation_ctrl.v_spinbox.value())
         return [c_ang, s_ang, h_ang]
-    # def labels_changed(self):
-    #     # reapply label colors
-    #     lut = self.label_tree.lookup_table()
-    #     self.scimg.label_img.setImage(lut=lut)
-    #     self.cimg.label_img.setImage(lut=lut)
-    #     self.simg.label_img.setImage(lut=lut)
-    #     self.himg.label_img.setImage(lut=lut)
-    #     self.sig_label_changed.emit(lut)
 
-    # def labels_changed(self):
-    #     # reapply label colors
-    #     lut = self.acontrols.atlas_view.label_tree.lookup_table()
-    #     self.acontrols.atlas_view.simg_copy.label_img.setImage(lut=lut)
-    #     self.acontrols.atlas_view.cimg.label_img.setImage(lut=lut)
-    #     self.acontrols.atlas_view.simg.label_img.setImage(lut=lut)
-    #     self.acontrols.atlas_view.himg.label_img.setImage(lut=lut)
-    #     # self.sig_label_changed.emit(lut)
-    #     check_id = list(self.acontrols.atlas_view.label_tree.checked())
-    #     if len(self.working_mesh) != 0:
-    #         for i in range(len(self.working_mesh)):
-    #             self.view3d.removeItem(self.working_mesh[i])
-    #
-    #     for i in range(len(check_id)):
-    #         id = check_id[i]
-    #         self.working_mesh[i] = self.small_mesh_list[str(id)]
-    #
-    #         self.view3d.addItem(self.working_mesh[i])
+    def set_volume_atlas_ctrl_data(self, atlas_ctrl_data):
+        self.cpage_ctrl.page_slider.setValue(atlas_ctrl_data['coronal_index'])
+        self.spage_ctrl.page_slider.setValue(atlas_ctrl_data['sagittal_index'])
+        self.hpage_ctrl.page_slider.setValue(atlas_ctrl_data['horizontal_index'])
+        atlas_rotation = atlas_ctrl_data['slice_rotation']
+        self.crotation_ctrl.h_spinbox.setValue(atlas_rotation[0][0])
+        self.crotation_ctrl.v_spinbox.setValue(atlas_rotation[0][1])
+        self.srotation_ctrl.h_spinbox.setValue(atlas_rotation[1][0])
+        self.srotation_ctrl.v_spinbox.setValue(atlas_rotation[1][1])
+        self.hrotation_ctrl.h_spinbox.setValue(atlas_rotation[2][0])
+        self.hrotation_ctrl.v_spinbox.setValue(atlas_rotation[2][1])
+
+    def clear_atlas_stacks(self):
+
+        valid_keys = ['atlas-overlay', 'atlas-contour', 'atlas-mask', 'circle_follow', 'lasso_path', 'atlas-virus',
+                      'atlas-probe', 'atlas-cells', 'atlas-drawing']
+
+        for da_key in valid_keys:
+            self.working_atlas.image_dict[da_key].clear()
+
+    def clear_atlas(self):
+        self.cimg.img.clear()
+        self.simg.img.clear()
+        self.himg.img.clear()
+
+    # def clear_label_tree(self):
 
 
-    #
-    # def display_ctrl_changed(self, param, changes):
-    #     update = False
-    #     for param, change, value in changes:
-    #         if param.name() == 'Composition':
-    #             self.set_overlay(value)
-    #         elif param.name() == 'Opacity':
-    #             self.set_label_opacity(value)
-    #         elif param.name() == 'Interpolate':
-    #             self.set_interpolation(value)
-    #         else:
-    #             update = True
-    #     if update:
-    #         self.update_image_data()
-    #
 
-    # def angle_slider_changed(self):
-    #     # rotation = self.angle_slider.value()
-    #     # self.set_rotation_roi(self.img1.atlas_img, rotation)
-    #     self.update_slice_image()
-
-    def close(self):
-        self.data = None
-    #
-    # def set_overlay(self, o):
-    #     self.cimg.set_overlay(o)
-    #     self.simg.set_overlay(o)
-    #     self.himg.set_overlay(o)
-    #     self.simg_copy.set_overlay(o)
-
-    #     self.img2.set_overlay(o)
-    #
-    # def set_label_opacity(self, o):
-    #     self.cimg.set_label_opacity(o)
-    #     self.simg.set_label_opacity(o)
-    #     self.himg.set_label_opacity(o)
-    #     self.simg_copy.set_label_opacity(o)
-
-    # def set_interpolation(self, interp):
-    #     assert isinstance(interp, bool)
-    #     self.interpolate = interp
-    #
-    # def set_label_lut(self, lut):
-    #     self.cimg.set_lut(lut)
-    #     self.simg.set_lut(lut)
-    #     self.himg.set_lut(lut)
-    #     self.simg_copy.set_lut(lut)
-
-    # def histlut_changed(self):
-    #     # note: img1 is updated automatically; only bneed to update img2 to match
-    #     self.img2.atlas_img.setLookupTable(self.lut.getLookupTable(n=256))
-    #     self.img2.atlas_img.setLevels(self.lut.getLevels())

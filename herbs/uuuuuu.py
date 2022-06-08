@@ -459,11 +459,11 @@ def merge_channels_into_single_img(czi_img, channel_colors):
     return merged_img
 
 
-def make_color_lut(channel_color: tuple):
+def make_color_lut(channel_color: tuple, bit_level: int):
     r, g, b = colorsys.hsv_to_rgb(channel_color[0], channel_color[1], channel_color[2])
     colors = [(0, 0, 0), (r * 255, g * 255, b * 255)]
     color_map = pg.ColorMap(pos=[0, 1], color=colors)
-    da_lut = color_map.getLookupTable(nPts=65536, mode=pg.ColorMap.FLOAT)
+    da_lut = color_map.getLookupTable(nPts=bit_level, mode=pg.ColorMap.FLOAT)
     da_lut = da_lut * 255
     return da_lut
 
@@ -937,36 +937,22 @@ def render_volume(atlas_data, atlas_folder, factor=2, level=0.1):
     pickle.dump(md, outfile)
     outfile.close()
 
-    return
+    return md
 
 
-def render_small_volume(atlas_data, atlas_label, atlas_folder, factor=2, level=0.1):
-    # small_verts_list = {}
-    # small_faces_list = {}
-    small_meshdata_list = {}
+def render_small_volume(label_id, save_path, atlas_data, atlas_label, factor=2, level=0.1):
+    temp_atlas = atlas_data.copy()
+    temp_atlas[atlas_label != label_id] = 0
+    pimg = np.ascontiguousarray(temp_atlas[::factor, ::factor, ::factor])
+    verts, faces = pg.isosurface(ndi.gaussian_filter(pimg.astype('float64'), (2, 2, 2)), np.max(temp_atlas) * level)
+    # small_verts_list[str(id)] = verts
+    # small_faces_list[str(id)] = faces
 
-    all_unique_label = np.unique(atlas_label)
+    md = gl.MeshData(vertexes=verts * factor, faces=faces)
 
-    for id in all_unique_label:
-        id = int(id)
-        print(id)
-        if id == 0:
-            continue
-        temp_atlas = atlas_data.copy()
-        temp_atlas[atlas_label != id] = 0
-        pimg = np.ascontiguousarray(temp_atlas[::factor, ::factor, ::factor])
-        verts, faces = pg.isosurface(ndi.gaussian_filter(pimg.astype('float64'), (2, 2, 2)), np.max(temp_atlas) * level)
-        # small_verts_list[str(id)] = verts
-        # small_faces_list[str(id)] = faces
-
-        md = gl.MeshData(vertexes=verts * factor, faces=faces)
-
-        small_meshdata_list[str(id)] = md
-
-    outfile = open(os.path.join(atlas_folder, 'atlas_small_meshdata.pkl'), 'wb')
-    pickle.dump(small_meshdata_list, outfile)
+    outfile = open(os.path.join(save_path, '{}.pkl'.format(label_id)), 'wb')
+    pickle.dump(md, outfile)
     outfile.close()
-    return
 
 
 def get_statusbar_style(col):
@@ -1115,3 +1101,80 @@ def color_vis_img(img, color):
     return temp
 
 
+def check_loaded_project(project_dict):
+    all_keys = list(project_dict.keys())
+    valid_keys = ['atlas_path', 'current_atlas', 'num_windows', 'probe_type', 'np_onside', 'processing_slice',
+                  'processing_img', 'overlay_img', 'atlas_control', 'img_ctrl_data', 'setting_data', 'tool_data',
+                  'layer_data', 'working_img_data', 'working_atlas_data','object_data']
+    valid_project = True
+    for da_key in all_keys:
+        if da_key not in valid_keys:
+            valid_project = Fasle
+    return valid_project
+
+
+def check_bounding_contains(points, size):
+    if np.any(points[:, 0] > size[1]) or np.any(points[:, 1] > size[0]):
+        return False
+    else:
+        return True
+
+
+def obj_data_to_mesh3d(filename):
+    vertices = []
+    faces = []
+
+    with open(filename, 'r') as objf:
+        for line in objf:
+            slist = line.split()
+            if slist:
+                if slist[0] == 'v':
+                    vertex = np.array(slist[1:], dtype=float)
+                    vertices.append(vertex)
+                elif slist[0] == 'f':
+                    face = []
+                    for k in range(1, len(slist)):
+                        face.append([int(s) for s in slist[k].replace('//', '/').split('/')])
+                    if len(face) > 3:  # triangulate the n-polyonal face, n>3
+                        faces.extend(
+                            [[face[0][0] - 1, face[k][0] - 1, face[k + 1][0] - 1] for k in range(1, len(face) - 1)])
+                    else:
+                        faces.append([face[j][0] - 1 for j in range(len(face))])
+                else:
+                    pass
+
+    return np.array(vertices), np.array(faces)
+
+
+def make_atlas_label_contour(atlas_folder, segmentation_data):
+    sagital_contour_img = np.zeros(segmentation_data.shape, 'i')
+    coronal_contour_img = np.zeros(segmentation_data.shape, 'i')
+    horizontal_contour_img = np.zeros(segmentation_data.shape, 'i')
+
+    # pre-process boundary
+    for i in range(len(segmentation_data)):
+        da_slice = segmentation_data[i, :, :].copy()
+        contour_img = make_contour_img(da_slice)
+        sagital_contour_img[i, :, :] = contour_img
+
+    for i in range(segmentation_data.shape[1]):
+        da_slice = segmentation_data[:, i, :].copy()
+        contour_img = make_contour_img(da_slice)
+        coronal_contour_img[:, i, :] = contour_img
+
+    for i in range(segmentation_data.shape[2]):
+        da_slice = segmentation_data[:, :, i].copy()
+        contour_img = make_contour_img(da_slice)
+        horizontal_contour_img[:, :, i] = contour_img
+
+    boundary = {'s_contour': sagital_contour_img,
+                'c_contour': coronal_contour_img,
+                'h_contour': horizontal_contour_img}
+
+    bnd = {'data': boundary}
+
+    outfile_ct = open(os.path.join(atlas_folder, 'contour_pre_made.pkl'), 'wb')
+    pickle.dump(bnd, outfile_ct)
+    outfile_ct.close()
+
+    return boundary

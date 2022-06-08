@@ -259,14 +259,20 @@ class ChannelSelector(QWidget):
 
     def change_vis(self):
         if self.vis_btn.isChecked():
-            self.vis = False
+            self.set_checked(True)
+        else:
+            self.set_checked(False)
+        self.sig_vis_channels.emit(self.vis, self.index)
+
+    def set_checked(self, is_checked):
+        if is_checked:
             self.color_label.setVisible(True)
             self.color_combo.setVisible(False)
+            self.vis = False
         else:
-            self.vis = True
             self.color_label.setVisible(False)
             self.color_combo.setVisible(True)
-        self.sig_vis_channels.emit(self.vis, self.index)
+            self.vis = True
 
     def selection_change(self):
         da_index = self.color_combo.currentIndex()
@@ -283,5 +289,3 @@ class ChannelSelector(QWidget):
     def delete_item(self):
         self.color_combo.hsv_color_list.pop()
         self.color_combo.removeItem(len(self.color_combo.hsv_color_list)-1)
-
-

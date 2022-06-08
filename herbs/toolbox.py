@@ -27,7 +27,7 @@ class ToolBox(QObject):
         self.remove_inside = True
 
         # action version
-        self.add_atlas = QAction(QIcon('icons/toolbar/atlas_icon.png'), 'Upload Waxholm Rat Brain Atlas', self)
+        self.add_atlas = QAction(QIcon('icons/toolbar/atlas_icon.png'), 'Upload Previous Loaded Volume Atlas', self)
         self.add_image_stack = QAction(QIcon('icons/toolbar/image_icon.svg'), 'upload histological image', self)
 
         self.vis2 = QAction(QIcon('icons/toolbar/two_window.png'), 'show 2 windows', self)
@@ -474,29 +474,27 @@ class ToolBox(QObject):
     def get_tool_data(self):
         data = {'pencil_color': self.pencil_color_btn.color(),
                 'pencil_size': self.pencil_size_valt.text(),
-                'eraser_color': self.eraser_color_btn.color(),
-                'eraser_size': self.eraser_size_valt.text(),
                 'magic_wand_color': self.magic_color_btn.color(),
                 'magic_wand_tol': self.magic_tol_val.text(),
                 'magic_wand_kernel': self.magic_wand_kernel.currentText(),
                 'magic_wand_ksize': self.magic_wand_ksize.value(),
                 'probe_color': self.probe_color_btn.color(),
-                'triangle_color': self.triang_color_btn.color(),
-                'cell_color': self.cell_color_btn.color()}
+                'cell_color': self.cell_color_btn.color(),
+                'is_closed': self.is_closed}
         return data
 
     def set_tool_data(self, data):
         self.pencil_color_btn.setColor(data['pencil_color'])
-        self.pencil_size_valt.setText(data['pencil_size'])
-        self.eraser_color_btn.setColor(data['eraser_color'])
-        self.eraser_size_valt.setText(data['eraser_size'])
+        self.pencil_size_valt.setText(str(data['pencil_size']))
+        self.pencil_path_btn.setChecked(data['is_closed'])
         self.magic_color_btn.setColor(data['magic_wand_color'])
-        self.magic_tol_val.setText(data['magic_wand_tol'])
-        self.magic_wand_kernel.setCurrentText(data['magic_wand_kernel'])
+        self.magic_tol_val.setText(str(data['magic_wand_tol']))
         self.magic_wand_ksize.setValue(data['magic_wand_ksize'])
+        self.magic_wand_kernel.setCurrentText(data['magic_wand_kernel'])
         self.probe_color_btn.setColor(data['probe_color'])
-        self.triang_color_btn.setColor(data['triangle_color'])
         self.cell_color_btn.setColor(data['cell_color'])
+
+
 
 
 

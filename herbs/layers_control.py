@@ -100,6 +100,7 @@ class SingleLayer(QWidget):
         self.link = link
         self.active = True
         self.vis = True
+        self.thumbnail_data = None
         self.eye_button = QPushButton()
         self.eye_button.setFixedSize(QSize(30, 60))
         self.eye_button.setStyleSheet(eye_button_style)
@@ -116,18 +117,18 @@ class SingleLayer(QWidget):
         self.tbnail.setFixedWidth(50)
         self.tbnail.clicked.connect(self.on_click)
 
-        self.text_btn = QDoubleButton()
+        self.text_btn = QPushButton()
         self.text_btn.setStyleSheet(text_btn_style)
         self.text_btn.setText(link)
         self.text_btn.setFixedSize(QSize(140, 60))
-        self.text_btn.left_clicked.connect(self.on_click)
-        self.text_btn.double_clicked.connect(self.on_doubleclick)
+        self.text_btn.clicked.connect(self.on_click)
+        # self.text_btn.double_clicked.connect(self.on_doubleclick)
 
-        self.l_line_edit = QLineEdit()
-        self.l_line_edit.setStyleSheet(line_edit_style)
-        self.l_line_edit.setFixedSize(QSize(140, 60))
-        self.l_line_edit.editingFinished.connect(self.enter_pressed)
-        self.l_line_edit.setVisible(False)
+        # self.l_line_edit = QLineEdit()
+        # self.l_line_edit.setStyleSheet(line_edit_style)
+        # self.l_line_edit.setFixedSize(QSize(140, 60))
+        # self.l_line_edit.editingFinished.connect(self.enter_pressed)
+        # self.l_line_edit.setVisible(False)
 
         self.trash_button = QPushButton()
         self.trash_button.setFixedSize(QSize(25, 60))
@@ -147,7 +148,7 @@ class SingleLayer(QWidget):
         self.inner_layout.addWidget(self.tbnail)
         self.inner_layout.addSpacing(5)
         self.inner_layout.addWidget(self.text_btn)
-        self.inner_layout.addWidget(self.l_line_edit)
+        # self.inner_layout.addWidget(self.l_line_edit)
         self.inner_layout.addWidget(self.trash_button)
         self.inner_layout.addStretch()
 
@@ -178,24 +179,24 @@ class SingleLayer(QWidget):
             self.vis = True
         self.tbnail.setEnabled(self.vis)
         self.text_btn.setEnabled(self.vis)
-        self.l_line_edit.setEnabled(self.vis)
+        # self.l_line_edit.setEnabled(self.vis)
         self.eye_clicked.emit((self.id, self.link, self.vis))
 
     def on_delete(self):
         self.sig_delete.emit(self.id)
 
-    @pyqtSlot()
-    def on_doubleclick(self):
-        self.l_line_edit.setText(self.text_btn.text())
-        self.l_line_edit.setVisible(True)
-        self.text_btn.setVisible(False)
-        self.l_line_edit.setFocus(True)
-        self.on_click()
-
-    def enter_pressed(self):
-        self.l_line_edit.setVisible(False)
-        self.text_btn.setText(self.l_line_edit.text())
-        self.text_btn.setVisible(True)
+    # @pyqtSlot()
+    # def on_doubleclick(self):
+    #     self.l_line_edit.setText(self.text_btn.text())
+    #     self.l_line_edit.setVisible(True)
+    #     self.text_btn.setVisible(False)
+    #     self.l_line_edit.setFocus(True)
+    #     self.on_click()
+    #
+    # def enter_pressed(self):
+    #     self.l_line_edit.setVisible(False)
+    #     self.text_btn.setText(self.l_line_edit.text())
+    #     self.text_btn.setVisible(True)
 
     def set_thumbnail_data(self, thumbnail_data):
         if len(thumbnail_data.shape) == 2:
@@ -206,6 +207,8 @@ class SingleLayer(QWidget):
             im[:, :, 2] = thumbnail_data
         else:
             im = thumbnail_data.astype('uint8')
+
+        self.thumbnail_data = im.copy()
 
         im_shape = np.ravel(im.shape[:2])
 
@@ -457,17 +460,19 @@ class LayersControl(QWidget):
         return data
 
     def set_layer_data(self, data):
-        self.layer_list = data['layer_list']
-        self.layer_id = data['layer_id']
         self.layer_link = data['layer_link']
         self.layer_color = data['layer_color']
+
+        for i in range(len(data['layer_link'])):
+            self.add_layer(data['layer_link'][i], data['layer_color'][i])
+            self.layer_link[-1].set_thumbnail_data(data['layer_tbnail'][i])
+
         self.layer_opacity = data['layer_opacity']
         self.layer_blend_mode = data['layer_blend_mode']
-        self.layer_count = data['layer_count']
         self.current_layer_index = data['current_layer_index']
-
-        for i in range(len(self.layer_list)):
-            self.layer_layout.addWidget(self.layer_list[i])
+        self.layer_link[-1].set_checked(False)
+        for i in range(len(self.current_layer_index)):
+            self.layer_link[i].set_checked(True)
 
     def clear_all(self):
         ind = np.arange(len(self.layer_list))[::-1]

@@ -194,65 +194,107 @@ class CurvesPlot(pg.PlotWidget):
         self.scene().sigMouseClicked.connect(self.on_mouse_clicked)
 
         self.adding_allowed = False
-        self.pnts = None
+        self.enable_channel = [False, False, False, False]
         self.line_type = 'gamma'
         self.depth_level = 65535
-        self.start_point = np.array([0, 0])
-        self.end_point = np.array([self.depth_level, self.depth_level])
+        self.start_point = [np.array([0, 0]) for i in range(4)]
+        self.end_point = [np.array([self.depth_level, self.depth_level]) for i in range(4)]
         self.table_input = np.arange(self.depth_level + 1)
-        self.table_output = np.arange(self.depth_level + 1)
-        self.hist_data = []
+        self.hist_data = None
+        self.active_index = None
+
+        self.inactive_pen = pg.mkPen(QColor(128, 128, 128, 255), width=3)
+        self.inactive_brush = QColor(128, 128, 128, 10)
+
+        self.active_pen = []
+        self.active_brush = []
 
         self.hist_list = []
+        self.lut_line = []
+        self.lut_points = []
         for i in range(4):
             self.hist_list.append(pg.PlotDataItem())
-        self.line = pg.PlotCurveItem(fillLevel=None, pen='k')
-        self.points = MovablePoints()
-        self.points.mouseDragged.connect(self.on_mouse_dragged)
+            self.lut_line.append(pg.PlotCurveItem(fillLevel=None))
+            self.lut_points.append(MovablePoints())
+            self.lut_points[i].mouseDragged.connect(self.on_mouse_dragged)
 
         for i in range(4):
             self.addItem(self.hist_list[i])
-        self.addItem(self.line)
-        self.addItem(self.points)
+        for i in range(4):
+            self.addItem(self.lut_line[i])
+            self.lut_line[i].setVisible(False)
+        for i in range(4):
+            self.addItem(self.lut_points[i])
+            self.lut_points[i].setVisible(False)
 
-    def set_data(self, image_data, color, depth_level):
+    def set_data(self, hist_data, color, depth_level):
         """
         Set data to curve Plot view, only called once there load new data
-        :param image_data: grayscale image data for one scene
+        :param hist_data: grayscale image data for one scene
         :param color: list of rgb [0, 255] for each channel
-        :param gray_max: gray intensity level
+        :param depth_level: gray intensity level
         :return: None
         """
-        if self.pnts is not None:
+        if self.hist_data is not None:
             for i in range(4):
-                self.removeItem(self.hist_list[i])
-                self.hist_list[i] = pg.PlotDataItem()
-                self.addItem(self.hist_list[i])
+                self.hist_list[i].clear()
+                self.lut_line[i].clear()
+                self.lut_points[i]. clear()
+            self.hist_data = None
+
+        if self.depth_level != depth_level:
+            self.start_point = [np.array([0, 0]) for i in range(4)]
+            self.end_point = [np.array([depth_level, depth_level]) for i in range(4)]
+            self.table_input = np.arange(0, depth_level + 1)
+            self.depth_level = depth_level
+
+        self.hist_data = hist_data.copy()
 
         self.plotItem.vb.setRange(xRange=[0, depth_level], yRange=[0, depth_level])
 
-        self.hist_data = make_hist_data(image_data, depth_level)
         for i in range(len(self.hist_data)):
+            self.enable_channel[i] = True
+            self.active_pen.append(pg.mkPen(QColor(color[i][0], color[i][1], color[i][2], 255), width=3))
+            self.active_brush.append((color[i][0], color[i][1], color[i][2], 130))
+            self.hist_list[i].setVisible(True)
             self.hist_list[i].setData(self.hist_data[i][0], self.hist_data[i][1],
-                                      fillLevel=0,
-                                      fillBrush=(color[i][0], color[i][1], color[i][2], 130),
-                                      pen=pg.mkPen(QColor(color[i][0], color[i][1], color[i][2], 255), width=3))
-        if self.depth_level != depth_level:
-            self.start_point = np.array([0, 0])
-            self.end_point = np.array([depth_level, depth_level])
-            self.table_input = np.arange(0, depth_level + 1)
-            self.table_output = np.arange(depth_level + 1)
-            self.depth_level = depth_level
+                                      fillLevel=0, fillBrush=self.active_brush[i], pen=self.active_pen[i])
+            self.start_point[i][0] = np.min(self.hist_data[i][0])
+            self.end_point[i][0] = np.max(self.hist_data[i][0])
 
-        self.pnts = np.vstack([self.start_point, self.end_point])
-        self.line.setData(self.pnts[:, 0], self.pnts[:, 1])
-        self.points.setData(pos=self.pnts)
+            self.set_original_lut_line(i)
 
-    def set_plot(self, points, table):
-        self.pnts = points
-        self.table_output = table
-        self.line.setData(self.table_input, self.table_output)
-        self.points.setData(pos=self.pnts)
+            self.lut_points[i].setData(pos=np.vstack([self.start_point[i], self.end_point[i]]))
+
+    def set_original_lut_line(self, ind):
+        line_x = np.array([self.start_point[ind][0], self.end_point[ind][0]])
+        line_y = np.array([self.start_point[ind][1], self.end_point[ind][1]])
+        self.lut_line[ind].setData(line_x, line_y)
+        self.lut_line[ind].setPen(self.active_pen[ind])
+        self.lut_line[ind].setVisible(True)
+
+    def reset_plot(self):
+        for i in range(len(self.hist_data)):
+            self.set_original_lut_line(i)
+            self.lut_points[i].setData(pos=np.vstack([self.start_point[i], self.end_point[i]]))
+
+    def set_enable(self, ind, is_enable):
+        self.enable_channel[ind] = is_enable
+        if is_enable:
+            self.hist_list[ind].setPen(self.active_pen[ind])
+            self.hist_list[ind].setFillBrush(self.active_brush[ind])
+            self.lut_line[ind].setPen(self.active_pen[ind])
+        else:
+            self.hist_list[ind].setPen(self.inactive_pen)
+            self.hist_list[ind].setFillBrush(self.inactive_brush)
+            self.lut_line[ind].setPen(self.inactive_pen)
+        if np.sum(self.enable_channel) == 1 and self.line_type != 'gamma':
+            self.active_index = np.where(self.enable_channel)[0][0]
+            self.lut_points[self.active_index].setVisible(True)
+        else:
+            if self.active_index is not None:
+                self.lut_points[self.active_index].setVisible(False)
+            self.active_index = None
 
     def change_hist_color(self, color: tuple, ind: int):
         """
@@ -262,58 +304,73 @@ class CurvesPlot(pg.PlotWidget):
         """
         if not self.hist_data:
             return
-        self.hist_list[ind].setFillLevel(0)
         da_hsv = get_qhsv_from_czi_hsv(color)
-        self.hist_list[ind].setBrush(QColor.fromHsv(da_hsv[0], da_hsv[1], da_hsv[2], 130))
-        self.hist_list[ind].setPen(pg.mkPen(QColor.fromHsv(da_hsv[0], da_hsv[1], da_hsv[2], 255), width=3))
+        col = QColor.fromHsv(da_hsv[0], da_hsv[1], da_hsv[2], 255)
+        self.active_pen[ind] = pg.mkPen(col, width=3)
+        self.active_brush[ind] = QColor.fromHsv(da_hsv[0], da_hsv[1], da_hsv[2], 130)
+        self.hist_list[ind].setFillBrush(self.active_brush[ind])
+        self.hist_list[ind].setPen(self.active_pen[ind])
+        self.lut_line[ind].setPen(self.active_pen[ind])
 
-    def set_line_type(self, line_type):
+    def change_line_type(self, line_type):
         self.line_type = line_type
-        self.pnts = np.vstack([self.start_point, self.end_point])
-        self.points.setData(pos=self.pnts)
-        self.line.setData(self.pnts[:, 0], self.pnts[:, 1])
+        self.reset_plot()
+
+    def set_lut_line(self, table_output, ind):
+        self.lut_line[ind].setData(self.table_input, table_output)
+
+    def set_lut_points(self, point_data, ind):
+        self.lut_points[ind].setData(pos=point_data)
+
+    def set_plot(self, points, table):
+        # self.pnts = points
+        # self.table_output = table
+        self.line.setData(self.table_input, table)
+        self.points.setData(pos=points)
 
     def on_mouse_dragged(self, vec):
-        if self.line_type == 'gamma':
+        if self.line_type == 'gamma' or self.active_index is None:
             return
         ind = vec[1]
-        data = self.points.data['pos']
+        data = self.lut_points[self.active_index].data['pos']
         if ind in [0, len(data)-1]:
             return
         else:
-            self.table_output = self.update_table(data)
-            self.line.setData(self.table_input, self.table_output)
-        self.sig_line_change.emit((self.table_output.astype('int'), data))
+            table_output = self.update_table(data)
+            self.lut_line[self.active_index].setData(self.table_input, table_output)
+        self.sig_line_change.emit((table_output.astype('int'), self.active_index))
         # self.pnts = data.copy()
 
     def on_mouse_clicked(self, event):
-        if self.line_type == 'gamma':
+        if self.line_type == 'gamma' or self.active_index is None:
             return
         pnt = self.plotItem.vb.mapSceneToView(event.scenePos())
-        data = self.points.data['pos']
+        data = self.lut_points[self.active_index].data['pos']
         if self.adding_allowed:
             x = pnt.x()
             y = pnt.y()
-            if x <= data[0, 0] or x >= data[-1, 0]:
-                return
-            self.pnts = np.vstack([data, np.array([x, y])])
-            sort_x = np.argsort(self.pnts[:, 0])
-            self.pnts = self.pnts[sort_x, :]
-            self.table_output = self.update_table(self.pnts)
-            self.points.setData(pos=self.pnts)
-            print(self.pnts)
-            self.line.setData(self.table_input, self.table_output)
-            self.sig_line_change.emit((self.table_output.astype('int'), self.pnts))
+            temp = np.vstack([data, np.array([x, y])])
+            sort_x = np.argsort(temp[:, 0])
+            temp = temp[sort_x, :]
+            self.lut_points[self.active_index].setData(pos=temp)
+            table_output = self.update_table(temp)
+            self.lut_line[self.active_index].setData(self.table_input, table_output)
+            self.sig_line_change.emit((table_output.astype('int'), self.active_index))
 
     def on_mouse_moved(self, point):
-        if self.line_type == 'gamma':
+        if self.line_type == 'gamma' or self.active_index is None:
             return
         pnts = self.plotItem.vb.mapSceneToView(point)
-        sct = self.points.scatter.pointsAt(pnts)
-        if self.line.mouseShape().contains(pnts):
+        data = self.lut_points[self.active_index].data['pos']
+        sct = self.lut_points[self.active_index].scatter.pointsAt(pnts)
+        if self.lut_line[self.active_index].mouseShape().contains(pnts):
             if len(sct) == 0:
-                self.setCursor(Qt.CrossCursor)
-                self.adding_allowed = True
+                if data[0, 0] < pnts.x() < data[-1, 0]:
+                    self.setCursor(Qt.CrossCursor)
+                    self.adding_allowed = True
+                else:
+                    self.setCursor(Qt.ArrowCursor)
+                    self.adding_allowed = False
             else:
                 self.setCursor(Qt.OpenHandCursor)
                 self.adding_allowed = False
@@ -344,11 +401,6 @@ class CurvesPlot(pg.PlotWidget):
         temp_output[temp_output >= self.depth_level] = self.depth_level
         return temp_output
 
-    def clear(self):
-        self.points.clear()
-        for i in range(4):
-            self.hist_list[i].clear()
-
 
 class CurveWidget(QWidget):
     class SignalProxy(QObject):
@@ -365,8 +417,14 @@ class CurveWidget(QWidget):
         QWidget.__init__(self)
 
         self.gray_max = 65535
-        self.gamma = 1
-        self.table_output = np.arange(self.gray_max)
+        self.gamma = [1, 1, 1, 1]
+        self.n_channels = None
+        self.table_output = []
+        self.original_table = []
+
+        self.current_black_val = 0
+        self.current_white_val = self.gray_max
+        self.current_width = self.gray_max
 
         self.curve_plot = CurvesPlot()
         self.curve_plot.sig_line_change.connect(self.table_changed)
@@ -451,108 +509,202 @@ class CurveWidget(QWidget):
         widget_layout.addWidget(bottom_wrap)
         self.setLayout(widget_layout)
 
+    def block_signal(self, is_clocked):
+        self.multi_handle_slider.blockSignals(is_clocked)
+        self.white_spinbox.spin_val.blockSignals(is_clocked)
+        self.black_spinbox.spin_val.blockSignals(is_clocked)
+
     def set_data(self, data, color, depth_level):
-        self.curve_plot.set_data(data, color, depth_level)
+        if self.table_output:
+            self.table_output = []
+
         if self.gray_max != depth_level:
             self.gray_max = depth_level
             self.multi_handle_slider.setMaximum(depth_level)
-            self.multi_handle_slider.setValue((0, depth_level))
             self.white_spinbox.spin_val.setMaximum(depth_level)
-            self.white_spinbox.spin_val.setValue(depth_level)
+
+        hist_data = make_hist_data(data, depth_level)
+        self.n_channels = len(hist_data)
+        self.curve_plot.set_data(hist_data, color, depth_level)
+        for i in range(self.n_channels):
+            point_data = np.asarray([self.curve_plot.start_point[i], self.curve_plot.end_point[i]])
+            table = self.get_table(point_data, i)
+            self.table_output.append(table.astype(int))
+        self.original_table = self.table_output.copy()
+        self.set_original_to_slider()
+
+    def set_original_to_slider(self):
+        min_slider_val = np.min(np.asarray(self.curve_plot.start_point)[:, 0])
+        max_slider_val = np.max(np.asarray(self.curve_plot.end_point)[:, 0])
+        self.block_signal(True)
+        self.multi_handle_slider.setValue((min_slider_val, max_slider_val))
+        self.black_spinbox.spin_val.setValue(min_slider_val)
+        self.white_spinbox.spin_val.setValue(max_slider_val)
+        self.block_signal(False)
+        self.current_black_val = min_slider_val
+        self.current_white_val = max_slider_val
+        self.current_width = max_slider_val - min_slider_val
 
     def slider_changed(self, ev):
-        if self.curve_plot.pnts is None:
+        if self.curve_plot.hist_data is None:
             return
-        point_values = self.curve_plot.points.data['pos'].copy()
-        point_values = point_values.astype(int)
-        self.black_spinbox.spin_val.setMaximum(point_values[1, 0] - 1)
-        self.white_spinbox.spin_val.setMinimum(point_values[-2, 0] + 1)
+        # point_values = self.curve_plot.lut_points.data['pos'].copy()
+        # point_values = point_values.astype(int)
+        # self.black_spinbox.spin_val.setMaximum(point_values[1, 0] - 1)
+        # self.white_spinbox.spin_val.setMinimum(point_values[-2, 0] + 1)
         val1 = int(ev[0])
         val2 = int(ev[1])
 
         if val1 != self.black_spinbox.spin_val.value():
-            if val1 >= point_values[1, 0]:
-                val1 = point_values[1, 0] - 1
-                self.multi_handle_slider.setValue((val1, val2))
+            # if val1 >= point_values[1, 0]:
+            #     val1 = point_values[1, 0] - 1
+            #     self.multi_handle_slider.setValue((val1, val2))
             self.black_spinbox.spin_val.setValue(val1)
         if val2 != self.white_spinbox.spin_val.value():
-            if val2 <= point_values[-2, 0]:
-                val2 = point_values[-2, 0] + 1
-                self.multi_handle_slider.setValue((val1, val2))
+            # if val2 <= point_values[-2, 0]:
+            #     val2 = point_values[-2, 0] + 1
+            #     self.multi_handle_slider.setValue((val1, val2))
             self.white_spinbox.spin_val.setValue(val2)
+
+    def get_table(self, point_data, ind):
+        xval = self.curve_plot.table_input
+        if self.curve_plot.line_type == 'gamma':
+            lims = (point_data[0, 0], point_data[-1, 0])
+            table = gamma_line(xval, lims, self.gamma[ind], self.gray_max)
+        else:
+            table = self.curve_plot.update_table(point_data)
+        return table
 
     def gamma_spinbox_changed(self):
         if self.line_type != 'gamma':
             return
-        data = self.curve_plot.points.data['pos'].copy()
-        self.gamma = self.gamma_spinbox.spin_val.value()
-        lims = (data[0, 0], data[-1, 0])
-        self.table_output = gamma_line(self.curve_plot.table_input, lims, self.gamma, self.gray_max)
-        self.curve_plot.set_plot(data, self.table_output)
-        self.sig_table_changed.emit(self.table_output.astype(int))
+        x_val = self.curve_plot.table_input
+        for i in range(len(self.table_output)):
+            if self.curve_plot.enable_channel[i]:
+                self.gamma[i] = self.gamma_spinbox.spin_val.value()
+                data = self.curve_plot.lut_points[i].data['pos'].copy()
+                lims = (data[0, 0], data[-1, 0])
+                table = gamma_line(x_val, lims, self.gamma[i], self.gray_max)
+                self.table_output[i] = table.astype(int)
+                self.curve_plot.set_lut_line(table, i)
+                self.sig_table_changed.emit((self.table_output[i], i))
+
+    def black_side_changed(self, diff_factor, ind):
+        point_data = self.curve_plot.lut_points[ind].data['pos'].copy()
+        da_width = point_data[-1, 0] - point_data[0, 0]
+        dists = int(diff_factor * da_width)
+        point_data[:-1, 0] = dists + point_data[:-1, 0]
+
+        table = self.get_table(point_data, ind)
+        self.table_output[ind] = table.astype(int)
+
+        self.curve_plot.set_lut_points(point_data, ind)
+        self.curve_plot.set_lut_line(table, ind)
+        self.white_spinbox.spin_val.setMinimum(point_data[-2, 0] + 1)
 
     def black_spinbox_changed(self):
-        if self.curve_plot.pnts is None:
+        if self.curve_plot.hist_data is None:
             return
         val = self.black_spinbox.spin_val.value()
-        line_type = self.line_type_combo.currentText()
-        slider_vals = self.multi_handle_slider.value()
-        self.multi_handle_slider.setValue((val, slider_vals[1]))
-        point_values = self.curve_plot.pnts.copy()
-        point_values[0, 0] = val
+        val_diff = val - self.current_black_val
+        diff_factor = val_diff / self.current_width
+        for i in range(len(self.table_output)):
+            if self.curve_plot.enable_channel[i]:
+                self.black_side_changed(diff_factor, i)
+                self.sig_table_changed.emit((self.table_output[i], i))
+        self.current_black_val = val
+        self.current_width = self.current_white_val - self.current_black_val
 
-        xval = self.curve_plot.table_input
-        if line_type == 'gamma':
-            table = gamma_line(xval, (val, slider_vals[1]), self.gamma, self.gray_max)
-        else:
-            table = self.curve_plot.update_table(point_values)
-        self.table_output = table.copy()
-        self.curve_plot.set_plot(point_values, self.table_output)
-        self.sig_table_changed.emit(self.table_output.astype(int))
+    def white_side_changed(self, diff_factor, ind):
+        point_data = self.curve_plot.lut_points[ind].data['pos'].copy()
+        da_width = point_data[-1, 0] - point_data[0, 0]
+        dists = int(diff_factor * da_width)
+        point_data[1:, 0] = dists + point_data[1:, 0]
+
+        table = self.get_table(point_data, ind)
+        self.table_output[ind] = table.astype(int)
+
+        self.curve_plot.set_lut_points(point_data, ind)
+        self.curve_plot.set_lut_line(table, ind)
 
     def white_spinbox_changed(self):
-        if self.curve_plot.pnts is None:
+        if self.curve_plot.hist_data is None:
             return
         val = self.white_spinbox.spin_val.value()
-        line_type = self.line_type_combo.currentText()
-        slider_vals = self.multi_handle_slider.value()
-        self.multi_handle_slider.setValue((slider_vals[0], val))
-        point_values = self.curve_plot.pnts.copy()
-        point_values[-1, 0] = val
+        val_diff = val - self.current_white_val
+        diff_factor = val_diff / self.current_width
 
-        xval = self.curve_plot.table_input
-        if line_type == 'gamma':
-            table = gamma_line(xval, (slider_vals[0], val), self.gamma, self.gray_max)
-        else:
-            table = self.curve_plot.update_table(point_values)
-        self.table_output = table.copy()
-        self.curve_plot.set_plot(point_values, self.table_output)
-        self.sig_table_changed.emit(self.table_output.astype(int))
+        for i in range(len(self.table_output)):
+            if self.curve_plot.enable_channel[i]:
+                self.white_side_changed(diff_factor, i)
+                self.sig_table_changed.emit((self.table_output[i], i))
+        self.current_white_val = val
+        self.current_width = self.current_white_val - self.current_black_val
 
     def table_changed(self, ev):
         table = ev[0]
-        curve_scatter = ev[1].astype(int)
-        self.black_spinbox.spin_val.setMaximum(curve_scatter[1, 0] - 1)
-        self.white_spinbox.spin_val.setMinimum(curve_scatter[-2, 0] + 1)
-        self.sig_table_changed.emit(table)
+        ind = ev[1]
+        # curve_scatter = ev[1].astype(int)
+        # self.black_spinbox.spin_val.setMaximum(curve_scatter[1, 0] - 1)
+        # self.white_spinbox.spin_val.setMinimum(curve_scatter[-2, 0] + 1)
+        self.sig_table_changed.emit((table, ind))
 
     def line_type_changed(self):
         self.line_type = self.line_type_combo.currentText()
-        self.curve_plot.set_line_type(self.line_type)
-        self.black_spinbox.spin_val.setValue(0)
-        self.white_spinbox.spin_val.setValue(self.gray_max)
-        self.multi_handle_slider.setValue((0, self.gray_max))
-        if self.line_type_combo.currentText() != 'gamma':
+        self.curve_plot.change_line_type(self.line_type)
+        self.set_original_to_slider()
+        if self.line_type != 'gamma':
             self.gamma_spinbox.setVisible(False)
         else:
             self.gamma_spinbox.setVisible(True)
+            self.gamma_spinbox.spin_val.blockSignals(True)
             self.gamma_spinbox.spin_val.setValue(1)
+            self.gamma_spinbox.spin_val.blockSignals(False)
         self.sig_line_type_changed.emit()
 
     def reset_pressed(self):
-        self.curve_plot.set_line_type(self.line_type_combo.currentText())
-        self.black_spinbox.spin_val.setValue(0)
-        self.white_spinbox.spin_val.setValue(self.gray_max)
+        self.curve_plot.change_line_type('gamma')
+        self.set_original_to_slider()
+        self.gamma_spinbox.spin_val.blockSignals(True)
         self.gamma_spinbox.spin_val.setValue(1)
-        self.multi_handle_slider.setValue((0, self.gray_max))
+        self.gamma_spinbox.setVisible(True)
+        self.gamma_spinbox.spin_val.blockSignals(False)
         self.sig_reset.emit()
+
+    def set_enable_induced_slider(self):
+        all_start = []
+        all_end = []
+        for i in range(self.n_channels):
+            all_start.append(self.curve_plot.lut_points[i].data['pos'][0, :])
+            all_end.append(self.curve_plot.lut_points[i].data['pos'][-1, :])
+        selected_start = np.asarray(all_start)[np.ravel(self.curve_plot.enable_channel)[:self.n_channels]]
+        selected_end = np.asarray(all_end)[np.ravel(self.curve_plot.enable_channel)[:self.n_channels]]
+        min_slider_val = int(np.min(selected_start[:, 0]))
+        max_slider_val = int(np.max(selected_end[:, 0]))
+        self.current_black_val = min_slider_val
+        self.current_white_val = max_slider_val
+        self.current_width = max_slider_val - min_slider_val
+        self.block_signal(True)
+        self.multi_handle_slider.setValue((min_slider_val, max_slider_val))
+        self.black_spinbox.spin_val.setValue(min_slider_val)
+        self.white_spinbox.spin_val.setValue(max_slider_val)
+        self.block_signal(False)
+        if np.sum(self.curve_plot.enable_channel) != 1:
+            self.gamma_spinbox.spin_val.blockSignals(True)
+            self.gamma_spinbox.spin_val.setValue(1)
+            self.gamma_spinbox.spin_val.blockSignals(False)
+        else:
+            g_ind = np.where(self.curve_plot.enable_channel)[0][0]
+            self.gamma_spinbox.spin_val.blockSignals(True)
+            self.gamma_spinbox.spin_val.setValue(self.gamma[g_ind])
+            self.gamma_spinbox.spin_val.blockSignals(False)
+
+    def set_channel_enable(self, ind, is_enable):
+        self.curve_plot.set_enable(ind, is_enable)
+        self.set_enable_induced_slider()
+
+
+
+
+
+

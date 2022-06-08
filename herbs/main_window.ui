@@ -217,7 +217,7 @@ border-color: rgb(75, 78, 84);</string>
       <string>Save Layer</string>
      </property>
      <addaction name="actionCurrent_Layer"/>
-     <addaction name="actionAll_Layers"/>
+     <addaction name="actionAll_Layer"/>
     </widget>
     <widget class="QMenu" name="menuSave_Object">
      <property name="title">
@@ -315,6 +315,7 @@ border-color: rgb(75, 78, 84);</string>
      <string>Atlas</string>
     </property>
     <addaction name="actionDownload"/>
+    <addaction name="actionDownload_Allen_Mice_Atlas"/>
     <addaction name="separator"/>
     <addaction name="actionAtlas_Processor"/>
     <addaction name="separator"/>
@@ -775,19 +776,29 @@ selection-background-color: rgb(50, 50, 50);</string>
     <string>Create Slice Layer</string>
    </property>
   </action>
-  <action name="actionCurrent_Layer">
-   <property name="text">
-    <string>Current Layer</string>
-   </property>
-  </action>
   <action name="actionLoad_Layers">
    <property name="text">
     <string>Load Layers</string>
    </property>
   </action>
-  <action name="actionAll_Layers">
+  <action name="actionData_Layer">
+   <property name="text">
+    <string>Data Layer</string>
+   </property>
+  </action>
+  <action name="actionAll_Layer">
    <property name="text">
     <string>All Layers</string>
+   </property>
+  </action>
+  <action name="actionCurrent_Layer">
+   <property name="text">
+    <string>Current Layer</string>
+   </property>
+  </action>
+  <action name="actionDownload_Allen_Mice_Atlas">
+   <property name="text">
+    <string>Download Allen Mice Atlas</string>
    </property>
   </action>
  </widget>
