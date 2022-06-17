@@ -1,9 +1,4 @@
 [build-system]
-# Minimum requirements for the build system to execute.
-requires = [
-    "packaging==20.5; platform_machine=='arm64'",  # macos M1
-    "setuptools==59.2.0",
-    "wheel==0.37.0"
-]
-
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
 
