@@ -1,12 +1,16 @@
- for the HERBS core, the HERBS guide, various
-    bug-fixes and code contributions.
+Dr. Menno P. Witter for providing anatomical support.
 
+Dr. Grethe M. Olsen for histological image data sharing and data registration confirmation anatomically contributions.
 
-for planning and code contributions.
- for code snippets, ideas, bugfixes, and testing.
+Ida Välikangas Rautio for HERBS testing and histological image data sharing.
 
-For help with xxx.py, testing, and bug fixes.
-Jonathan Whitlock for administration and community coordination.
+Pearl Saldanha for testing and cookbook writing.
+
+Kristian Moan for light sheet data sharing and discussion.
+
+Paulo Jorge Bettencourt Girão for ideas and technical information on all types of microscopy.
+
+Dr. Jonathan Whitlock for administration and community coordination.
 
 
 Institutions
