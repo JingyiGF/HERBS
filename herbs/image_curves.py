@@ -425,6 +425,7 @@ class CurveWidget(QWidget):
         self.current_black_val = 0
         self.current_white_val = self.gray_max
         self.current_width = self.gray_max
+        self.vis_hist = True
 
         self.curve_plot = CurvesPlot()
         self.curve_plot.sig_line_change.connect(self.table_changed)
@@ -515,6 +516,7 @@ class CurveWidget(QWidget):
         self.black_spinbox.spin_val.blockSignals(is_clocked)
 
     def set_data(self, data, color, depth_level):
+
         if self.table_output:
             self.table_output = []
 
@@ -523,19 +525,22 @@ class CurveWidget(QWidget):
             self.multi_handle_slider.setMaximum(depth_level)
             self.white_spinbox.spin_val.setMaximum(depth_level)
 
+        self.n_channels = data.shape[2]
+
         hist_data = make_hist_data(data, depth_level)
-        self.n_channels = len(hist_data)
         self.curve_plot.set_data(hist_data, color, depth_level)
+
         for i in range(self.n_channels):
             point_data = np.asarray([self.curve_plot.start_point[i], self.curve_plot.end_point[i]])
             table = self.get_table(point_data, i)
             self.table_output.append(table.astype(int))
         self.original_table = self.table_output.copy()
+
         self.set_original_to_slider()
 
     def set_original_to_slider(self):
-        min_slider_val = np.min(np.asarray(self.curve_plot.start_point)[:, 0])
-        max_slider_val = np.max(np.asarray(self.curve_plot.end_point)[:, 0])
+        min_slider_val = np.min(np.asarray(self.curve_plot.start_point)[:self.n_channels, 0])
+        max_slider_val = np.max(np.asarray(self.curve_plot.end_point)[:self.n_channels, 0])
         self.block_signal(True)
         self.multi_handle_slider.setValue((min_slider_val, max_slider_val))
         self.black_spinbox.spin_val.setValue(min_slider_val)
@@ -600,7 +605,7 @@ class CurveWidget(QWidget):
 
         self.curve_plot.set_lut_points(point_data, ind)
         self.curve_plot.set_lut_line(table, ind)
-        self.white_spinbox.spin_val.setMinimum(point_data[-2, 0] + 1)
+        # self.white_spinbox.spin_val.setMinimum(point_data[-2, 0] + 1)
 
     def black_spinbox_changed(self):
         if self.curve_plot.hist_data is None:

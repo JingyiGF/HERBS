@@ -87,6 +87,143 @@ QLineEdit {
 '''
 
 
+class CompareWindow(QDialog):
+    def __init__(self, obj_names, obj_data):
+        super().__init__()
+
+        self.setWindowTitle("Compare Information Window")
+
+        print(len(obj_names))
+
+        print(len(obj_data))
+        n_object = len(obj_names)
+        all_label_names = obj_data[0]['label_name'].copy()
+        all_label_acronym = obj_data[0]['label_acronym'].copy()
+        all_label_color = obj_data[0]['label_color'].copy()
+        all_label_channels = obj_data[0]['region_channels'].tolist()
+        print(len(all_label_names))
+        print(len(all_label_acronym))
+        print(len(all_label_color))
+        print(len(all_label_channels))
+        for i in range(1, n_object):
+            check_label = obj_data[i]['label_name']
+            for j in range(len(check_label)):
+                if check_label[j] in all_label_names:
+                    da_ind = np.where(np.ravel(all_label_names) == check_label[j])[0][0]
+                    print(da_ind)
+                    all_label_channels[da_ind] = all_label_channels[da_ind] + obj_data[i]['region_channels'][j]
+                else:
+                    all_label_names.append(check_label[j])
+                    all_label_acronym.append(obj_data[i]['label_acronym'][j])
+                    all_label_color.append(obj_data[i]['label_color'][j])
+                    all_label_channels.append(obj_data[i]['region_channels'][j])
+
+        layout = QVBoxLayout()
+        full_name = obj_names[0]
+        for i in range(1, n_object):
+            full_name = full_name + ', '
+            full_name = full_name + obj_names[i]
+
+        self.label = QLabel('Compare {}'.format(full_name))
+        color = QColor(128, 128, 128, 128)
+        label_style = 'QLabel {background-color: ' + color.name() + '; font-size: 20px}'
+        self.label.setStyleSheet(label_style)
+
+        sec_group = QGroupBox()
+        slayout = QGridLayout(sec_group)
+        lb1 = QLabel('Brain Region')
+        lb2 = QLabel('Acronym')
+        lb3 = QLabel('Channels')
+        lb4 = QLabel('Color')
+        slayout.addWidget(lb1, 0, 0, 1, 1)
+        slayout.addWidget(lb2, 0, 1, 1, 1)
+        slayout.addWidget(lb3, 0, 2, 1, 1)
+        slayout.addWidget(lb4, 0, 3, 1, 1)
+
+        channels = np.ravel(all_label_channels).astype(int)
+
+        for i in range(len(all_label_names)):
+            slayout.addWidget(QLabel(all_label_names[i]), i + 1, 0, 1, 1)
+            slayout.addWidget(QLabel(all_label_acronym[i]), i + 1, 1, 1, 1)
+            slayout.addWidget(QLabel(str(channels[i])), i + 1, 2, 1, 1)
+            clb = QLabel()
+            da_color = QColor(all_label_color[i][0], all_label_color[i][1], all_label_color[i][2], 255).name()
+            clb.setStyleSheet('QLabel {background-color: ' + da_color + '; width: 20px; height: 20px}')
+            slayout.addWidget(clb, i + 1, 3, 1, 1)
+
+        # make plot data
+        plot_frame = QFrame()
+        plot_frame.setMaximumWidth(300)
+        plot_frame.setMinimumWidth(300)
+        view_layout = QHBoxLayout(plot_frame)
+        view_layout.setSpacing(0)
+        view_layout.setContentsMargins(0, 0, 0, 0)
+
+        w = pg.GraphicsLayoutWidget()
+        view = w.addViewBox()
+        view.setAspectLocked()
+
+        view_layout.addWidget(w)
+
+        resize_factor = 5
+        max_num_channel = 0
+        for i in range(n_object):
+            da_sum = np.sum(obj_data[i]['block_count'][0])
+            if da_sum > max_num_channel:
+                max_num_channel = da_sum
+
+        for i in range(n_object):
+            count1 = obj_data[i]['block_count'][0]
+            plot_data1 = np.cumsum(count1)
+            plot_data1 = plot_data1 / max_num_channel * resize_factor
+            plot_colors1 = np.asarray(obj_data[i]['merged_color'][0])
+
+            count2 = obj_data[i]['block_count'][1]
+            plot_data2 = np.cumsum(count2)
+            plot_data2 = plot_data2 / max_num_channel * resize_factor
+            plot_colors2 = np.asarray(obj_data[i]['merged_color'][1])
+
+            # draw tips
+            da_tip_loc = np.array([[i - 0.3, 0], [i, - 0.7], [i + 0.3, 0]])
+            tips = pg.PlotDataItem(da_tip_loc, connect='all', fillLevel=0, fillBrush=pg.mkBrush(color=(128, 128, 128)))
+            view.addItem(tips)
+
+            # create bar chart
+            bg_list1 = []
+            for j in np.arange(len(plot_data1))[::-1]:
+                bg = pg.BarGraphItem(x=[i - 0.15], height=plot_data1[j], width=0.3,
+                                     brush=QColor(plot_colors1[j][0], plot_colors1[j][1], plot_colors1[j][2], 255))
+                bg_list1.append(bg)
+                view.addItem(bg_list1[-1])
+
+            bg_list2 = []
+            for j in np.arange(len(plot_data2))[::-1]:
+                bg = pg.BarGraphItem(x=[i + 0.15], height=plot_data2[j], width=0.3,
+                                     brush=QColor(plot_colors2[j][0], plot_colors2[j][1], plot_colors2[j][2], 255))
+                bg_list2.append(bg)
+                view.addItem(bg_list2[-1])
+
+        channel_info_frame = QFrame()
+        channel_info_layout = QHBoxLayout(channel_info_frame)
+        channel_info_layout.setContentsMargins(0, 0, 0, 0)
+        channel_info_layout.setSpacing(10)
+        channel_info_layout.addWidget(plot_frame)
+        channel_info_layout.addWidget(sec_group)
+
+        # ok button, used to close window
+        ok_btn = QDialogButtonBox(QDialogButtonBox.Ok)
+        ok_btn.accepted.connect(self.accept)
+
+        # add widget to layout
+        layout.addWidget(self.label)
+        layout.addWidget(channel_info_frame)
+        layout.addWidget(ok_btn)
+        self.setLayout(layout)
+
+    def accept(self) -> None:
+        self.close()
+
+
 class CellsInfoWindow(QDialog):
     def __init__(self, name, data):
         super().__init__()
@@ -272,11 +409,23 @@ class ProbeInfoWindow(QDialog):
             clb.setStyleSheet('QLabel {background-color: ' + da_color + '; width: 20px; height: 20px}')
             slayout.addWidget(clb, i + 1, 3, 1, 1)
 
-        self.data = np.cumsum(data['block_count'])
-        self.data = self.data / self.data[-1] * 2
-        self.data = self.data[::-1]
+        # make plot data
+        resize_factor = 5
+        count1 = data['block_count'][0]
+        text_data1 = count1 / np.sum(count1) * resize_factor
+        plot_data1 = np.cumsum(count1)
+        plot_data1 = plot_data1 / plot_data1[-1] * resize_factor
+        # plot_data1 = plot_data1[::-1]
+        plot_colors1 = np.asarray(data['merged_color'][0])
+
+        count2 = data['block_count'][1]
+        text_data2 = count2 / np.sum(count2) * resize_factor
+        plot_data2 = np.cumsum(count2)
+        plot_data2 = plot_data2 / plot_data2[-1] * resize_factor
+        # plot_data2 = plot_data2[::-1]
+        plot_colors2 = np.asarray(data['merged_color'][1])
         # self.label = label[::-1]
-        self.colors = data['chn_lines_color'][::-1]
+
 
         plot_frame = QFrame()
         plot_frame.setMaximumWidth(300)
@@ -288,21 +437,55 @@ class ProbeInfoWindow(QDialog):
         w = pg.GraphicsLayoutWidget()
         view = w.addViewBox()
         view.setAspectLocked()
-        view.invertY(True)
+        # view.invertY(True)
 
         # draw tips
-        top_value = self.data[0]
-        da_tip_loc = np.array([[0.7, top_value], [1, top_value + 0.7], [1.3, top_value]])
+        da_tip_loc = np.array([[0.7, 0], [1, - 0.7], [1.3, 0]])
         tips = pg.PlotDataItem(da_tip_loc, connect='all', fillLevel=0, fillBrush=pg.mkBrush(color=(128, 128, 128)))
         view.addItem(tips)
 
         # create bar chart
-        self.bg_list = []
-        for i in range(len(self.data)):
-            bg = pg.BarGraphItem(x=[1], height=self.data[i], width=0.6,
-                                 brush=QColor(self.colors[i][0], self.colors[i][1], self.colors[i][2], 255))
-            self.bg_list.append(bg)
-            view.addItem(self.bg_list[i])
+        bg_list1 = []
+        for i in np.arange(len(plot_data1))[::-1]:
+            bg = pg.BarGraphItem(x=[1-0.15], height=plot_data1[i], width=0.3,
+                                 brush=QColor(plot_colors1[i][0], plot_colors1[i][1], plot_colors1[i][2], 255))
+            bg_list1.append(bg)
+            view.addItem(bg_list1[-1])
+
+        text_list1 = [pg.TextItem(str(count1[0]))]
+        text_list1[-1].setPos(0.6, text_data1[0] * 0.5)
+        text_list1[-1].setAnchor((0.5, 0.5))
+        view.addItem(text_list1[-1])
+        for i in range(1, len(plot_data1)):
+            tt = pg.TextItem(str(count1[i]))
+            if np.mod(i, 2) == 0:
+                tt.setPos(0.6, plot_data1[i - 1] + text_data1[i] * 0.5)
+            else:
+                tt.setPos(0.5, plot_data1[i - 1] + text_data1[i] * 0.5)
+            tt.setAnchor((0.5, 0.5))
+            text_list1.append(tt)
+            view.addItem(text_list1[i])
+
+        bg_list2 = []
+        for i in np.arange(len(plot_data2))[::-1]:
+            bg = pg.BarGraphItem(x=[1+0.15], height=plot_data2[i], width=0.3,
+                                 brush=QColor(plot_colors2[i][0], plot_colors2[i][1], plot_colors2[i][2], 255))
+            bg_list2.append(bg)
+            view.addItem(bg_list2[-1])
+
+        text_list2 = [pg.TextItem(str(count2[0]))]
+        text_list2[-1].setPos(1.4, text_data2[0] * 0.5)
+        text_list2[-1].setAnchor((0.5, 0.5))
+        view.addItem(text_list2[-1])
+        for i in range(1, len(plot_data2)):
+            tt = pg.TextItem(str(count2[i]))
+            if np.mod(i, 2) == 0:
+                tt.setPos(1.4, plot_data2[i - 1] + text_data2[i] * 0.5)
+            else:
+                tt.setPos(1.5, plot_data2[i - 1] + text_data2[i] * 0.5)
+            tt.setAnchor((0.5, 0.5))
+            text_list2.append(tt)
+            view.addItem(text_list2[i])
 
         view_layout.addWidget(w)
 
@@ -337,7 +520,7 @@ class SinglePiece(QWidget):
     sig_clicked = pyqtSignal(object)
     sig_name_changed = pyqtSignal(object)
 
-    def __init__(self, parent=None, index=0, object_type='probes', object_icon=None, group_index=0):
+    def __init__(self, parent=None, index=0, object_type='probe', object_icon=None, group_index=0):
         QWidget.__init__(self, parent=parent)
 
         self.inactive_style = 'QFrame{background-color:rgb(83, 83, 83); border: 1px solid rgb(128, 128, 128);}'
@@ -432,6 +615,7 @@ class RegisteredObject(QWidget):
     sig_object_color_changed = pyqtSignal(object)
     eye_clicked = pyqtSignal(object)
     sig_clicked = pyqtSignal(object)
+    sig_link = pyqtSignal(object)
 
     def __init__(self, parent=None, index=0, object_type='merged probes', object_icon=None, group_index=0):
         QWidget.__init__(self, parent=parent)
@@ -468,9 +652,19 @@ class RegisteredObject(QWidget):
 
         self.text_btn = QPushButton(self.object_name)
         self.text_btn.setStyleSheet(text_btn_style)
-        self.text_btn.setFixedHeight(40)
+        self.text_btn.setFixedSize(QSize(150, 40))
         # self.text_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
         self.text_btn.clicked.connect(self.on_click)
+
+        self.link_button = QPushButton()
+        self.link_button.setFixedSize(QSize(25, 40))
+        self.link_button.setCheckable(True)
+        link_icon = QIcon()
+        link_icon.addPixmap(QPixmap("icons/sidebar/link_off.svg"), QIcon.Normal, QIcon.Off)
+        link_icon.addPixmap(QPixmap("icons/sidebar/link.svg"), QIcon.Normal, QIcon.On)
+        self.link_button.setIcon(link_icon)
+        self.link_button.setIconSize(QSize(20, 20))
+        self.link_button.clicked.connect(self.on_linked)
 
         self.inner_frame = QFrame()
         self.inner_frame.setStyleSheet(self.active_style)
@@ -483,6 +677,7 @@ class RegisteredObject(QWidget):
         self.inner_layout.addWidget(self.tbnail)
         self.inner_layout.addSpacing(5)
         self.inner_layout.addWidget(self.text_btn)
+        self.inner_layout.addWidget(self.link_button)
         self.inner_layout.addStretch()
 
         outer_layout = QHBoxLayout()
@@ -527,6 +722,9 @@ class RegisteredObject(QWidget):
     def is_checked(self):
         return self.active
 
+    def on_linked(self):
+        self.sig_link.emit(self.id)
+
 
 class ObjectControl(QObject):
     """
@@ -559,6 +757,7 @@ class ObjectControl(QObject):
         self.current_obj_index = None
 
         self.obj_count = 0
+        self.linked_indexes = []
 
         self.probe_piece_count = 0
         self.cell_piece_count = 0
@@ -587,6 +786,7 @@ class ObjectControl(QObject):
         self.drawing_icon = QIcon('icons/toolbar/pencil.svg')
         self.cell_icon = QIcon('icons/toolbar/location.svg')
         self.contour_icon = QIcon('icons/sidebar/contour.svg')
+        self.compare_icon = QIcon('icons/sidebar/compare.svg')
 
         combo_label = QLabel('Composition:')
         combo_label.setFixedWidth(80)
@@ -684,6 +884,12 @@ class ObjectControl(QObject):
         outer_layout.addWidget(mid_frame)
 
         # bottom buttons
+        self.compare_btn = QPushButton()
+        self.compare_btn.setFixedSize(24, 24)
+        self.compare_btn.setStyleSheet(btm_style)
+        self.compare_btn.setIcon(QIcon('icons/sidebar/compare.svg'))
+        self.compare_btn.setIconSize(QSize(20, 20))
+
         self.merge_probe_btn = QPushButton()
         self.merge_probe_btn.setFixedSize(24, 24)
         self.merge_probe_btn.setStyleSheet(btm_style)
@@ -836,6 +1042,16 @@ class ObjectControl(QObject):
         else:
             return
 
+    def obj_link_changed(self, clicked_id):
+        da_index = np.where(np.ravel(self.obj_id) == clicked_id)[0][0]
+        if self.obj_list[da_index].link_button.isChecked():
+            self.linked_indexes.append(da_index)
+        else:
+            if da_index in self.linked_indexes:
+                del_ind = np.where(np.ravel(self.linked_indexes) == da_index)[0][0]
+                self.linked_indexes.pop(del_ind)
+        print(self.linked_indexes)
+
     def obj_color_changed(self, clicked_id):
         self.set_active_layer_to_current(clicked_id)
         color = QColorDialog.getColor()
@@ -931,6 +1147,7 @@ class ObjectControl(QObject):
                                          object_icon=object_icon, group_index=group_index)
             new_layer.eye_clicked.connect(self.obj_eye_clicked)
             new_layer.sig_object_color_changed.connect(self.obj_color_changed)
+            new_layer.sig_link.connect(self.obj_link_changed)
             self.obj_opacity.append(self.default_opacity_val)
             self.obj_size.append(self.default_size_val)
             self.obj_comp_mode.append('opaque')
@@ -995,11 +1212,10 @@ class ObjectControl(QObject):
 
     # merge object piece
     def get_merged_data(self, obj_type='probe'):
-        if obj_type not in ['probe', 'virus', 'contour', 'drawing', 'cell']:
+        if obj_type not in ['probe', 'virus', 'contour', 'drawing', 'cells']:
             return
         n_obj = len(self.obj_id)
         cind = [ind for ind in range(n_obj) if obj_type in self.obj_type[ind] and 'merged' not in self.obj_type[ind]]
-        print('cind', cind)
         da_type_object_names = np.ravel(self.obj_name)[cind]
         n_pieces = len(da_type_object_names)
         pieces_names = []
@@ -1020,7 +1236,6 @@ class ObjectControl(QObject):
                     print(self.obj_data[da_piece_ind_in_obj_order[j]].T)
                     temp = np.hstack([temp, self.obj_data[da_piece_ind_in_obj_order[j]].T])
             data[i] = temp.T
-            print(data[i])
         if obj_type == 'probe':
             self.probe_piece_count = 0
         elif obj_type == 'virus':
@@ -1032,7 +1247,6 @@ class ObjectControl(QObject):
         else:
             self.cell_piece_count = 0
         self.delete_objects(cind)
-        print(self.current_obj_index)
         return data
 
     # get obj data
@@ -1082,5 +1296,12 @@ class ObjectControl(QObject):
         self.obj_comp_mode = []
         self.obj_count = []
         self.current_obj_index = []
+
+    def compare_obj_called(self):
+        compare_names = [self.obj_name[ind] for ind in self.linked_indexes]
+        print(compare_names)
+        compare_data = [self.obj_data[ind] for ind in self.linked_indexes]
+        info_window = CompareWindow(compare_names, compare_data)
+        info_window.exec()
 
 

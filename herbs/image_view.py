@@ -47,6 +47,74 @@ QPushButton:checked{
 '''
 
 
+class ImagePageController(QWidget):
+    class SignalProxy(QObject):
+        sigPageChanged = pyqtSignal(object)
+
+    def __init__(self):
+        self._sigprox = ImagePageController.SignalProxy()
+        self.sig_page_changed = self._sigprox.sigPageChanged
+
+        QWidget.__init__(self)
+
+        # self.setStyleSheet(page_control_style)
+
+        self.max_val = None
+
+        self.page_slider = QSlider(Qt.Horizontal)
+        self.page_slider.setMinimum(0)
+        self.page_slider.valueChanged.connect(self.slider_value_changed)
+
+        self.page_label = QLabel()
+        self.page_label.setFixedSize(50, 20)
+
+        self.page_left_btn = QPushButton()
+        self.page_left_btn.setIcon(QtGui.QIcon("icons/backward.svg"))
+        self.page_left_btn.setIconSize(QtCore.QSize(16, 16))
+        self.page_left_btn.clicked.connect(self.left_btn_clicked)
+
+        self.page_right_btn = QPushButton()
+        self.page_right_btn.setIcon(QtGui.QIcon("icons/forward.svg"))
+        self.page_right_btn.setIconSize(QtCore.QSize(16, 16))
+        self.page_right_btn.clicked.connect(self.right_btn_clicked)
+
+        page_ctrl_layout = QHBoxLayout()
+        page_ctrl_layout.setSpacing(0)
+        page_ctrl_layout.setContentsMargins(10, 5, 10, 5)
+        page_ctrl_layout.addWidget(self.page_left_btn)
+        page_ctrl_layout.addSpacing(10)
+        page_ctrl_layout.addWidget(self.page_slider)
+        page_ctrl_layout.addSpacing(5)
+        page_ctrl_layout.addWidget(self.page_label)
+        page_ctrl_layout.addWidget(self.page_right_btn)
+
+        self.setLayout(page_ctrl_layout)
+
+    def set_val(self, val):
+        self.page_slider.setValue(val)
+
+    def set_max(self, val):
+        self.max_val = val
+        self.page_slider.setMaximum(val)
+
+    def slider_value_changed(self):
+        val = self.page_slider.value()
+        self.page_label.setText(str(val))
+        self.sig_page_changed.emit(val)
+
+    def left_btn_clicked(self):
+        val = self.page_slider.value() - 1
+        if val < 0:
+            val = 0
+        self.set_val(val)
+
+    def right_btn_clicked(self):
+        val = self.page_slider.value() + 1
+        if val > self.max_val:
+            val = self.max_val
+        self.set_val(val)
+
+
 class ImageView(QObject):
     """
     A collection of user interface elements bound together:
@@ -84,13 +152,11 @@ class ImageView(QObject):
         self.channel_visible = [False, False, False, False]
         self.channel_color = [None, None, None, None]
         self.color_combo_index = [-1, -1, -1, -1]
-        self.channel_name = None
-        self.channel_hsv_color = None
-        self.channel_rgb_color = None
-        self.depth_level = None
 
         self.side_lines = None
         self.corner_points = None
+        self.volume_img = None
+        self.display_img_index = 0
 
         # scene control
         self.check_scenes = QPushButton('Load ALL Scenes')
@@ -130,6 +196,11 @@ class ImageView(QObject):
         # image stacks
         self.img_stacks = ImageStacks()
 
+        # scene control
+        self.page_ctrl = ImagePageController()
+        self.page_ctrl.setVisible(False)
+        self.page_ctrl.sig_page_changed.connect(self.image_page_changed)
+
         # curve widget
         self.curve_widget = CurveWidget()
         self.curve_widget.setEnabled(False)
@@ -165,6 +236,7 @@ class ImageView(QObject):
 
     def set_data(self, image_file):
         if self.image_file is not None:
+            self.page_ctrl.setVisible(False)
             self.clear_image_stacks()
             self.curve_widget.reset_pressed()
             self.curve_widget.setEnabled(False)
@@ -176,17 +248,25 @@ class ImageView(QObject):
                 self.img_stacks.image_list[i].clear()
                 self.chn_widget_list[i].setVisible(False)
             self.image_file = None
-            self.color_lut_list = []
-            self.original_lut_list = []
-            self.depth_level = None
+            self.color_lut_list.clear()
+            self.original_lut_list.clear()
             self.curve_widget.line_type_combo.setCurrentIndex(0)
 
         self.image_file = image_file
-        self.depth_level = image_file.level
-        self.channel_name = self.image_file.channel_name
-        self.channel_hsv_color = self.image_file.hsv_colors
-        self.channel_rgb_color = self.image_file.rgb_colors
-        self.current_img = copy.deepcopy(self.image_file.data['scene 0'])
+
+        if self.image_file.n_pages > 1:
+            self.page_ctrl.set_max(self.image_file.n_pages - 1)
+            self.page_ctrl.setVisible(True)
+            self.volume_img = copy.deepcopy(self.image_file.data['scene 0'])
+            init_page_number = int(0.5 * self.image_file.n_pages)
+            self.page_ctrl.set_val(init_page_number)
+            temp_data = self.volume_img[init_page_number, :, :].copy()
+            temp_data = [temp_data]
+            self.current_img = np.dstack(temp_data)
+        else:
+            self.volume_img = None
+            self.current_img = copy.deepcopy(self.image_file.data['scene 0'])
+
         self.current_scale = self.image_file.scale['scene 0']
 
         if self.image_file.n_scenes != 1:
@@ -204,6 +284,7 @@ class ImageView(QObject):
         # set data to curves
         self.set_curve_widgets()  # get reasonable table
         self.set_channel_widgets()  # get initial color_lut_list for each layer
+
         # set data to image stacks
         self.set_data_to_img_stacks()
         self.get_corner_and_lines()
@@ -216,9 +297,8 @@ class ImageView(QObject):
             self.channel_color[i] = copy.deepcopy(self.image_file.hsv_colors[i])
             da_hsv_color = self.channel_color[i]
             da_lut = make_color_lut(da_hsv_color, self.image_file.level + 1)
-            self.color_lut_list.append(da_lut)
             self.original_lut_list.append(da_lut)
-
+            self.color_lut_list.append(da_lut)
             self.chn_widget_list[i].setVisible(True)
             self.chn_widget_list[i].vis_btn.setText(self.image_file.channel_name[i])
             self.chn_widget_list[i].add_item(self.channel_color[i])
@@ -228,18 +308,23 @@ class ImageView(QObject):
     def set_curve_widgets(self):
         self.curve_widget.setEnabled(True)
         img_layers = self.current_img.copy()
-        self.curve_widget.set_data(img_layers, self.channel_rgb_color, self.image_file.level)
+        self.curve_widget.set_data(img_layers, self.image_file.rgb_colors, self.image_file.level)
 
     def channel_color_changed(self, col, ind):
         da_lut = make_color_lut(col, self.curve_widget.gray_max + 1)
-        self.original_lut_list[ind] = da_lut[self.curve_widget.original_table[ind], :]
+        self.original_lut_list[ind] = da_lut.copy()
         self.color_lut_list[ind] = da_lut[self.curve_widget.table_output[ind], :]
+        self.img_stacks.image_list[ind].setLevels(levels=(0, self.image_file.level))
         self.img_stacks.image_list[ind].setLookupTable(self.color_lut_list[ind])
         self.channel_color[ind] = col
         self.curve_widget.curve_plot.change_hist_color(col, ind)
         self.color_combo_index[ind] = self.chn_widget_list[ind].color_combo.currentIndex()
 
     def set_channel_visible(self, vis, ind):
+        if np.sum(self.channel_visible) == 1:
+            vis_layer_ind = np.where(np.ravel(self.channel_visible))[0][0]
+            if vis_layer_ind == ind:
+                return
         self.channel_visible[ind] = vis
         self.img_stacks.image_list[ind].setVisible(vis)
         self.curve_widget.set_channel_enable(ind, vis)
@@ -266,6 +351,13 @@ class ImageView(QObject):
         rect = (0, 0, self.img_size[1], self.img_size[0])
         self.corner_points, self.side_lines = get_corner_line_from_rect(rect)
         self.sig_image_changed.emit()
+
+    def image_page_changed(self, page_number):
+        self.display_img_index = page_number
+        temp_data = self.volume_img[page_number, :, :].copy()
+        temp_data = [temp_data]
+        self.current_img = np.dstack(temp_data)
+        self.img_stacks.set_data(self.current_img)
 
     def scene_index_changed(self):
         if self.image_file is None:
@@ -366,17 +458,16 @@ class ImageView(QObject):
             lut_points_data.append(self.curve_widget.curve_plot.lut_points[i].data['pos'].copy())
 
         data = {'current_img': self.current_img,
+                'processing_img': self.processing_img,
+                'current_scene': self.scene_slider.value(),
                 'current_scale': self.scale_slider.value(),
-                'img_level': self.curve_widget.gray_max,
                 'channel_color': self.channel_color,
-                'channel_name': self.channel_name,
-                'channel_rgb_color': self.channel_rgb_color,
-                'channel_hsv_color': self.channel_hsv_color,
                 'color_combo_index': self.color_combo_index,
                 'original_lut_list': self.original_lut_list,
                 'color_lut_list': self.color_lut_list,
                 'gamma_vals': self.curve_widget.gamma,
                 'table_output': self.curve_widget.table_output,
+                'original_table': self.curve_widget.original_table,
                 'line_type': self.curve_widget.line_type,
                 'hist_data': self.curve_widget.curve_plot.hist_data,
                 'lut_points_data': lut_points_data}
@@ -384,25 +475,21 @@ class ImageView(QObject):
 
     def load_img_ctrl_data(self, img_ctrl_data):
         self.current_img = img_ctrl_data['current_img']
-        self.channel_name = img_ctrl_data['channel_name']
-        self.channel_hsv_color = img_ctrl_data['channel_hsv_color']
-        self.channel_rgb_color = img_ctrl_data['channel_rgb_color']
         self.current_scale = img_ctrl_data['current_scale']
         self.channel_color = img_ctrl_data['channel_color']
         self.color_combo_index = img_ctrl_data['color_combo_index']
-        n_channel = len(self.channel_name)
+        self.processing_img = img_ctrl_data['processing_img']
         # set data
-        self.scene_wrap.setVisible(False)
-        self.scale_slider.blockSignals(True)
-        self.scale_slider.setValue(self.current_scale)
-        self.scale_label.setText('{}%'.format(self.current_scale))
-        self.scale_slider.blockSignals(False)
-        self.scale_wrap.setEnabled(False)
+        # self.scene_wrap.setVisible(False)
 
-        self.curve_widget.gray_max = img_ctrl_data['img_level']
+        self.scene_slider.blockSignals(True)
+        self.scene_slider.setValue(img_ctrl_data['current_scene'])
+        self.scene_label.setText('{}/{}'.format(img_ctrl_data['current_scene'] + 1, self.image_file.n_scenes))
+        self.scene_slider.blockSignals(False)
+
         self.curve_widget.gamma = img_ctrl_data['gamma_vals']
-        self.curve_widget.n_channels = n_channel
         self.curve_widget.table_output = img_ctrl_data['table_output']
+        self.curve_widget.original_table = img_ctrl_data['original_table']
         self.curve_widget.line_type = img_ctrl_data['line_type']
 
         self.curve_widget.line_type_combo.blockSignals(True)
@@ -410,31 +497,29 @@ class ImageView(QObject):
         self.curve_widget.line_type_combo.blockSignals(False)
 
         self.curve_widget.curve_plot.line_type = self.curve_widget.line_type
-        self.curve_widget.curve_plot.set_data(img_ctrl_data['hist_data'], self.channel_rgb_color,
-                                              self.curve_widget.gray_max)
+        self.curve_widget.curve_plot.set_data(img_ctrl_data['hist_data'], self.image_file.rgb_colors,
+                                              self.image_file.level)
 
-        for i in range(n_channel):
+        for i in range(self.image_file.n_channels):
             self.curve_widget.curve_plot.change_hist_color(self.channel_color[i], i)
             self.curve_widget.curve_plot.set_lut_line(self.curve_widget.table_output[i], i)
             self.curve_widget.curve_plot.set_lut_points(img_ctrl_data['lut_points_data'][i], i)
 
-        self.curve_widget.block_signal(True)
-        for i in range(n_channel):
+        for i in range(self.image_file.n_channels):
             self.curve_widget.curve_plot.set_enable(i, True)
         self.curve_widget.set_enable_induced_slider()
-        self.curve_widget.block_signal(False)
 
         self.original_lut_list = img_ctrl_data['original_lut_list']
         self.color_lut_list = img_ctrl_data['color_lut_list']
 
-        for i in range(n_channel):
+        for i in range(self.image_file.n_channels):
             self.chn_widget_list[i].blockSignals(True)
             self.chn_widget_list[i].setVisible(True)
             self.chn_widget_list[i].vis_btn.setChecked(False)
             self.chn_widget_list[i].set_checked(False)
-            self.chn_widget_list[i].vis_btn.setText(self.channel_name[i])
+            self.chn_widget_list[i].vis_btn.setText(self.image_file.channel_name[i])
             self.chn_widget_list[i].color_combo.blockSignals(True)
-            self.chn_widget_list[i].add_item(self.channel_hsv_color[i])
+            self.chn_widget_list[i].add_item(self.image_file.hsv_colors[i])
             self.chn_widget_list[i].color_combo.setCurrentIndex(self.color_combo_index[i])
             self.chn_widget_list[i].color_combo.blockSignals(False)
             self.channel_visible[i] = True
@@ -443,20 +528,33 @@ class ImageView(QObject):
         self.original_lut_list = img_ctrl_data['original_lut_list']
         self.color_lut_list = img_ctrl_data['color_lut_list']
 
+        # self.set_data_and_size(self.processing_img)
 
-    def set_img_process_data(self, layer_dict):
+    #
+    def check_img_process_layer_data(self, layer_dict):
         valid_keys = list(layer_dict.keys())
-        if 'data' in valid_keys and 'img_ctrl_data' in valid_keys:
-            self.processing_img = layer_dict['data']
-            self.load_img_ctrl_data(layer_dict['img_ctrl_data'])
-            return True
-        else:
-            return False
+        check_res = True
+        if not np.all(['data', 'level', 'size'] in valid_keys):
+            check_res = False
+        if not np.all(layer_dict['size'] == self.image_view.current_img.shape[:2]):
+            check_res = False
+        if layer_dict['level'] != self.image_file.level:
+            check_res = False
+        return check_res
+
+    def has_loaded_layer_the_same_size(self, layer_dict):
+        check_res = True
+        if not np.all(layer_dict['data'].shape[:2] == self.image_view.current_img.shape[:2]):
+            check_res = False
+        return check_res
+
+
+
 
     def save_img_process_data(self):
-        img_ctrl_data = self.get_img_ctrl_data()
         data = {'data': self.processing_img,
-                'img_ctrl_data': img_ctrl_data}
+                'level': self.image_file.level,
+                'size': self.img_size}
         return data
 
 

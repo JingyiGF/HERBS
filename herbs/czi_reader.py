@@ -18,7 +18,7 @@ class CZIReader(object):
         self.dimensions = self.czi.get_dims_shape()
         self.is_mosaic = self.czi.is_mosaic()
         self.pixel_type = self.czi.pixel_type
-        print(self.pixel_type)
+        self.n_pages = 1
         self.data = {}
         self.scale = {}
 

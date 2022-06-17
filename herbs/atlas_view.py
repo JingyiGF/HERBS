@@ -330,7 +330,7 @@ class AtlasView(QObject):
         self.atlas_contour = None
         self.atlas_boundary = None
         self.coronal_size = None
-        self.dagital_size = None
+        self.sagital_size = None
         self.horizontal_size = None
         self.slice_size = None
         self.slice_tb_size_base = 80
@@ -383,6 +383,11 @@ class AtlasView(QObject):
         self.current_sagital_index = None
         self.current_horizontal_index = None
 
+        self.anchor_coronal_index = None
+        self.anchor_sagital_index = None
+        self.anchor_horicontal_index = None
+
+
         self.display_atlas = None
         self.display_label = None
         self.scale = None
@@ -402,24 +407,6 @@ class AtlasView(QObject):
 
         # 3d things
         plate_color = [0.5, 0.5, 0.5, 0.2]
-        # self.ap_plate_verts = np.array([[-1, 0, -1.6], [-1, 0, 0.15], [1, 0, 0.15], [1, 0, -1.6]])
-        # self.ap_plate_faces = np.array([[0, 1, 2], [0, 2, 3]])
-        # ap_plate_md = gl.MeshData(vertexes=self.ap_plate_verts, faces=self.ap_plate_faces)
-        # self.ap_plate_mesh = gl.GLMeshItem(meshdata=ap_plate_md, smooth=False, color=plate_color)
-        # self.ap_plate_mesh.setGLOptions('additive')
-        #
-        # self.dv_plate_verts = np.array([[-1, -1.4, 0], [-1, 0.6, 0], [1, 0.6, 0], [1, -1.4, 0]])
-        # self.dv_plate_faces = np.array([[0, 1, 2], [0, 2, 3]])
-        # dv_plate_md = gl.MeshData(vertexes=self.dv_plate_verts, faces=self.dv_plate_faces)
-        # self.dv_plate_mesh = gl.GLMeshItem(meshdata=dv_plate_md, smooth=False, color=plate_color)
-        # self.dv_plate_mesh.setGLOptions('additive')
-        #
-        # self.ml_plate_verts = np.array([[0, -1.4, -1.6], [0, 0.6, -1.6], [0, 0.6, 0.15], [0, -1.4, 0.15]])
-        # self.ml_plate_faces = np.array([[0, 1, 2], [0, 2, 3]])
-        # ml_plate_md = gl.MeshData(vertexes=self.ml_plate_verts, faces=self.ml_plate_faces)
-        # self.ml_plate_mesh = gl.GLMeshItem(meshdata=ml_plate_md, smooth=False, color=plate_color)
-        # self.ml_plate_mesh.setGLOptions('additive')
-
         self.ap_plate_verts = np.array([[-1, 0, -1], [-1, 0, 1], [1, 0, 1], [1, 0, -1]])
         self.ap_plate_faces = np.array([[0, 1, 2], [0, 2, 3]])
         ap_plate_md = gl.MeshData(vertexes=self.ap_plate_verts, faces=self.ap_plate_faces)
@@ -438,9 +425,8 @@ class AtlasView(QObject):
         self.ml_plate_mesh = gl.GLMeshItem(meshdata=ml_plate_md, smooth=False, color=plate_color)
         self.ml_plate_mesh.setGLOptions('additive')
 
-
-
-        self.cimg = SliceStacks()  # ap - coronal
+        # ap - coronal
+        self.cimg = SliceStacks()
         self.cpage_ctrl = PageController()
         self.cpage_ctrl.sig_page_changed.connect(self.coronal_slice_page_changed)
         self.clut = pg.HistogramLUTWidget()
@@ -657,9 +643,10 @@ class AtlasView(QObject):
         data = {'data': self.slice_image_data,
                 'cut': self.slice_cut,
                 'width': self.slice_width,
-                'heigth': self.slice_height,
+                'height': self.slice_height,
                 'distance': self.slice_distance,
-                'Bregma': self.slice_bregma}
+                'Bregma': self.slice_bregma,
+                'ready': self.slice_info_ready}
         return data
 
     def set_slice_data_and_info(self, slice_data):
@@ -669,6 +656,7 @@ class AtlasView(QObject):
         self.slice_height = slice_data['height']
         self.slice_distance = slice_data['distance']
         self.slice_bregma = slice_data['Bregma']
+        self.slice_info_ready = slice_data['ready']
         self.set_slice_data(img_data)
 
     def get_slice_coords(self, ruler_data):
@@ -718,6 +706,7 @@ class AtlasView(QObject):
             da_bregma = atlas_info[3]['Bregma']
         inverse_b2 = self.atlas_size[0] - 1 - da_bregma[2]
         self.Bregma = (inverse_b2, da_bregma[0], da_bregma[1])
+        print(self.Bregma, 'bregma')
         self.rotate_origin_3d = np.array(da_bregma)
         self.origin_3d = np.array(da_bregma)
 
@@ -756,19 +745,19 @@ class AtlasView(QObject):
         self.simg.label_img.setLookupTable(lut=lut)
         self.himg.label_img.setLookupTable(lut=lut)
 
-        self.c_size = np.ravel(self.cimg.label_img.image.shape)
+        self.c_size = np.array([self.atlas_size[0], self.atlas_size[1]])
         coronal_scale = np.max(self.c_size / self.slice_tb_size_base)
-        self.coronal_tb_size = self.c_size / coronal_scale
+        self.coronal_tb_size = self.c_size[::-1] / coronal_scale
         self.coronal_tb_size = self.coronal_tb_size.astype(int)
 
-        self.s_size = np.ravel(self.simg.label_img.image.shape)
+        self.s_size = np.array([self.atlas_size[0], self.atlas_size[2]])
         sagital_scale = np.max(self.s_size / self.slice_tb_size_base)
-        self.sagital_tb_size = self.s_size / sagital_scale
+        self.sagital_tb_size = self.s_size[::-1] / sagital_scale
         self.sagital_tb_size = self.sagital_tb_size.astype(int)
 
-        self.h_size = np.ravel(self.simg.label_img.image.shape)
+        self.h_size = np.array([self.atlas_size[1], self.atlas_size[2]])
         horizontal_scale = np.max(self.h_size / self.slice_tb_size_base)
-        self.horizontal_tb_size = self.h_size / horizontal_scale
+        self.horizontal_tb_size = self.h_size[::-1] / horizontal_scale
         self.horizontal_tb_size = self.horizontal_tb_size.astype(int)
 
         self.update_3d_plate_component()
@@ -801,6 +790,7 @@ class AtlasView(QObject):
         self.ml_plate_mesh.setMeshData(meshdata=ml_plate_md)
 
     def working_cut_changed(self, atlas_display):
+        self.pre_trajectory_changed()
         if atlas_display == "coronal":
             self.working_atlas = self.cimg
             self.working_page_control = self.cpage_ctrl
@@ -1069,7 +1059,184 @@ class AtlasView(QObject):
         self.simg.img.clear()
         self.himg.img.clear()
 
-    # def clear_label_tree(self):
+    def get_coronal_3d(self, points2, coronal_index=None):
+        if coronal_index is None:
+            da_y = np.ones(len(points2)) * self.current_coronal_index
+        else:
+            da_y = coronal_index
+        points3 = np.vstack([points2[:, 0], da_y, self.atlas_size[0] - points2[:, 1]]).T
+        points3 = points3 - self.origin_3d
+        if self.coronal_rotated:
+            rot_mat = self.c_rotm_3d
+            rotation_origin = self.rotate_origin_3d
+            points3 = np.dot(rot_mat, (points3 - rotation_origin).T).T + rotation_origin
+            print('p3', points3)
+
+        return points3
+
+    def get_sagital_3d(self, points2, sagital_index=None):
+        if sagital_index is None:
+            da_x = np.ones(len(points2)) * self.current_sagital_index
+        else:
+            da_x = sagital_index
+        points3 = np.vstack([da_x, points2[:, 0], self.atlas_size[0] - points2[:, 1]]).T
+        points3 = points3 - self.origin_3d
+        if self.sagital_rotated:
+            rot_mat = self.s_rotm_3d
+            rotation_origin = self.rotate_origin_3d
+            points3 = np.dot(rot_mat, (points3 - rotation_origin).T).T + rotation_origin
+        return points3
+
+    def get_horizontal_3d(self, points2, horizontal_index=None):
+        if horizontal_index is None:
+            da_z = np.ones(len(points2)) * self.current_horizontal_index
+        else:
+            da_z = horizontal_index
+        points3 = np.vstack([points2[:, 1], points2[:, 0], self.atlas_size[0] - da_z]).T
+        points3 = points3 - self.origin_3d
+        if self.horizontal_rotated:
+            rot_mat = self.h_rotm_3d
+            rotation_origin = self.rotate_origin_3d
+            points3 = np.dot(rot_mat, (points3 - rotation_origin).T).T + rotation_origin
+        return points3
+
+    def get_3d_pnts(self, processing_data, atlas_display):
+        if atlas_display == 'coronal':
+            print(processing_data)
+            data = self.get_coronal_3d(processing_data)
+            print(data)
+        elif atlas_display == 'sagittal':
+            data = self.get_sagital_3d(processing_data)
+        else:
+            data = self.get_horizontal_3d(processing_data)
+        return data
+
+    def get_pre_np2_data(self, data, atlas_display, site_face):
+        points3_list = []
+        base_loc = np.array([-375, -125, 125, 375]) / self.vox_size_um
+        if atlas_display == 'coronal':
+            if site_face == 0:
+                start_pnt, end_pnt = rotate_base_points(data, base_loc)
+                for i in range(4):
+                    points2 = np.vstack([start_pnt[i], end_pnt[i]])
+                    p3 = self.get_coronal_3d(points2)
+                    points3_list.append(p3)
+            else:
+                for i in range(4):
+                    points2 = data.copy()
+                    coronal_index = np.ones(2) * (self.current_coronal_index + base_loc[i])
+                    p3 = self.get_coronal_3d(points2, coronal_index)
+                    points3_list.append(p3)
+        elif atlas_display == 'sagittal':
+            if site_face == 0:
+                start_pnt, end_pnt = rotate_base_points(data, base_loc)
+                for i in range(4):
+                    points2 = np.vstack([start_pnt[i], end_pnt[i]])
+                    p3 = self.get_sagital_3d(points2)
+                    points3_list.append(p3)
+            else:
+                for i in range(4):
+                    points2 = data.copy()
+                    sagital_index = np.ones(2) * (self.current_sagital_index + base_loc[i])
+                    p3 = self.get_sagital_3d(points2, sagital_index)
+                    points3_list.append(p3)
+        else:
+            if site_face == 0:
+                start_pnt, end_pnt = rotate_base_points(data, base_loc)
+                for i in range(4):
+                    points2 = np.vstack([start_pnt[i], end_pnt[i]])
+                    p3 = self.get_horizontal_3d(points2)
+                    points3_list.append(p3)
+            else:
+                for i in range(4):
+                    points2 = data.copy()
+                    horizontal_index = np.ones(2) * (self.current_horizontal_index + base_loc[i])
+                    p3 = self.get_horizontal_3d(points2, horizontal_index)
+                    points3_list.append(p3)
+        return points3_list
+
+    def pre_trajectory_changed(self):
+        for i in range(4):
+            self.working_atlas.pre_trajectory_list[i].clear()
+
+    #
+    def get_pre_coronal_np2_data(self, data, site_face):
+        base_loc = np.array([-375, -125, 125, 375]) / self.vox_size_um
+        if site_face == 0:
+            start_pnt, end_pnt = rotate_base_points(data, base_loc)
+            self.anchor_coronal_index = None
+            for i in range(4):
+                da_pnts = np.asarray([start_pnt[i], end_pnt[i]])
+                self.working_atlas.pre_trajectory_list[i].setData(da_pnts)
+            temp = np.vstack([start_pnt, end_pnt])
+            self.working_atlas.image_dict['atlas-probe'].setData(pos=temp)
+        else:
+            start_pnt = data[0]
+            end_pnt = data[1]
+            self.working_atlas.pre_trajectory_list[0].setData(data)
+            self.anchor_coronal_index = base_loc + self.current_coronal_index
+        return start_pnt, end_pnt
+
+    #
+    def get_pre_sagital_np2_data(self, data, site_face):
+        base_loc = np.array([-375, -125, 125, 375]) / self.vox_size_um
+        if site_face == 0:
+            start_pnt, end_pnt = rotate_base_points(data, base_loc)
+            self.anchor_sagital_index = None
+            for i in range(4):
+                da_pnts = np.asarray([start_pnt[i], end_pnt[i]])
+                self.working_atlas.pre_trajectory_list[i].setData(da_pnts)
+            temp = np.vstack([start_pnt, end_pnt])
+            self.working_atlas.image_dict['atlas-probe'].setData(pos=temp)
+        else:
+            start_pnt = data[0]
+            end_pnt = data[1]
+            self.working_atlas.pre_trajectory_list[0].setData(data)
+            self.anchor_sagital_index = base_loc + self.current_sagital_index
+        return start_pnt, end_pnt
+
+    #
+    def get_pre_horizontal_np2_data(self, data, site_face):
+        base_loc = np.array([-375, -125, 125, 375]) / self.vox_size_um
+        if site_face == 0:
+            start_pnt, end_pnt = rotate_base_points(data, base_loc)
+            self.anchor_horizontal_index = None
+            for i in range(4):
+                da_pnts = np.asarray([start_pnt[i], end_pnt[i]])
+                self.working_atlas.pre_trajectory_list[i].setData(da_pnts)
+            temp = np.vstack([start_pnt, end_pnt])
+            self.working_atlas.image_dict['atlas-probe'].setData(pos=temp)
+        else:
+            start_pnt = data[0]
+            end_pnt = data[1]
+            self.working_atlas.pre_trajectory_list[0].setData(data)
+            self.anchor_horizontal_index = base_loc + self.current_horizontal_index
+        return start_pnt, end_pnt
+
+    #
+    def draw_volume_pre_trajectory(self, data, n_pre_trajectory):
+        if len(data) == 1:
+            if n_pre_trajectory == 1:
+                self.working_atlas.image_dict['atlas-probe'].setData(pos=np.asarray(data))
+            else:
+                base_loc = np.array([-375, -125, 125, 375]) / self.vox_size_um
+                temp = np.stack([data[0][0] + base_loc, np.repeat(data[0][1], 4)], axis=1)
+                self.working_atlas.image_dict['atlas-probe'].setData(pos=np.asarray(temp))
+        elif len(data) == 2:
+            if n_pre_trajectory == 1:
+                print('hahahahah')
+                self.working_atlas.image_dict['atlas-probe'].setData(pos=np.asarray(data))
+            else:
+                print('sdfasd')
+                base_loc = np.array([-375, -125, 125, 375]) / self.vox_size_um
+                start_pnt, end_pnt = rotate_base_points(np.asarray(data), base_loc)
+                temp = np.vstack([start_pnt, end_pnt])
+                self.working_atlas.image_dict['atlas-probe'].setData(pos=temp)
+        else:
+            self.working_atlas.image_dict['atlas-probe'].clear()
+
+
+
 
 
 

@@ -97,11 +97,11 @@ def get_angles(direction):
     vertical_vec = np.array([0, 0, 1])
     
     ap_proj = direction.copy()
-    ap_proj[1] = 0
+    ap_proj[0] = 0
     ap_proj = ap_proj / np.linalg.norm(ap_proj)
 
     ml_proj = direction.copy()
-    ml_proj[0] = 0
+    ml_proj[1] = 0
     ml_proj = ml_proj / np.linalg.norm(ml_proj)
 
     ap_val = math.acos(np.max([np.min([np.dot(ap_proj, vertical_vec), 1]), -1]))
@@ -128,112 +128,231 @@ def pandas_to_str(label_name, label_ano, length, channels):
     return df.to_string(col_space=30, justify="justify")
 
 
-def get_probe_length(segmentation_data, sp, ep, direction, resolution, tip_length, channel_size, bregma):
-    probe_length_with_tip = np.sqrt(np.sum((sp - ep)**2)) * resolution
-    print('old length', probe_length_with_tip)
-    probe_length_without_tip = probe_length_with_tip - tip_length
-    pix_probe_length_without_tip = probe_length_without_tip / resolution
-    pix_probe_length_with_tip = probe_length_with_tip / resolution
+def correct_start_pnt(label_data, start_pnt, start_vox, direction):
+    direction = direction / np.linalg.norm(direction)
+    check_vec = label_data[int(start_vox[0]), int(start_vox[1]), :]
+    top_vox = np.where(check_vec != 0)[0][-1]
+    if start_vox[2] < top_vox:
+        for i in range(1000):
+            temp = start_vox - i * direction
+            check_vox = temp.astype(int)
+            if label_data[check_vox[0], check_vox[1], check_vox[2]] == 0:
+                break
+        if i == 999:
+            print('something went wrong, please contact maintainer')
+        new_sp = start_pnt - (i - 1) * direction
+    elif start_vox[2] > top_vox:
+        for i in range(1000):
+            temp = start_vox + i * direction
+            check_vox = temp.astype(int)
+            if label_data[check_vox[0], check_vox[1], check_vox[2]] == 0:
+                break
+        if i == 999:
+            print('something went wrong, please contact maintainer')
+        new_sp = start_pnt + (i - 1) * direction
+    else:
+        new_sp = start_pnt
+    return new_sp
 
-    if tip_length != 0:
+
+def correct_end_point(sp, ep, direction, vox_size, tip_length, probe_type):
+    probe_length_with_tip = np.sqrt(np.sum((sp - ep) ** 2)) * vox_size  # in um
+    probe_length_without_tip = probe_length_with_tip - tip_length  # in um
+    if probe_type != 2:
         if probe_length_without_tip > 9600:
             probe_length_without_tip = 9600
             probe_length_with_tip = probe_length_without_tip + tip_length
-        total_chn_lines = int(np.round(probe_length_without_tip / channel_size))
-        chk_pnts = np.zeros((total_chn_lines, 3))
-        step_length = pix_probe_length_without_tip / total_chn_lines
+        new_ep = sp + direction * probe_length_with_tip / vox_size
+    else:
+        new_ep = ep
+    return new_ep, probe_length_with_tip, probe_length_without_tip
 
-        for i in range(total_chn_lines):
-            chk_pnts[i] = sp + step_length * i * direction
 
-        new_ep = sp + pix_probe_length_with_tip * direction
+def check_parallel_to_z(sp, ep):
+    d = ep - sp
+    is_parallel = False
+    if abs(d[0]) < 1e-6 and abs(d[1]) < 1e-6 and abs(d[2]) > 1:
+        is_parallel = True
+    return is_parallel
 
-        print('new length', np.sqrt(np.sum((sp - new_ep) ** 2)) * resolution)
-        # chk_vox = chk_vox + 0.5 * (chk_vox[1] - chk_vox[0])
-        chk_vox = chk_pnts + bregma
-        chk_vox = chk_vox.astype(int)
 
-        chn_lines_labels = np.zeros(total_chn_lines)
-        for i in range(total_chn_lines):
-            chn_lines_labels[i] = segmentation_data[chk_vox[i, 0], chk_vox[i, 1], chk_vox[i, 2]]
+def angle_between_2vectors(vector1, vector2):
+    unit_vector_1 = vector1 / np.linalg.norm(vector1)
+    unit_vector_2 = vector2 / np.linalg.norm(vector2)
+    dot_product = np.dot(unit_vector_1, unit_vector_2)
+    angle = np.arccos(dot_product)
+    return angle
 
-        region_label = np.unique(chn_lines_labels).astype(int)
+
+def rotation_y(theta):
+    ct = np.cos(theta)
+    st = np.sin(theta)
+    ry = np.array([[ct, 0, st], [0, 1, 0], [-st, 0, ct]])
+    return ry
+
+
+def rotation_z(theta):
+    ct = np.cos(theta)
+    st = np.sin(theta)
+    rz = np.array([[ct, -st, 0], [st, ct, 0], [0, 0, 1]])
+    return rz
+
+
+def get_probe_info(probe_type):
+    if probe_type == 0:
+        tip_length = 175
+        channel_size = 20
+        channel_number_in_banks = (384, 384, 192)
+    elif probe_type == 1:
+        tip_length = 175
+        channel_size = 15
+        channel_number_in_banks = (384, 384, 192)
+    else:
+        tip_length = 0
+        channel_size = None
+        channel_number_in_banks = None
+    return tip_length, channel_size, channel_number_in_banks
+
+
+def get_probe_sites(segmentation_data, sp, ep, probe_length_without_tip,
+                    direction, vox_size, probe_type, channel_size, bregma, site_face):
+    if probe_type != 2:
+        base_loc = np.array([-16, -8, 8, 16]) / vox_size
+
+        center_loc = []
+        da_loc = sp + direction * (probe_length_without_tip - 6) / vox_size
+
+        while da_loc[2] < sp[2]:
+            center_loc.append(da_loc)
+            da_loc = center_loc[-1] - direction * channel_size / vox_size
+
+        n_sites_row = len(center_loc)
+        print(n_sites_row)
+
+        sites_loc = []
+        zero_vec = np.zeros(4)
+        if check_parallel_to_z(sp, ep):
+            if site_face == 0:
+                # calculate for flat case
+                related_site_center = np.vstack([base_loc, zero_vec, zero_vec]).T
+                for i in range(n_sites_row):
+                    sites_loc.append(center_loc[i] + related_site_center)
+            else:
+                # calculate for side case
+                related_site_center = np.vstack([zero_vec, base_loc, zero_vec]).T
+                for i in range(n_sites_row):
+                    sites_loc.append(center_loc[i] + related_site_center)
+        else:
+            x_vec = np.array([1, 0, 0])
+            vec1 = ep - sp
+            vec2 = vec1.copy()
+            vec2[2] = 0
+            ang_alpha = angle_between_2vectors(vec2, x_vec)
+            ang_beta = angle_between_2vectors(vec1, vec2)
+            rot_m = np.dot(rotation_z(ang_alpha), rotation_y(ang_beta))
+
+            if site_face == 0:
+                # calculate for flat case
+                related_site_center = np.vstack([zero_vec, base_loc, zero_vec])
+                for i in range(n_sites_row):
+                    sites_loc.append(center_loc[i] + np.dot(rot_m, related_site_center).T)
+            else:
+                # calculate for side case
+                related_site_center = np.vstack([zero_vec, zero_vec, base_loc])
+                for i in range(n_sites_row):
+                    sites_loc.append(center_loc[i] + np.dot(rot_m, related_site_center).T)
+
+        sites_label = np.zeros((n_sites_row, 2), 'i')
+        for i in range(n_sites_row):
+            if probe_type == 0:
+                if np.mod(i, 2) == 0:
+                    valid_sites_index = np.array([1, 3])
+                else:
+                    valid_sites_index = np.array([0, 2])
+            else:
+                valid_sites_index = np.array([1, 3])
+
+            site_vox = sites_loc[i] + bregma
+            site_vox = site_vox.astype(int)
+            valid_vox = site_vox[valid_sites_index, :]
+            sites_label[i, 0] = segmentation_data[valid_vox[0][0], valid_vox[0][1], valid_vox[0][2]]
+            sites_label[i, 1] = segmentation_data[valid_vox[1][0], valid_vox[1][1], valid_vox[1][2]]
+
+        region_label = np.unique(sites_label).astype(int)
         region_length = np.zeros(len(region_label))
         region_channels = np.zeros(len(region_label))
         for i in range(len(region_label)):
-            region_channels[i] = np.sum(chn_lines_labels == region_label[i]) * 2
-            region_length[i] = np.sum(chn_lines_labels == region_label[i]) * channel_size
+            region_channels[i] = np.sum(sites_label == region_label[i])
+            region_length[i] = np.sum(sites_label == region_label[i]) * channel_size / 2
     else:
-        chn_lines_labels = None
+        sites_loc = None
+        sites_label = None
         region_label = None
         region_length = None
         region_channels = None
-        new_ep = ep
         
-    return probe_length_with_tip, chn_lines_labels, region_label, region_length, region_channels, new_ep
+    return sites_loc, sites_label, region_label, region_length, region_channels
 
 
-def get_label_name(label_info, unique_label, chn_lines_labels):
+def get_label_name(label_info, unique_label, sites_label):
     label_names = []
     label_acronym = []
     label_color = []
-    chn_line_color = np.zeros((len(chn_lines_labels), 3), 'i')
+    left_sites_color = np.zeros((len(sites_label), 3), 'i')
+    right_sites_color = np.zeros((len(sites_label), 3), 'i')
     for i in range(len(unique_label)):
-        # print(unique_label[i])
         if unique_label[i] == 0:
             label_names.append(' ')
             label_acronym.append(' ')
             label_color.append((128, 128, 128))
-            cind = np.where(chn_lines_labels == unique_label[i])[0]
-            chn_line_color[cind, 0] = 128
-            chn_line_color[cind, 1] = 128
-            chn_line_color[cind, 2] = 128
+            cind = np.where(sites_label[:, 0] == unique_label[i])[0]
+            if len(cind) > 1:
+                left_sites_color[cind, 0] = 128
+                left_sites_color[cind, 1] = 128
+                left_sites_color[cind, 2] = 128
+            cind = np.where(sites_label[:, 1] == unique_label[i])[0]
+            if len(cind) > 1:
+                right_sites_color[cind, 0] = 128
+                right_sites_color[cind, 1] = 128
+                right_sites_color[cind, 2] = 128
         else:
-            da_ind = np.where(label_info['index'] == unique_label[i])[0][0]
+            da_ind = np.where(np.ravel(label_info['index']) == unique_label[i])[0][0]
             label_names.append(label_info['label'][da_ind])
             label_acronym.append(label_info['abbrev'][da_ind])
             label_color.append(label_info['color'][da_ind])
-            cind = np.where(chn_lines_labels == unique_label[i])[0]
-            chn_line_color[cind, 0] = label_info['color'][da_ind][0]
-            chn_line_color[cind, 1] = label_info['color'][da_ind][1]
-            chn_line_color[cind, 2] = label_info['color'][da_ind][2]
+            cind = np.where(sites_label[:, 0] == unique_label[i])[0]
+            if len(cind) > 1:
+                left_sites_color[cind, 0] = label_info['color'][da_ind][0]
+                left_sites_color[cind, 1] = label_info['color'][da_ind][1]
+                left_sites_color[cind, 2] = label_info['color'][da_ind][2]
+            cind = np.where(sites_label[:, 1] == unique_label[i])[0]
+            if len(cind) > 1:
+                right_sites_color[cind, 0] = label_info['color'][da_ind][0]
+                right_sites_color[cind, 1] = label_info['color'][da_ind][1]
+                right_sites_color[cind, 2] = label_info['color'][da_ind][2]
 
-    return label_names, label_acronym, label_color, chn_line_color
+    return label_names, label_acronym, label_color, left_sites_color, right_sites_color
 
 
-def block_same_label(chn_lines_labels, chn_line_color):
-    merged_labels = [chn_lines_labels[0]]
-    merged_colors = [chn_line_color[0]]
+def block_same_label_one_side(sites_label_one_side, sites_color_one_side):
+    merged_labels = [sites_label_one_side[0]]
+    merged_colors = [sites_color_one_side[0]]
     in_block_count = 1
     block_count = []
-    for i in range(1, len(chn_lines_labels)):
-        if chn_lines_labels[i] == chn_lines_labels[i - 1]:
+    for i in range(1, len(sites_label_one_side)):
+        if sites_label_one_side[i] == sites_label_one_side[i - 1]:
             in_block_count += 1
         else:
             block_count.append(in_block_count)
             in_block_count = 1
-            merged_labels.append(chn_lines_labels[i])
-            merged_colors.append(chn_line_color[i])
-        if i == len(chn_lines_labels) - 1:
+            merged_labels.append(sites_label_one_side[i])
+            merged_colors.append(sites_color_one_side[i])
+        if i == len(sites_label_one_side) - 1:
             block_count.append(in_block_count)
     return merged_labels, merged_colors, block_count
 
 
-def correct_start_pnt(label_data, start_pnt, direction):
-    temp = start_pnt - direction
-    if temp[2] < start_pnt[2]:
-        direction = - direction
-        print('reverse direction')
 
-    for i in range(1000):
-        temp = start_pnt - i * direction
-        check_vox = temp.astype(int)
-        if label_data[check_vox[0], check_vox[1], check_vox[2]] == 0:
-            break
-    if i == 999:
-        print('something went wrong, please contact maintainer')
-    new_sp = start_pnt - (i - 1) * direction
-    return new_sp, direction
 
 
 def get_tilt_info(sp, ep):
@@ -266,39 +385,78 @@ def get_tilt_info(sp, ep):
     return ap_tilt, ml_tilt
 
 
-def calculate_probe_info(data, label_data, label_info, vxsize_um, tip_length, channel_size, bregma):
+def calculate_probe_info(data, label_data, label_info, vxsize_um, probe_type, bregma, site_face):
+    """
+
+    :param data: 3d coordinates for all the points
+    :param label_data: original brain region segmentation
+    :param label_info:
+    :param vxsize_um:
+    :param tip_length:
+    :param channel_size:
+    :param bregma:
+    :return:
+    """
+    # find the best fit line of the given points
+    # direction is from ???
+    # start_pnt and end_pnt are coordinates related to the given Bregma
+    tip_length, channel_size, channel_number_in_banks = get_probe_info(probe_type)
     start_pnt, end_pnt, avg, direction = line_fit(data)
     start_vox = start_pnt + bregma
     end_vox = end_pnt + bregma
     ap_angle, ml_angle = get_angles(direction)
-    print(ap_angle, ml_angle)
-    new_start_vox, direction = correct_start_pnt(label_data, start_vox, direction)
-    new_sp = new_start_vox - bregma
-    probe_length, chn_lines_labels, region_label, region_length, region_channels, new_ep = \
-        get_probe_length(label_data, new_sp, end_pnt, direction, vxsize_um, tip_length, channel_size, bregma)
-    # print(chn_lines_labels, region_label, region_length, region_channels, new_ep)
-    enter_coords = new_sp * vxsize_um
-    end_coords = new_ep * vxsize_um
+    new_sp = correct_start_pnt(label_data, start_pnt, start_vox, direction)
+    new_start_vox = new_sp + bregma
+    print('sp', start_pnt)
+    print('sp_vox', start_vox)
+    print('new_sp', new_sp)
+    print('new_sp_vox', new_start_vox)
+    new_ep, probe_length_with_tip, probe_length_without_tip = correct_end_point(
+        new_sp, end_pnt, direction, vxsize_um, tip_length, probe_type)
+    print('ep', end_pnt)
+    print('new_ep', new_ep)
+    print(probe_length_with_tip)
+    print(np.sqrt(np.sum((new_sp - new_ep) ** 2)) * vxsize_um)
     new_end_vox = new_ep + bregma
     new_end_vox = new_end_vox.astype(int)
+    print(new_end_vox)
 
-    dv = (new_end_vox[2] - new_start_vox[2]) * vxsize_um
+    sites_loc, sites_label, region_label, region_length, region_channels = get_probe_sites(
+        label_data, new_sp, new_ep, probe_length_without_tip,
+        direction, vxsize_um, probe_type, channel_size, bregma, site_face)
+    print(region_label, region_length, region_channels)
+    enter_coords = new_sp * vxsize_um
+    end_coords = new_ep * vxsize_um
+
+    dv = (new_sp[2] - new_ep[2]) * vxsize_um
     ap_tilt, ml_tilt = get_tilt_info(new_sp, new_ep)
 
-    label_names, label_acronym, label_color, chn_line_color = get_label_name(label_info, region_label, chn_lines_labels)
+    label_names, label_acronym, label_color, left_sites_color, right_sites_color = get_label_name(
+        label_info, region_label, sites_label)
+
+    # sites_color = [left_sites_color, right_sites_color]
     # print(label_names, label_acronym, label_color, chn_line_color)
 
-    merged_labels, merged_colors, block_count = block_same_label(chn_lines_labels, chn_line_color)
+    left_merged_labels, left_merged_colors, left_block_count = block_same_label_one_side(
+        sites_label[:, 0], left_sites_color)
+    right_merged_labels, right_merged_colors, right_block_count = block_same_label_one_side(
+        sites_label[:, 1], right_sites_color)
+
+    merged_labels = [left_merged_labels, right_merged_labels]
+    merged_colors = [left_merged_colors, right_merged_colors]
+    block_count = [left_block_count, right_block_count]
+
     # print(merged_labels, merged_colors, block_count)
 
     da_dict = {'object_name': 'probe', 'data': data, 'ap_tilt': ap_tilt, 'ml_tilt': ml_tilt,
                'insertion_coords_3d': start_pnt, 'terminus_coords_3d': end_pnt,
                'new_insertion_coords_3d': new_sp, 'new_terminus_coords_3d': new_ep,
-               'direction': direction, 'probe_length': probe_length, 'dv': dv,
+               'direction': direction, 'probe_length': probe_length_with_tip, 'dv': dv,
                'ap_angle': ap_angle, 'ml_angle': ml_angle,
                'insertion_coords': enter_coords, 'insertion_vox': new_start_vox,
                'terminus_coords': end_coords, 'terminus_vox': new_end_vox,
-               'chn_lines_labels': merged_labels, 'chn_lines_color': merged_colors, 'block_count': block_count,
+               'sites_label': sites_label, 'sites_loc_related_to_Bregma': sites_loc,
+               'merged_labels': merged_labels, 'merged_color': merged_colors, 'block_count': block_count,
                'region_label': region_label, 'region_length': region_length, 'region_channels': region_channels,
                'label_name': label_names, 'label_acronym': label_acronym, 'label_color': label_color}
     return da_dict
@@ -535,7 +693,11 @@ def create_other_size(image, file_name, dim, location):
 def make_hist_data(image_data, max_val):
     hist_data_list = []
     for i in range(image_data.shape[2]):
-        hist_y, x = np.histogram(image_data[:, :, i], bins=np.max(image_data[:, :, i]))
+        if np.max(image_data[:, :, i]) == 0:
+            da_bins = max_val
+        else:
+            da_bins = np.max(image_data[:, :, i])
+        hist_y, x = np.histogram(image_data[:, :, i], bins=da_bins)
         y = np.log1p(hist_y)
         y = y / np.max(y) * max_val
         y = np.append(y, 0)
@@ -1081,7 +1243,7 @@ def create_vis_img(size, point_data, color, vis_type='p', closed=False):
     da_color = (int(color[0]), int(color[1]), int(color[2]))
     if vis_type == 'p':
         for i in range(len(point_data)):
-            cv2.circle(img, (int(point_data[i][0]), int(point_data[i][1])), radius=2, color=da_color, thickness=-1)
+            cv2.circle(img, (int(point_data[i][0]), int(point_data[i][1])), radius=5, color=da_color, thickness=-1)
     else:
         if closed:
             cv2.fillPoly(img, pts=point_data, color=da_color)
@@ -1105,11 +1267,11 @@ def check_loaded_project(project_dict):
     all_keys = list(project_dict.keys())
     valid_keys = ['atlas_path', 'current_atlas', 'num_windows', 'probe_type', 'np_onside', 'processing_slice',
                   'processing_img', 'overlay_img', 'atlas_control', 'img_ctrl_data', 'setting_data', 'tool_data',
-                  'layer_data', 'working_img_data', 'working_atlas_data','object_data']
+                  'layer_data', 'working_img_data', 'working_atlas_data', 'object_data']
     valid_project = True
     for da_key in all_keys:
         if da_key not in valid_keys:
-            valid_project = Fasle
+            valid_project = False
     return valid_project
 
 
@@ -1178,3 +1340,31 @@ def make_atlas_label_contour(atlas_folder, segmentation_data):
     outfile_ct.close()
 
     return boundary
+
+
+def get_angle_two_vector(vec1, vec2):
+    """
+    in 2d
+    :param vec1:
+    :param vec2:
+    :return:
+    """
+
+    vec = np.array([-vec2[1], vec2[0]])
+    b_coord = np.dot(vec1, vec2)
+    p_coord = np.dot(vec1, vec)
+    da_ang = np.arctan2(p_coord, b_coord)
+
+    return da_ang
+
+
+def rotate_base_points(data, base_loc):
+    temp = np.stack([base_loc, np.array([0, 0, 0, 0])], axis=1)
+    vec1 = data[1] - data[0]
+    vec2 = np.array([0, 1])
+    ang = get_angle_two_vector(vec1, vec2)
+    rotm = np.array([[np.cos(ang), -np.sin(ang)], [np.sin(ang), np.cos(ang)]])
+    base_pnt = np.dot(rotm, temp.T).T
+    start_pnt = base_pnt + data[0]
+    end_pnt = base_pnt + data[1]
+    return start_pnt, end_pnt

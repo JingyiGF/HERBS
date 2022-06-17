@@ -93,15 +93,15 @@ class SliceSettingDialog(QDialog):
 
         self.width_val = QDoubleSpinBox()
         self.width_val.setValue(0)
-        self.width_val.setRange(-20, 20)
+        self.width_val.setRange(-50, 50)
         self.width_val.valueChanged.connect(self.width_val_changed)
         self.height_val = QDoubleSpinBox()
         self.height_val.setValue(0)
-        self.height_val.setRange(-20, 20)
+        self.height_val.setRange(-50, 50)
         self.height_val.valueChanged.connect(self.height_val_changed)
         self.distance_val = QDoubleSpinBox()
         self.distance_val.setValue(0)
-        self.distance_val.setRange(-20, 20)
+        self.distance_val.setRange(-50, 50)
         self.distance_val.valueChanged.connect(self.distance_val_changed)
 
         # ok button, used to close window

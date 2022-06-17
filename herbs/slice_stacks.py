@@ -105,6 +105,10 @@ class SliceStacks(pg.GraphicsLayoutWidget):
         drawing_pnts = pg.PlotDataItem(pen=pg.mkPen(color=(255, 102, 0), width=2), brush=None)
         contour_pnts = pg.PlotDataItem(pen=pg.mkPen(color=(255, 0, 255), width=3), brush=None)
 
+        self.pre_trajectory_list = []
+        for i in range(4):
+            self.pre_trajectory_list.append(pg.PlotDataItem(pen=pg.mkPen(color=(0, 0, 255), width=2), brush=None))
+
         self.image_dict = {'atlas-overlay': overlay_img,
                            'atlas-mask': mask_img,
                            'grid_lines': grid_lines,
@@ -136,6 +140,9 @@ class SliceStacks(pg.GraphicsLayoutWidget):
 
         for i in range(len(self.image_dict)):
             self.vb.addItem(self.image_dict[self.image_dict_keys[i]])
+
+        for i in range(4):
+            self.vb.addItem(self.pre_trajectory_list[i])
 
         self.vb.addItem(self.v_line, ignoreBounds=True)
         self.vb.addItem(self.h_line, ignoreBounds=True)

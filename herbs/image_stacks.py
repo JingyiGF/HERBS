@@ -111,6 +111,12 @@ class SliceStack(pg.GraphicsLayoutWidget):
         drawing_pnts = pg.PlotDataItem(pen=pg.mkPen(color=(255, 102, 0), width=2), brush=None)
         contour_pnts = pg.PlotDataItem(pen=pg.mkPen(color=(255, 0, 255), width=3), brush=None)
 
+        self.pre_trajectory_list = []
+        for i in range(4):
+            self.pre_trajectory_list.append(pg.PlotDataItem(pen=pg.mkPen(color=(0, 0, 255), width=2), brush=None,
+                                                            symbolPen=(0, 0, 255), symbolBrush=(0, 0, 255),
+                                                            symbol='s', symbolSize=3))
+
         self.image_dict = {'atlas-overlay': overlay_img,
                            'overlay_contour': overlay_contour,
                            'atlas-drawing': drawing_pnts,
@@ -131,6 +137,9 @@ class SliceStack(pg.GraphicsLayoutWidget):
 
         for i in range(len(self.image_dict)):
             self.vb.addItem(self.image_dict[self.image_dict_keys[i]])
+
+        for i in range(4):
+            self.vb.addItem(self.pre_trajectory_list[i])
 
     def set_data(self, data, scale=None):
         self.data = data

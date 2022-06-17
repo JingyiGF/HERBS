@@ -449,13 +449,15 @@ class LayersControl(QWidget):
         self.layer_opacity_val_label.setText('{} %'.format(da_val))
 
     def get_layer_data(self):
-        data = {'layer_list': self.layer_list,
-                'layer_id': self.layer_id,
-                'layer_link': self.layer_link,
+        tb_list = []
+        for i in range(len(self.layer_link)):
+            da_tb = self.layer_list[i].thumbnail_data
+            tb_list.append(da_tb)
+        data = {'layer_link': self.layer_link,
                 'layer_color': self.layer_color,
+                'layer_thumbnail': tb_list,
                 'layer_opacity': self.layer_opacity,
                 'layer_blend_mode': self.layer_blend_mode,
-                'layer_count': self.layer_count,
                 'current_layer_index': self.current_layer_index}
         return data
 
@@ -465,14 +467,14 @@ class LayersControl(QWidget):
 
         for i in range(len(data['layer_link'])):
             self.add_layer(data['layer_link'][i], data['layer_color'][i])
-            self.layer_link[-1].set_thumbnail_data(data['layer_tbnail'][i])
+            self.layer_list[-1].set_thumbnail_data(data['layer_thumbnail'][i])
 
         self.layer_opacity = data['layer_opacity']
         self.layer_blend_mode = data['layer_blend_mode']
         self.current_layer_index = data['current_layer_index']
-        self.layer_link[-1].set_checked(False)
+        self.layer_list[-1].set_checked(False)
         for i in range(len(self.current_layer_index)):
-            self.layer_link[i].set_checked(True)
+            self.layer_list[i].set_checked(True)
 
     def clear_all(self):
         ind = np.arange(len(self.layer_list))[::-1]
