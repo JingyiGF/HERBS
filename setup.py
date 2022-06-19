@@ -32,8 +32,6 @@ Programming Language :: Python :: 3.10
 Programming Language :: Python :: 3 :: Only
 Topic :: Software Development
 Topic :: Scientific/Engineering
-Topic :: Scientific/Engineering :: Image Processing
-Topic :: Scientific/Engineering :: Medical Science Apps
 Typing :: Typed
 Operating System :: Microsoft :: Windows
 Operating System :: POSIX
