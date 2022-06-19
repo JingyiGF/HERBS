@@ -2,20 +2,79 @@
 @author: Jingyi GF{jingyi.g.fuglstad@gmail.com}
 """
 import os
+import sys
+import subprocess
+import textwrap
+import warnings
+import builtins
+import re
 from setuptools import setup, find_packages
-exec(open('herbs/version.py').read())
+
+if sys.version_info[:2] < (3, 8) or sys.version_info[:2] < (3, 11):
+    raise RuntimeError("Python version >= 3.8 < 3.11 required.")
+
+if os.path.exists('MANIFEST'):
+    os.remove('MANIFEST')
 
 
 # Utility function to read the README file.
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
+
+CLASSIFIERS = """
+Development Status :: 3 - Alpha
+Intended Audience :: Science/Research
+Intended Audience :: Developers
+Intended Audience :: Education
+License :: OSI Approved :: MIT License
+Programming Language :: Python :: 3
+Programming Language :: Python :: 3.8
+Programming Language :: Python :: 3.9
+Programming Language :: Python :: 3.10
+Programming Language :: Python :: 3 :: Only
+Topic :: Software Development
+Topic :: Scientific/Engineering
+Topic :: Scientific/Engineering :: Image Processing
+Topic :: Scientific/Engineering :: Medical Science Apps
+Typing :: Typed
+Operating System :: Microsoft :: Windows
+Operating System :: POSIX
+Operating System :: Unix
+Operating System :: MacOS
+"""
+
+REQUIRES = """
+PyQt5 == 5.14.2
+pyqtgraph == 0.12.3
+PyOpenGL == 3.1.5
+QtRangeSlider == 0.1.5
+opencv-python
+numba
+numpy
+scipy
+shutil
+requests
+csv
+nibabel
+pynrrd
+tifffile
+aicspylibczi
+pandas
+natsort
+imagecodecs
+random
+h5py
+tables
+"""
+
+
 setup(
     name="herbs",
-    version=__version__,
+    version="0.0.2",
     author="Jingyi GF",
     author_email="jingyi.g.fuglstad@gmail.com",
-    description="",
+    description="A Python-based GUI for Histological E-data Registration in Brain Space",
     keywords="brain atlas, histological image registration, probe coordinates",
     url="https://github.com/JingyiGF/HERBS",
     packages=find_packages(exclude=[]),
@@ -24,10 +83,7 @@ setup(
     project_urls={
         "Bug Tracker": "https://github.com/JingyiGF/HERBS/issues",
     },
-    classifiers=[
-        "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: MIT License",
-        "Operating System :: OS Independent",
-    ],
-    python_requires=">=3.8",
+    classifiers=[_f for _f in CLASSIFIERS.split('\n') if _f],
+    python_requires=">=3.8 <3.11",
+    install_requires=[_f for _f in REQUIRES.split('\n') if _f]
 )

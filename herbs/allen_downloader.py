@@ -57,7 +57,6 @@ class WorkerProcessAllen(QObject):
         self.progress.emit(9)
 
         n_unique_labels = len(self.unique_label)
-        print(label_data.shape)
         mesh_path = os.path.join(self.saving_folder, 'meshes')
         if not os.path.exists(mesh_path):
             os.mkdir(mesh_path)
