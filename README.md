@@ -12,7 +12,7 @@ $ pip install herbs
 
 ```python
 import herbs
-run_herbs()
+herbs.run_herbs()
 ```
 
 <img src="https://github.com/JingyiGF/HERBS/blob/main/image/herbs.jpg" width="800px"></img>
