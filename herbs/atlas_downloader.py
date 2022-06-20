@@ -17,7 +17,7 @@ from .uuuuuu import render_volume, render_small_volume
 
 
 class DownloadThread(QThread):
-    download_proess_signal = pyqtSignal(int)
+    download_process_signal = pyqtSignal(int)
 
     def __init__(self, url, filesize, fileobj, buffer):
         super(DownloadThread, self).__init__()
@@ -37,7 +37,7 @@ class DownloadThread(QThread):
                 self.fileobj.write(chunk)
                 offset = offset + len(chunk)
                 proess = offset / int(self.filesize) * 100
-                self.download_proess_signal.emit(int(proess))
+                self.download_process_signal.emit(int(proess))
             self.fileobj.close()
             self.exit(0)
 
@@ -232,7 +232,6 @@ class AtlasDownloader(QDialog):
                 shutil.copyfile(join(dirname(__file__), "data/atlas_labels.pkl"), target)
 
             self.start_thread(self.label_url, self.label_local, self.set_label_bar_value)
-            time.sleep(0.1)
             self.start_thread(self.mask_url, self.mask_local, self.set_mask_bar_value)
             time.sleep(0.1)
             self.start_thread(self.segmentation_url, self.segmentation_local, self.set_segmentation_bar_value)
@@ -244,9 +243,9 @@ class AtlasDownloader(QDialog):
         file_size = requests.get(url, stream=True).headers['Content-Length']
         file_obj = open(os.path.join(self.saving_folder, local), 'wb')
 
-        da_thread = DownloadThread(url, file_size, file_obj, buffer=1024)
-        da_thread.download_proess_signal.connect(func)
-        da_thread.start()
+        self.da_thread = DownloadThread(url, file_size, file_obj, buffer=1024)
+        self.da_thread.download_process_signal.connect(func)
+        self.da_thread.start()
 
     # Setting progress bar
     def set_label_bar_value(self, value):
