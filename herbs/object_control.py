@@ -9,7 +9,6 @@ import pyqtgraph.functions as fn
 from PyQt5.QtGui import QIcon, QPixmap, QColor, QFont
 from PyQt5.QtCore import Qt, QSize
 from .wtiles import *
-from .styles import Styles
 
 btm_style = '''
 
@@ -48,6 +47,7 @@ eye_button_style = '''
     border-radius: 0px;
     background: transparent;
 '''
+
 
 text_btn_style = '''
 QPushButton {
@@ -93,24 +93,17 @@ class CompareWindow(QDialog):
 
         self.setWindowTitle("Compare Information Window")
 
-        print(len(obj_names))
-
-        print(len(obj_data))
         n_object = len(obj_names)
         all_label_names = obj_data[0]['label_name'].copy()
         all_label_acronym = obj_data[0]['label_acronym'].copy()
         all_label_color = obj_data[0]['label_color'].copy()
         all_label_channels = obj_data[0]['region_channels'].tolist()
-        print(len(all_label_names))
-        print(len(all_label_acronym))
-        print(len(all_label_color))
-        print(len(all_label_channels))
+
         for i in range(1, n_object):
             check_label = obj_data[i]['label_name']
             for j in range(len(check_label)):
                 if check_label[j] in all_label_names:
                     da_ind = np.where(np.ravel(all_label_names) == check_label[j])[0][0]
-                    print(da_ind)
                     all_label_channels[da_ind] = all_label_channels[da_ind] + obj_data[i]['region_channels'][j]
                 else:
                     all_label_names.append(check_label[j])
@@ -520,17 +513,16 @@ class SinglePiece(QWidget):
     sig_clicked = pyqtSignal(object)
     sig_name_changed = pyqtSignal(object)
 
-    def __init__(self, parent=None, index=0, object_type='probe', object_icon=None, group_index=0):
+    def __init__(self, parent=None, index=0, obj_name='', obj_type='probe piece', object_icon=None):
         QWidget.__init__(self, parent=parent)
 
         self.inactive_style = 'QFrame{background-color:rgb(83, 83, 83); border: 1px solid rgb(128, 128, 128);}'
         self.active_style = 'QFrame{background-color:rgb(107, 107, 107); border: 1px solid rgb(128, 128, 128);}'
 
         self.id = index
-        self.object_name = object_type
-        self.object_type = object_type
+        self.object_name = obj_name
+        self.object_type = obj_type
         self.active = True
-        self.group_id = group_index
 
         self.tbnail = QPushButton()
         self.tbnail.setFixedSize(QSize(40, 40))
@@ -575,7 +567,6 @@ class SinglePiece(QWidget):
 
     @pyqtSlot()
     def on_click(self):
-        print("Click")
         self.set_checked(True)
         self.sig_clicked.emit(self.id)
 
@@ -590,7 +581,6 @@ class SinglePiece(QWidget):
 
     @pyqtSlot()
     def enter_pressed(self):
-        print('return')
         da_text = self.l_line_edit.text()
         if '-' not in da_text or 'piece' not in da_text:
             return
@@ -617,7 +607,7 @@ class RegisteredObject(QWidget):
     sig_clicked = pyqtSignal(object)
     sig_link = pyqtSignal(object)
 
-    def __init__(self, parent=None, index=0, object_type='merged probes', object_icon=None, group_index=0):
+    def __init__(self, parent=None, obj_id=0, obj_name='', obj_type='merged probe', object_icon=None):
         QWidget.__init__(self, parent=parent)
 
         self.inactive_style = 'QFrame{background-color:rgb(83, 83, 83); border: 1px solid rgb(128, 128, 128);}'
@@ -626,12 +616,11 @@ class RegisteredObject(QWidget):
         self.color = QColor(randint(0, 255), randint(0, 255), randint(0, 255), 255)
         self.icon_back = 'border:1px solid black; background-color: {}'.format(self.color.name())
 
-        self.id = index
-        self.object_type = object_type
-        self.object_name = object_type
+        self.id = obj_id
+        self.object_type = obj_type
+        self.object_name = obj_name
         self.active = True
         self.vis = True
-        self.group_id = group_index
 
         self.eye_button = QPushButton()
         self.eye_button.setFixedSize(QSize(40, 40))
@@ -754,29 +743,22 @@ class ObjectControl(QObject):
         self.default_size_val = 2
         self.default_opacity_val = 100
 
+        self.valid_obj_type = ['probe piece', 'merged probe',
+                               'cells piece', 'merged cells',
+                               'virus piece', 'merged virus',
+                               'contour piece', 'merged contour',
+                               'drawing piece', 'merged drawing']
+
         self.current_obj_index = None
 
         self.obj_count = 0
         self.linked_indexes = []
-
-        self.probe_piece_count = 0
-        self.cell_piece_count = 0
-        self.drawing_piece_count = 0
-        self.virus_piece_count = 0
-        self.contour_piece_count = 0
-
-        self.reg_probe_count = 0
-        self.reg_cell_count = 0
-        self.reg_drawing_count = 0
-        self.reg_virus_count = 0
-        self.reg_contour_count = 0
 
         self.obj_list = []  # widgets
         self.obj_id = []  # identity
         self.obj_name = []  # names, initially the same as type, can be changed freely ???
         self.obj_type = []  # type
         self.obj_data = []  # data
-        self.obj_group_id = []  # group identity
         self.obj_size = []  # size
         self.obj_opacity = []
         self.obj_comp_mode = []
@@ -823,7 +805,7 @@ class ObjectControl(QObject):
 
         obj_size_label = QLabel('Size/Width: ')
         obj_size_label.setFixedWidth(80)
-        self.obj_size_slider = QSlider(QtCore.Qt.Horizontal)
+        self.obj_size_slider = QSlider(Qt.Horizontal)
         self.obj_size_slider.setValue(2)
         self.obj_size_slider.setMinimum(1)
         self.obj_size_slider.setMaximum(10)
@@ -975,32 +957,6 @@ class ObjectControl(QObject):
     def delete_object_btn_clicked(self):
         if self.current_obj_index is None:
             return
-        obj_type = self.obj_type[self.current_obj_index]
-        if 'probe' in obj_type:
-            if 'merged' in obj_type:
-                self.reg_probe_count -= 1
-            else:
-                self.probe_piece_count -= 1
-        elif 'virus' in obj_type:
-            if 'merged' in obj_type:
-                self.reg_virus_count -= 1
-            else:
-                self.virus_piece_count -= 1
-        elif 'cell' in obj_type:
-            if 'merged' in obj_type:
-                self.reg_cell_count -= 1
-            else:
-                self.cell_piece_count -= 1
-        elif 'contour' in obj_type:
-            if 'merged' in obj_type:
-                self.reg_contour_count -= 1
-            else:
-                self.contour_piece_count -= 1
-        else:
-            if 'merged' in obj_type:
-                self.reg_drawing_count -= 1
-            else:
-                self.drawing_piece_count -= 1
         self.delete_objects(self.current_obj_index)
 
     def obj_clicked(self, clicked_id):
@@ -1023,22 +979,13 @@ class ObjectControl(QObject):
 
     def set_active_layer_to_current(self, clicked_id):
         previous_obj_id = self.obj_id[self.current_obj_index]
-        size_val = self.obj_size_slider.value()
-        opacity_val = self.obj_opacity_slider.value()
-        compo_mode = self.obj_blend_combo.currentText()
         if previous_obj_id != clicked_id:
             active_index = np.where(np.ravel(self.obj_id) == clicked_id)[0][0]
             self.current_obj_index = active_index
             # self.obj_list[active_index].set_checked(True)
             inactive_id = np.where(np.ravel(self.obj_id) == previous_obj_id)[0][0]
             self.obj_list[inactive_id].set_checked(False)
-            if 'merged' in self.obj_type[self.current_obj_index]:
-                if self.obj_size[self.current_obj_index] != size_val:
-                    self.obj_size_slider.setValue(self.obj_size[self.current_obj_index])
-                if self.obj_opacity[self.current_obj_index] != opacity_val:
-                    self.obj_opacity_slider.setValue(self.obj_opacity[self.current_obj_index])
-                if self.obj_comp_mode[self.current_obj_index] != compo_mode:
-                    self.obj_blend_combo.setCurrentText(self.obj_comp_mode[self.current_obj_index])
+            self.set_slider_combo_to_current()
         else:
             return
 
@@ -1050,7 +997,6 @@ class ObjectControl(QObject):
             if da_index in self.linked_indexes:
                 del_ind = np.where(np.ravel(self.linked_indexes) == da_index)[0][0]
                 self.linked_indexes.pop(del_ind)
-        print(self.linked_indexes)
 
     def obj_color_changed(self, clicked_id):
         self.set_active_layer_to_current(clicked_id)
@@ -1079,7 +1025,6 @@ class ObjectControl(QObject):
             del self.obj_list[da_ind]
             del self.obj_id[da_ind]
             del self.obj_name[da_ind]
-            del self.obj_group_id[da_ind]
             del self.obj_type[da_ind]
             del self.obj_data[da_ind]
             del self.obj_comp_mode[da_ind]
@@ -1097,54 +1042,37 @@ class ObjectControl(QObject):
             self.current_obj_index = active_index
 
     #
-    def get_index_and_icon(self, object_type):
+    def get_object_icon(self, object_type):
         if 'probe' in object_type:
-            if 'merged' in object_type:
-                group_index = self.reg_probe_count
-            else:
-                group_index = self.probe_piece_count
             object_icon = self.probe_icon
         elif 'virus' in object_type:
-            if 'merged' in object_type:
-                group_index = self.reg_virus_count
-            else:
-                group_index = self.virus_piece_count
             object_icon = self.virus_icon
         elif 'cell' in object_type:
-            if 'merged' in object_type:
-                group_index = self.reg_cell_count
-            else:
-                group_index = self.cell_piece_count
             object_icon = self.cell_icon
         elif 'contour' in object_type:
-            if 'merged' in object_type:
-                group_index = self.reg_contour_count
-            else:
-                group_index = self.contour_piece_count
             object_icon = self.contour_icon
         elif 'drawing' in object_type:
-            if 'merged' in object_type:
-                group_index = self.reg_drawing_count
-            else:
-                group_index = self.drawing_piece_count
             object_icon = self.drawing_icon
         else:
-            group_index = None
             object_icon = None
-        return group_index, object_icon
+        return object_icon
 
-    def add_object(self, object_type, object_data):
-        group_index, object_icon = self.get_index_and_icon(object_type)
-        if group_index is None:
+    def get_group_count(self, object_type):
+        group_count = len([da_type for da_type in self.obj_type if da_type == object_type])
+        return group_count
+
+    def add_object(self, object_name, object_type, object_data):
+        object_icon = self.get_object_icon(object_type)
+        group_count = self.get_group_count(object_type)
+        if object_icon is None:
             return
         self.obj_id.append(self.obj_count)
         self.obj_data.append(object_data)
-        self.obj_name.append("{} {}".format(object_type, group_index + 1))
+        self.obj_name.append("{} {}".format(object_name, group_count))
         self.obj_type.append(object_type)
         if 'merged' in object_type:
-            print('merged')
-            new_layer = RegisteredObject(index=self.obj_count, object_type=object_type,
-                                         object_icon=object_icon, group_index=group_index)
+            new_layer = RegisteredObject(obj_id=self.obj_count, obj_name=object_name,
+                                         obj_type=object_type, object_icon=object_icon)
             new_layer.eye_clicked.connect(self.obj_eye_clicked)
             new_layer.sig_object_color_changed.connect(self.obj_color_changed)
             new_layer.sig_link.connect(self.obj_link_changed)
@@ -1159,60 +1087,32 @@ class ObjectControl(QObject):
                 self.obj_opacity_slider.setValue(self.default_opacity_val)
             if self.obj_blend_combo.currentText() != 'opaque':
                 self.obj_blend_combo.setCurrentText('opaque')
-
         else:
-            new_layer = SinglePiece(index=self.obj_count, object_type=object_type,
-                                    object_icon=object_icon, group_index=group_index)
+            new_layer = SinglePiece(index=self.obj_count, obj_name=object_name,
+                                    obj_type=object_type, object_icon=object_icon)
             new_layer.sig_name_changed.connect(self.obj_piece_name_changed)
             self.obj_opacity.append([])
             self.obj_size.append([])
             self.obj_comp_mode.append([])
 
-        new_layer.text_btn.setText("{} {}".format(object_type, group_index + 1))
+        new_layer.text_btn.setText(self.obj_name[-1])
         new_layer.set_checked(True)
         new_layer.sig_clicked.connect(self.obj_clicked)
         self.obj_list.append(new_layer)
-        self.obj_group_id.append(group_index)
 
         active_index = np.where(np.ravel(self.obj_id) == self.obj_count)[0][0]
         if self.current_obj_index is None:
             self.current_obj_index = active_index
         else:
-            print(self.current_obj_index)
             self.obj_list[self.current_obj_index].set_checked(False)
             self.current_obj_index = active_index
 
         self.layer_layout.addWidget(self.obj_list[-1])
         self.obj_count += 1
-        if 'probe' in object_type:
-            if 'merged' in object_type:
-                self.reg_probe_count += 1
-            else:
-                self.probe_piece_count += 1
-        elif 'virus' in object_type:
-            if 'merged' in object_type:
-                self.reg_virus_count += 1
-            else:
-                self.virus_piece_count += 1
-        elif 'cell' in object_type:
-            if 'merged' in object_type:
-                self.reg_cell_count += 1
-            else:
-                self.cell_piece_count += 1
-        elif 'contour' in object_type:
-            if 'merged' in object_type:
-                self.reg_contour_count += 1
-            else:
-                self.contour_piece_count += 1
-        else:
-            if 'merged' in object_type:
-                self.reg_drawing_count += 1
-            else:
-                self.drawing_piece_count += 1
 
     # merge object piece
-    def get_merged_data(self, obj_type='probe'):
-        if obj_type not in ['probe', 'virus', 'contour', 'drawing', 'cells']:
+    def get_merged_data(self, obj_type='probe piece'):
+        if obj_type not in ['probe piece', 'virus piece', 'contour piece', 'drawing piece', 'cells piece']:
             return
         n_obj = len(self.obj_id)
         cind = [ind for ind in range(n_obj) if obj_type in self.obj_type[ind] and 'merged' not in self.obj_type[ind]]
@@ -1236,49 +1136,50 @@ class ObjectControl(QObject):
                     print(self.obj_data[da_piece_ind_in_obj_order[j]].T)
                     temp = np.hstack([temp, self.obj_data[da_piece_ind_in_obj_order[j]].T])
             data[i] = temp.T
-        if obj_type == 'probe':
-            self.probe_piece_count = 0
-        elif obj_type == 'virus':
-            self.virus_piece_count = 0
-        elif obj_type == 'contour':
-            self.contour_piece_count = 0
-        elif obj_type == 'drawing':
-            self.drawing_piece_count = 0
-        else:
-            self.cell_piece_count = 0
         self.delete_objects(cind)
         return data
 
     # get obj data
     def get_obj_data(self):
-        data = {'obj_list': self.obj_list,
-                'obj_id': self.obj_id,
-                'obj_name':  self.obj_name,
+        data = {'obj_name':  self.obj_name,
                 'obj_type': self.obj_type,
                 'obj_data': self.obj_data,
-                'obj_group_id': self.obj_group_id,
                 'obj_size': self.obj_size,
                 'obj_opacity': self.obj_opacity,
                 'obj_comp_mode': self.obj_comp_mode,
-                'obj_count': self.obj_count,
                 'current_obj_index': self.current_obj_index}
         return data
 
     def set_obj_data(self, data):
-        self.obj_list = data['obj_list']
-        self.obj_id = data['obj_id']
         self.obj_name = data['obj_name']
         self.obj_type = data['obj_type']
         self.obj_data = data['obj_data']
-        self.obj_group_id = data['obj_group_id']
+
+        for i in range(len(self.obj_type)):
+            self.add_object(self.obj_name[i], self.obj_type[i], self.obj_data[i])
+
         self.obj_size = data['obj_size']
         self.obj_opacity = data['obj_opacity']
         self.obj_comp_mode = data['obj_comp_mode']
-        self.obj_count = data['obj_count']
         self.current_obj_index = data['current_obj_index']
 
-        for i in range(len(self.obj_list)):
-            self.layer_layout.addWidget(self.obj_list[i])
+        self.obj_list[-1].set_checked(False)
+        self.obj_list[self.current_obj_index].set_checked(True)
+
+    def set_slider_combo_to_current(self):
+        if 'merged' in self.obj_type[self.current_obj_index]:
+            size_val = self.obj_size_slider.value()
+            opacity_val = self.obj_opacity_slider.value()
+            compo_mode = self.obj_blend_combo.currentText()
+
+            if self.obj_size[self.current_obj_index] != size_val:
+                self.obj_size_slider.setValue(self.obj_size[self.current_obj_index])
+            if self.obj_opacity[self.current_obj_index] != opacity_val:
+                self.obj_opacity_slider.setValue(self.obj_opacity[self.current_obj_index])
+            if self.obj_comp_mode[self.current_obj_index] != compo_mode:
+                self.obj_blend_combo.setCurrentText(self.obj_comp_mode[self.current_obj_index])
+        else:
+            return
 
     def clear_all(self):
         ind = np.arange(len(self.obj_list))[::-1]
@@ -1290,16 +1191,14 @@ class ObjectControl(QObject):
         self.obj_name = []
         self.obj_type = []
         self.obj_data = []
-        self.obj_group_id = []
         self.obj_size = []
         self.obj_opacity = []
         self.obj_comp_mode = []
-        self.obj_count = []
+        self.obj_count = 0
         self.current_obj_index = []
 
     def compare_obj_called(self):
         compare_names = [self.obj_name[ind] for ind in self.linked_indexes]
-        print(compare_names)
         compare_data = [self.obj_data[ind] for ind in self.linked_indexes]
         info_window = CompareWindow(compare_names, compare_data)
         info_window.exec()

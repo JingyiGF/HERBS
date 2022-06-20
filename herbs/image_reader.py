@@ -15,6 +15,7 @@ class ImageReader(object):
         if self.file_name_list[0][-1] == '.':
             self.file_name_list[0] = self.file_name_list[0][:-1]
         self.n_scenes = 1
+        self.n_pages = 1
 
         self.scaling_val = None
         self.is_rgb = True

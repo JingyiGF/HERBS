@@ -467,7 +467,7 @@ class AllenDownloader(QDialog):
         file_obj = open(os.path.join(self.saving_folder, local), 'wb')
 
         self.da_thread = DownloadThread(url, file_size, file_obj, buffer=1024)
-        self.da_thread.download_proess_signal.connect(func)
+        self.da_thread.download_process_signal.connect(func)
         self.da_thread.start()
 
     # Setting progress bar

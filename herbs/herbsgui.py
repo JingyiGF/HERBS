@@ -767,7 +767,7 @@ class HERBS(QMainWindow, FORM_Main):
         # file menu related
         self.actionAtlas.triggered.connect(self.load_atlas_clicked)
         self.actionSingle_Image.triggered.connect(self.load_image)
-        self.actionSave_Project.triggered.connect(self.save_project)
+        self.actionSave_Project.triggered.connect(self.save_project_called)
         self.actionCurrent_Layer.triggered.connect(self.save_current_layer)
         self.actionAll_Layer.triggered.connect(self.save_all_layer)
         self.actionSave_Current.triggered.connect(self.save_current_object)
@@ -1607,7 +1607,6 @@ class HERBS(QMainWindow, FORM_Main):
 
         aln.worker.deleteLater()
         aln.deleteLater()
-
 
     def process_raw_atlas_data(self):
         process_atlas_window = AtlasProcessor()
@@ -4387,13 +4386,10 @@ class HERBS(QMainWindow, FORM_Main):
     #
     # ------------------------------------------------------------------
     def compare_object(self):
-        print('clicked')
         if len(self.object_ctrl.linked_indexes) < 2:
             self.print_message('Need at least 2 objects to compare.', self.reminder_color, 0)
             return
         objects_type = np.ravel(self.object_ctrl.obj_type)[np.ravel(self.object_ctrl.linked_indexes)]
-        print(objects_type)
-        print(np.unique(objects_type))
         if len(np.unique(objects_type)) > 1:
             self.print_message('Only the same type of objects can be compared.', self.reminder_color, 0)
             return
@@ -4411,15 +4407,17 @@ class HERBS(QMainWindow, FORM_Main):
             if self.image_view.image_file is None and self.probe_type == 1:  # pre
                 data_2d = np.asarray(data_tobe_registered)
                 data_3d_list = self.atlas_view.get_pre_np2_data(data_2d, self.atlas_display, self.site_face)
-                print(data_3d_list)
                 for i in range(4):
-                    self.object_ctrl.add_object(object_type='probe {} - piece'.format(i),
+                    self.object_ctrl.add_object(object_name='probe {} - piece'.format(i),
+                                                object_type='probe piece',
                                                 object_data=data_3d_list[i])
                     self.object_3d_list.append([])
             else:
                 data_2d = np.asarray(data_tobe_registered)
                 data_3d = self.atlas_view.get_3d_pnts(data_2d, self.atlas_display)
-                self.object_ctrl.add_object(object_type='probe - piece', object_data=data_3d)
+                self.object_ctrl.add_object(object_name='probe - piece',
+                                            object_type='probe piece',
+                                            object_data=data_3d)
                 self.object_3d_list.append([])
 
             self.working_atlas_data['atlas-probe'].clear()
@@ -4437,7 +4435,9 @@ class HERBS(QMainWindow, FORM_Main):
             processing_pnt = np.vstack([inds[0], inds[1]]).T
 
         data = self.atlas_view.get_3d_pnts(processing_pnt, self.atlas_display)
-        self.object_ctrl.add_object(object_type='virus - piece', object_data=data)
+        self.object_ctrl.add_object(object_name='virus - piece',
+                                    object_type='virus piece',
+                                    object_data=data)
         self.object_3d_list.append([])
         self.working_atlas_data['atlas-virus'] = []
 
@@ -4453,7 +4453,9 @@ class HERBS(QMainWindow, FORM_Main):
             processing_pnt = np.vstack([inds[0], inds[1]]).T
 
         data = self.atlas_view.get_3d_pnts(processing_pnt, self.atlas_display)
-        self.object_ctrl.add_object(object_type='contour - piece', object_data=data)
+        self.object_ctrl.add_object(object_name='contour - piece',
+                                    object_type='contour piece',
+                                    object_data=data)
         self.object_3d_list.append([])
         self.working_atlas_data['atlas-contour'] = []
 
@@ -4466,7 +4468,9 @@ class HERBS(QMainWindow, FORM_Main):
             return
         processing_data = np.asarray(data_tobe_registered)
         data = self.atlas_view.get_3d_pnts(processing_data, self.atlas_display)
-        self.object_ctrl.add_object(object_type='drawing - piece', object_data=data)
+        self.object_ctrl.add_object(object_name='drawing - piece',
+                                    object_type='drawing piece',
+                                    object_data=data)
         self.object_3d_list.append([])
         self.working_atlas_data['atlas-drawing'] = []
 
@@ -4481,12 +4485,14 @@ class HERBS(QMainWindow, FORM_Main):
         data = self.atlas_view.get_3d_pnts(processing_data, self.atlas_display)
         for i in range(5):
             if i == 0:
-                object_type = 'cell - piece'
+                object_type = 'cells - piece'
             else:
-                object_type = 'cell {} - piece'.format(i)
+                object_type = 'cells {} - piece'.format(i)
             if self.working_atlas_data['cell_count'][i] != 0:
                 piece_data = data[np.where(np.ravel(self.working_atlas_data['cell_layer_index']) == i)[0], :]
-                self.object_ctrl.add_object(object_type=object_type, object_data=piece_data)
+                self.object_ctrl.add_object(object_name=object_type,
+                                            object_type='cells piece',
+                                            object_data=piece_data)
                 self.object_3d_list.append([])
         self.working_atlas_data['atlas-cells'] = []
 
@@ -4515,9 +4521,10 @@ class HERBS(QMainWindow, FORM_Main):
 
     # probe related functions
     def merge_probes(self):
-        if self.object_ctrl.probe_piece_count == 0:
+        probe_piece_count = len([da_piece for da_piece in self.object_ctrl.obj_type if da_piece == 'probe piece'])
+        if probe_piece_count == 0:
             return
-        data = self.object_ctrl.get_merged_data('probe')
+        data = self.object_ctrl.get_merged_data('probe piece')
         print('data', data)
         label_data = np.transpose(self.atlas_view.atlas_label, (1, 2, 0))[:, :, ::-1]
         print(self.atlas_view.origin_3d)
@@ -4526,20 +4533,21 @@ class HERBS(QMainWindow, FORM_Main):
             info_dict = calculate_probe_info(data[i], label_data, self.atlas_view.label_info,
                                              self.atlas_view.vox_size_um, self.probe_type,
                                              self.atlas_view.origin_3d, self.site_face)
-            self.object_ctrl.add_object('merged probe', object_data=info_dict)
+            self.object_ctrl.add_object('merged probe', 'merged probe', object_data=info_dict)
 
             self.add_3d_probe_lines(info_dict)
 
     # virus related functions
     def merge_virus(self):
-        if self.object_ctrl.virus_piece_count == 0:
+        virus_piece_count = len([da_piece for da_piece in self.object_ctrl.obj_type if da_piece == 'virus piece'])
+        if virus_piece_count == 0:
             return
-        data = self.object_ctrl.get_merged_data('virus')
+        data = self.object_ctrl.get_merged_data('virus piece')
         label_data = np.transpose(self.atlas_view.atlas_label, (1, 2, 0))[:, :, ::-1]
 
         for i in range(len(data)):
             info_dict = calculate_virus_info(data[i], label_data, self.atlas_view.label_info, self.atlas_view.origin_3d)
-            self.object_ctrl.add_object('merged virus', object_data=info_dict)
+            self.object_ctrl.add_object('merged virus', 'merged virus', object_data=info_dict)
 
             virus_points = create_plot_points_in_3d(info_dict)
             self.object_3d_list.append(virus_points)
@@ -4547,16 +4555,17 @@ class HERBS(QMainWindow, FORM_Main):
 
     # cell related functions
     def merge_cells(self):
-        if self.object_ctrl.cell_piece_count == 0:
+        cells_piece_count = len([da_piece for da_piece in self.object_ctrl.obj_type if da_piece == 'cells piece'])
+        if cells_piece_count == 0:
             return
-        data = self.object_ctrl.get_merged_data('cell')
+        data = self.object_ctrl.get_merged_data('cells piece')
         print(data)
         label_data = np.transpose(self.atlas_view.atlas_label, (1, 2, 0))[:, :, ::-1]
 
         for i in range(len(data)):
             info_dict = calculate_cells_info(data[i], label_data, self.atlas_view.label_info,
                                              self.atlas_view.origin_3d)
-            self.object_ctrl.add_object('merged cell', object_data=info_dict)
+            self.object_ctrl.add_object('merged cells', 'merged cells', object_data=info_dict)
 
             cell_points = create_plot_points_in_3d(info_dict)
             self.object_3d_list.append(cell_points)
@@ -4564,25 +4573,27 @@ class HERBS(QMainWindow, FORM_Main):
 
     # drawing related functions
     def merge_drawings(self):
-        if self.object_ctrl.drawing_piece_count == 0:
+        drawing_piece_count = len([da_piece for da_piece in self.object_ctrl.obj_type if da_piece == 'drawing piece'])
+        if drawing_piece_count == 0:
             return
-        data = self.object_ctrl.get_merged_data('drawing')
+        data = self.object_ctrl.get_merged_data('drawing piece')
         # label_data = np.transpose(self.atlas_view.atlas_label, (1, 2, 0))[:, :, ::-1]
 
         for i in range(len(data)):
             info_dict = {'object_type': 'drawing', 'data': data[i]}
-            self.object_ctrl.add_object('merged drawing', object_data=info_dict)
+            self.object_ctrl.add_object('merged drawing', 'merged drawing', object_data=info_dict)
             self.add_3d_drawing_lines(info_dict)
 
     # contour related functions
     def merge_contour(self):
-        if self.object_ctrl.contour_piece_count == 0:
+        contour_piece_count = len([da_piece for da_piece in self.object_ctrl.obj_type if da_piece == 'contour piece'])
+        if contour_piece_count == 0:
             return
-        data = self.object_ctrl.get_merged_data('contour')
+        data = self.object_ctrl.get_merged_data('contour piece')
 
         for i in range(len(data)):
             info_dict = {'object_type': 'contour', 'data': data[i]}
-            self.object_ctrl.add_object('merged contour', object_data=info_dict)
+            self.object_ctrl.add_object('merged contour', 'merged contour', object_data=info_dict)
 
             contour_points = create_plot_points_in_3d(info_dict)
             self.object_3d_list.append(contour_points)
@@ -4860,6 +4871,7 @@ class HERBS(QMainWindow, FORM_Main):
 
         self.print_message('Brain region mesh is Loaded.  Atlas loaded and set successfully.', self.normal_color, 0)
 
+    # load volume atlas
     def load_volume_atlas(self, atlas_folder):
         self.volume_atlas_path = atlas_folder
         self.current_atlas_path = atlas_folder
@@ -4911,7 +4923,6 @@ class HERBS(QMainWindow, FORM_Main):
 
         atlas_data = np.transpose(da_atlas.atlas_data, [2, 0, 1])[::-1, :, :]
         atlas_info = da_atlas.atlas_info
-        print(atlas_info[3]['Bregma'])
 
         label_info = da_atlas.label_info
 
@@ -4941,19 +4952,19 @@ class HERBS(QMainWindow, FORM_Main):
     def load_atlas_clicked(self):
         self.print_message('Loading Brain Atlas...', self.normal_color, 0.1)
 
-        atlas_folder = str(QFileDialog.getExistingDirectory(self, "Select Atlas Folder"))
+        atlas_folder = str(QFileDialog.getExistingDirectory(self, "Select Atlas Folder", self.home_path))
         with open('data/atlas_path.txt', 'w') as f:
             f.write(atlas_folder)
 
         if atlas_folder != '':
             self.load_volume_atlas(atlas_folder)
         else:
-            if self.atlas_view.atlas_data is not None:
-                self.statusbar.showMessage('No new atlas is selected.')
-            else:
-                self.statusbar.showMessage('No valid path for atlas.')
+            self.print_message('', self.normal_color, 0)
 
     def load_previous_atlas(self):
+        if self.atlas_view.atlas_data is not None:
+            return
+
         self.print_message('Loading Previous Loaded Volume Brain Atlas...', self.normal_color, 0.1)
 
         if os.path.exists('data/atlas_path.txt'):
@@ -4961,31 +4972,26 @@ class HERBS(QMainWindow, FORM_Main):
                 with open('data/atlas_path.txt') as f:
                     lines = f.readlines()
                 atlas_folder = lines[0]
-            except (IOError, OSError, IndexError, pickle.PickleError, pickle.UnpicklingError):
-                self.print_message('Could not find previous loaded volume atlas. Please selected atlas folder...',
-                                   self.reminder_color, 0)
-                atlas_folder = str(QFileDialog.getExistingDirectory(self, "Select Atlas Folder"))
+            except (IOError, OSError, IndexError):
+                atlas_folder = str(QFileDialog.getExistingDirectory(self, "Select Atlas Folder", self.home_path))
                 with open('data/atlas_path.txt', 'w') as f:
                     f.write(atlas_folder)
 
             if not os.path.exists(atlas_folder):
-                self.print_message('Could not find previous loaded volume atlas. Please selected atlas folder...',
-                                   self.reminder_color, 0)
-                atlas_folder = str(QFileDialog.getExistingDirectory(self, "Select Atlas Folder"))
+                msg = 'The previous loaded volume atlas might be moved or deleted. Please selected atlas folder...'
+                self.print_message(msg, self.reminder_color, 0)
+                atlas_folder = str(QFileDialog.getExistingDirectory(self, "Select Atlas Folder", self.home_path))
                 with open('data/atlas_path.txt', 'w') as f:
                     f.write(atlas_folder)
         else:
-            atlas_folder = str(QFileDialog.getExistingDirectory(self, "Select Atlas Folder"))
+            atlas_folder = str(QFileDialog.getExistingDirectory(self, "Select Atlas Folder", self.home_path))
             with open('data/atlas_path.txt', 'w') as f:
                 f.write(atlas_folder)
 
         if atlas_folder != '':
             self.load_volume_atlas(atlas_folder)
         else:
-            if self.atlas_view.atlas_data is not None:
-                self.statusbar.showMessage('No new atlas is selected.')
-            else:
-                self.statusbar.showMessage('No valid path for atlas.')
+            self.print_message('', self.normal_color, 0)
 
     # --------------------------------------------------------------------
     #                            save merged object
@@ -4999,8 +5005,8 @@ class HERBS(QMainWindow, FORM_Main):
         valid_index = [ind for ind in range(len(otype)) if object_type in otype[ind] and 'merged' in otype[ind]]
 
         if not valid_index:
-            self.print_message('No merged {} object is created ...'.format(object_type), self.error_message_color,
-                               0)
+            msg = 'No merged {} object is created ...'.format(object_type)
+            self.print_message(msg, self.error_message_color, 0)
             return
 
         self.print_message('Saving {} objects ...'.format(object_type), 'white', 0.1)
@@ -5375,7 +5381,7 @@ class HERBS(QMainWindow, FORM_Main):
     # -------------------------------------------------------------
     #                    save project
     # -------------------------------------------------------------
-    def save_project(self):
+    def save_project_called(self):
         self.print_message('Saving Project ...', self.normal_color, 0)
         if self.atlas_view.atlas_data is None and self.atlas_view.slice_image_data is None and self.image_view.current_img is None:
             self.print_message('No project can be saved.', self.reminder_color, 0)
@@ -5521,12 +5527,6 @@ class HERBS(QMainWindow, FORM_Main):
         tool_settings = p_dict['tool_data']
         self.tool_box.set_tool_data(tool_settings)
         self.tool_box.probe_type_combo.setCurrentIndex(self.probe_type)
-        # if self.probe_type == 0:
-        #     self.tool_box.probe_type1.setChecked(True)
-        # elif self.probe_type == 1:
-        #     self.tool_box.probe_type2.setChecked(True)
-        # else:
-        #     self.tool_box.probe_type3.setChecked(True)
 
         # settings
         setting_data = p_dict['setting_data']
@@ -5554,12 +5554,20 @@ class HERBS(QMainWindow, FORM_Main):
         # load object related
         object_data = p_dict['object_data']
         if object_data is not None:
-            print('sdfadsf')
+            self.object_ctrl.set_obj_data(object_data)
+
+
+        #
+        #
+        #
+        #
+        # obj_data = project_dict['objects']
+        # self.object_ctrl.set_layer_data(obj_data)
+        # self.object_3d_list = obj_data['object_3d_list']
+        # for i in range(len(self.object_3d_list)):
+        #     self.view3d.addItem(self.object_3d_list[i])
 
         self.print_message('Project loaded successfully.', self.normal_color, 0)
-
-
-
 
     def get_setting_data(self):
         data = {'atlas_rect': self.atlas_rect,
@@ -5635,34 +5643,14 @@ class HERBS(QMainWindow, FORM_Main):
                 self.print_message('Loading project is failed. Please check your data.', self.error_message_color, 0)
                 return
             print('clear everything')
+
+            if self.atlas_view.atlas_data is not None:
+                self.delete_all_atlas_layer()
+
             self.load_project(p_dict)
-            # try:
-            #     self.load_project(p_dict)
-            # except (KeyError, IndexError):
-            #     self.print_message('Reading project is failed.\  Please check your data.', self.error_message_color, 0)
-            #     return
-            # success_loading = check_loaded_project(p_dict)
-            # if success_loading:
-            #
-            # else:
-            #     self.print_message('Loaded data is not a project data. Please check your data.',
-            #                        self.error_message_color, 0)
-            #     return
+
         else:
             self.print_message('', self.normal_color, 0)
-
-
-            #
-            #
-            #
-            #
-            # obj_data = project_dict['objects']
-            # self.object_ctrl.set_layer_data(obj_data)
-            # self.object_3d_list = obj_data['object_3d_list']
-            # for i in range(len(self.object_3d_list)):
-            #     self.view3d.addItem(self.object_3d_list[i])
-
-
 
     # status
     def print_message(self, msg, col, sec):
