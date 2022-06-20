@@ -10,9 +10,11 @@ Kristian Moan for light sheet data sharing and discussion.
 
 Paulo Jorge Bettencourt Girão for ideas and technical information on all types of microscopy.
 
-Abraham Zelalem Vollan for NP2.0 histological image data sharing and anatomical information providing.
+Abraham Z. Vollan for NP2.0 histological image data sharing and anatomical information providing.
 
-Dr. Jonathan Whitlock for administration and community coordination.
+Dr. Jerneja Rudolf for HERBS testing.
+
+Dr. Jonathan R. Whitlock for administration and coordination.
 
 
 Institutions
