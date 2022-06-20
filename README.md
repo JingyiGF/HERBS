@@ -27,7 +27,7 @@ herbs.run_herbs()
 
 After running the above scripts, a GUI window will pop up. Users can download atlas and upload images for further process,
 
-<img src="herbs/herbs.png" width="800px"></img>
+<img src="./herbs/herbs.png" width="800px"></img>
 
 For more information, please read HERBS CookBook (coming soon) or check the Tutorial folder for corresponding functionalities.
 
