@@ -27,7 +27,7 @@ Results
   
 </td>
 <td align="center">
-<img src=".image/download_waxholm_pop1.jpg" width="500">
+<img src="../image/download_waxholm_pop1.jpg" width="500">
 </td>
 </tr>
 <tr>
