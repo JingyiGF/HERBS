@@ -25,7 +25,8 @@ import herbs
 herbs.run_herbs()
 ```
 
-After running the above scripts, a GUI window will pop up,
+After running the above scripts, a GUI window will pop up. Users can download atlas and upload images for further process,
+
 <img src="https://github.com/JingyiGF/HERBS/blob/main/image/herbs.png" width="800px"></img>
 
 For more information, please read HERBS CookBook or check the Tutorial folder for corresponding functionalities.
