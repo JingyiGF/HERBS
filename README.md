@@ -26,7 +26,7 @@ herbs.run_herbs()
 ```
 
 After running the above scripts, a GUI window will pop up,
-<img src="https://github.com/JingyiGF/HERBS/blob/main/image/herbs.jpg" width="800px"></img>
+<img src="https://github.com/JingyiGF/HERBS/blob/main/image/herbs.png" width="800px"></img>
 
 For more information, please read HERBS CookBook or check the Tutorial folder for corresponding functionalities.
 
