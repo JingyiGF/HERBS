@@ -31,6 +31,21 @@ After running the above scripts, a GUI window will pop up. Users can download at
 
 For more information, please read HERBS CookBook (coming soon) or check the Tutorial folder for corresponding functionalities.
 
+## Some Pre-Requirement Issues
+
+- In order to run HERBS properly, 64 bit operating systems and 64 bit Python are required.
+
+- 3D visualisation in HERBS depends on OpenGL, if you face to the problem that no OpenGL is installed on your machine, please see (https://www.opengl.org) to download and install accordingly. 
+
+- For the current version of HERBS, Python is required to be installed. Please see (https://www.python.org) for downloading.
+
+- If you would like to install HERBS through terminal, **pip** is required. 
+	- Check if pip is installed, `pip --version` or `pip help`.
+	- Use `python3 -m ensurepip` for MacOS to install pip.
+	- Use `curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py` to download requiring file for installing pip on Windows and `python get-pip.py` to install pip.
+
+- We strongly recommend users to use Python and install packages with virtual environment. For no-coders, we strongly recommend to use IDE to create environment at the moment. A desktop app of HERBS will be released soon.   
+
 ### 
 Please report your issues: https://github.com/JingyiGF/HERBS/issues. Please have a good description (maybe a screenshot or an error message). Any feedback welcome!
 
