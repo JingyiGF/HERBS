@@ -387,7 +387,6 @@ class AtlasView(QObject):
         self.anchor_sagital_index = None
         self.anchor_horicontal_index = None
 
-
         self.display_atlas = None
         self.display_label = None
         self.scale = None
@@ -1235,6 +1234,13 @@ class AtlasView(QObject):
         else:
             self.working_atlas.image_dict['atlas-probe'].clear()
 
+    def vis_3d_planes(self, vis):
+        self.ap_plate_mesh.setVisible(vis)
+        self.dv_plate_mesh.setVisible(vis)
+        self.ml_plate_mesh.setVisible(vis)
+
+    def vis_3d_axes(self, vis):
+        self.axis.setVisible(vis)
 
 
 

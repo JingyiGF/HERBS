@@ -518,7 +518,7 @@ def calculate_contour_line(data):
     data = np.asarray(data)
     res = splprep([data[:, 0], data[:, 1], data[:, 2]], s=2)
     tck = res[0]
-    x_knots, y_knots, z_knots = splev(tck[0], tck)
+    # x_knots, y_knots, z_knots = splev(tck[0], tck)
     u_fine = np.linspace(0, 1, len(data))
     x_fine, y_fine, z_fine = splev(u_fine, tck)
     pnts = np.stack([x_fine, y_fine, z_fine], axis=1)
@@ -535,14 +535,34 @@ def create_plot_points_in_3d(data_dict):
     pnts = data_dict['data']
     vis_color = get_object_vis_color(data_dict['vis_color'])
     vis_points = gl.GLScatterPlotItem(pos=pnts, color=vis_color, size=3)
-    vis_points.setGLOptions('opaque')
     return vis_points
 
-# def shift_left(xy, val):
-#     return xy - np.array([-val, 0])[None, :]
-#
-# def shift_up(xy, val):
-#     return xy - np.array([0, val])[None, :]
+
+def create_probe_line_in_3d(data_dict):
+    pos = np.stack([data_dict['new_insertion_coords_3d'], data_dict['new_terminus_coords_3d']], axis=0)
+    vis_color = get_object_vis_color(data_dict['vis_color'])
+    probe_line = gl.GLLinePlotItem(pos=pos, color=vis_color, width=2, mode='line_strip')
+    return probe_line
+
+
+def create_drawing_line_in_3d(data_dict):
+    pos = np.asarray(data_dict['data'])
+    vis_color = get_object_vis_color(data_dict['vis_color'])
+    if np.all(pos[0] == pos[-1]):
+        drawing_obj = gl.GLSurfacePlotItem(x=pos[:, 0], y=pos[:, 1], z=pos[:, 2], colors=vis_color)
+    else:
+        drawing_obj = gl.GLLinePlotItem(pos=pos, color=vis_color, width=2, mode='line_strip')
+    return drawing_obj
+
+
+def create_contour_line_in_3d(data_dict):
+    temp = data_dict['data'].tolist()
+    if temp[0] != temp[-1]:
+        temp.append(temp[0])
+    pos = np.asarray(temp)
+    vis_color = get_object_vis_color(data_dict['vis_color'])
+    contour_obj = gl.GLLinePlotItem(pos=pos, color=vis_color, width=2, mode='line_strip')
+    return contour_obj
 
     
 def check_plotting_2d(points):
@@ -1228,6 +1248,8 @@ def interpolate_contour_points(points):
 
 
 def create_vis_img(size, point_data, color, vis_type='p', closed=False):
+    if isinstance(point_data, list):
+        point_data = np.asarray(point_data).astype(int)
     img = np.zeros((size[0], size[1], 3), 'uint8')
     da_color = (int(color[0]), int(color[1]), int(color[2]))
     if vis_type == 'p':
@@ -1235,7 +1257,7 @@ def create_vis_img(size, point_data, color, vis_type='p', closed=False):
             cv2.circle(img, (int(point_data[i][0]), int(point_data[i][1])), radius=5, color=da_color, thickness=-1)
     else:
         if closed:
-            cv2.fillPoly(img, pts=point_data, color=da_color)
+            cv2.fillPoly(img, pts=[point_data], color=da_color)
         else:
             for i in range(len(point_data) - 1):
                 cv2.line(img, (int(point_data[i][0]), int(point_data[i][1])),

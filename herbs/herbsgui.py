@@ -653,6 +653,13 @@ class HERBS(QMainWindow, FORM_Main):
 
         self.current_atlas = 'volume'
 
+        self.display_mode_3d = 'dark'
+        self.is_planes_on = True
+        self.is_axis_on = True
+        self.display_mode_2d = 'dark'
+        self.is_grids_on = False
+        self.obj_display_mode = 'opaque'
+
         self.kernel = None
 
         # ---------------------
@@ -811,8 +818,11 @@ class HERBS(QMainWindow, FORM_Main):
         self.action4_Windows.triggered.connect(self.show_4_windows)
         self.actionSlice_Histology.triggered.connect(self.show_slice_and_histology)
 
-        self.actionShow_Grids.triggered.connect(lambda: self.show_grids(True))
-        self.actionHide_Grids.triggered.connect(lambda: self.show_grids(False))
+        self.actionMode_Dark.triggered.connect(self.switch_3d_display_mode)
+        self.actionPlanes_On.triggered.connect(self.show_3d_planes)
+        self.actionAxes_On.triggered.connect(self.show_3d_axes)
+        self.action2D_Mode_Dark.triggered.connect(self.switch_2d_display_mode)
+        self.actionGrids_Off.triggered.connect(self.show_grids)
 
         # image menu related
         self.actionFlip_Horizontal.triggered.connect(self.image_view.image_horizon_flip)
@@ -887,7 +897,7 @@ class HERBS(QMainWindow, FORM_Main):
         self.view3d.opts['elevation'] = 50  # camera's angle of elevation in degrees
         self.view3d.opts['azimuth'] = 45    # camera's azimuthal angle in degrees
         self.view3d.opts['fov'] = 60        # horizontal field of view in degrees
-        # self.view3d.setBackgroundColor(pg.mkColor(50, 50, 50))
+        # self.view3d.setBackgroundColor(pg.mkColor(255, 255, 255))
         self.view3d.addItem(self.atlas_view.axis)
         self.view3d.addItem(self.atlas_view.grid)
 
@@ -1120,12 +1130,71 @@ class HERBS(QMainWindow, FORM_Main):
         self.histview.setVisible(False)
         self.sliceframe.setVisible(False)
 
-    def show_grids(self, vis):
-        self.atlas_view.cimg.image_dict['grid_lines'].setVisible(vis)
-        self.atlas_view.simg.image_dict['grid_lines'].setVisible(vis)
-        self.atlas_view.himg.image_dict['grid_lines'].setVisible(vis)
-        self.atlas_view.slice_stack.image_dict['grid_lines'].setVisible(vis)
-        self.image_view.img_stacks.image_dict['grid_lines'].setVisible(vis)
+    def show_grids(self):
+        if self.is_grids_on:
+            self.is_grids_on = False
+            self.actionGrids_Off.setText('Grids: Off')
+        else:
+            self.is_grids_on = True
+            self.actionGrids_Off.setText('Grids: On')
+        self.atlas_view.cimg.image_dict['grid_lines'].setVisible(self.is_grids_on)
+        self.atlas_view.simg.image_dict['grid_lines'].setVisible(self.is_grids_on)
+        self.atlas_view.himg.image_dict['grid_lines'].setVisible(self.is_grids_on)
+        self.atlas_view.slice_stack.image_dict['grid_lines'].setVisible(self.is_grids_on)
+        self.image_view.img_stacks.image_dict['grid_lines'].setVisible(self.is_grids_on)
+
+    # display mode
+    def switch_3d_display_mode(self):
+        if self.display_mode_3d == 'dark':
+            self.view3d.setBackgroundColor(pg.mkColor(255, 255, 255))
+            self.atlas_view.mesh.setGLOptions('translucent')
+            self.atlas_view.ap_plate_mesh.setGLOptions('translucent')
+            self.atlas_view.dv_plate_mesh.setGLOptions('translucent')
+            self.atlas_view.ml_plate_mesh.setGLOptions('translucent')
+            self.display_mode_3d = 'light'
+            self.obj_display_mode = 'additive'
+            self.actionMode_Dark.setText('3D Mode: light')
+        else:
+            self.view3d.setBackgroundColor(pg.mkColor(0, 0, 0))
+            self.atlas_view.mesh.setGLOptions('additive')
+            self.atlas_view.ap_plate_mesh.setGLOptions('additive')
+            self.atlas_view.dv_plate_mesh.setGLOptions('additive')
+            self.atlas_view.ml_plate_mesh.setGLOptions('additive')
+            self.display_mode_3d = 'dark'
+            self.obj_display_mode = 'opaque'
+            self.actionMode_Dark.setText('3D Mode: dark')
+
+    def show_3d_planes(self):
+        if self.is_planes_on:
+            self.is_planes_on = False
+            self.actionPlanes_On.setText('Planes: Off')
+        else:
+            self.is_planes_on = True
+            self.actionPlanes_On.setText('Planes: On')
+        self.atlas_view.vis_3d_planes(self.is_planes_on)
+
+    def show_3d_axes(self):
+        if self.is_axis_on:
+            self.is_axis_on = False
+            self.actionAxes_On.setText('Axes: Off')
+        else:
+            self.is_axis_on = True
+            self.actionAxes_On.setText('Axes: On')
+        self.atlas_view.vis_3d_axes(self.is_axis_on)
+
+    def switch_2d_display_mode(self):
+        if self.display_mode_2d == 'dark':
+            self.atlas_view.cimg.setBackground('w')
+            self.atlas_view.simg.setBackground('w')
+            self.atlas_view.himg.setBackground('w')
+            self.display_mode_2d = 'light'
+            self.action2D_Mode_Dark.setText('2D Mode: Light')
+        else:
+            self.atlas_view.cimg.setBackground('k')
+            self.atlas_view.simg.setBackground('k')
+            self.atlas_view.himg.setBackground('k')
+            self.display_mode_2d = 'dark'
+            self.action2D_Mode_Dark.setText('2D Mode: Dark')
 
     #
     # def clear_layout(self, layout):
@@ -4402,14 +4471,16 @@ class HERBS(QMainWindow, FORM_Main):
                 for i in range(4):
                     self.object_ctrl.add_object(object_name='probe {} - piece'.format(i),
                                                 object_type='probe piece',
-                                                object_data=data_3d_list[i])
+                                                object_data=data_3d_list[i],
+                                                object_mode=self.obj_display_mode)
                     self.object_3d_list.append([])
             else:
                 data_2d = np.asarray(data_tobe_registered)
                 data_3d = self.atlas_view.get_3d_pnts(data_2d, self.atlas_display)
                 self.object_ctrl.add_object(object_name='probe - piece',
                                             object_type='probe piece',
-                                            object_data=data_3d)
+                                            object_data=data_3d,
+                                            object_mode=self.obj_display_mode)
                 self.object_3d_list.append([])
 
             self.working_atlas_data['atlas-probe'].clear()
@@ -4429,7 +4500,8 @@ class HERBS(QMainWindow, FORM_Main):
         data = self.atlas_view.get_3d_pnts(processing_pnt, self.atlas_display)
         self.object_ctrl.add_object(object_name='virus - piece',
                                     object_type='virus piece',
-                                    object_data=data)
+                                    object_data=data,
+                                    object_mode=self.obj_display_mode)
         self.object_3d_list.append([])
         self.working_atlas_data['atlas-virus'] = []
 
@@ -4447,7 +4519,8 @@ class HERBS(QMainWindow, FORM_Main):
         data = self.atlas_view.get_3d_pnts(processing_pnt, self.atlas_display)
         self.object_ctrl.add_object(object_name='contour - piece',
                                     object_type='contour piece',
-                                    object_data=data)
+                                    object_data=data,
+                                    object_mode=self.obj_display_mode)
         self.object_3d_list.append([])
         self.working_atlas_data['atlas-contour'] = []
 
@@ -4462,7 +4535,8 @@ class HERBS(QMainWindow, FORM_Main):
         data = self.atlas_view.get_3d_pnts(processing_data, self.atlas_display)
         self.object_ctrl.add_object(object_name='drawing - piece',
                                     object_type='drawing piece',
-                                    object_data=data)
+                                    object_data=data,
+                                    object_mode=self.obj_display_mode)
         self.object_3d_list.append([])
         self.working_atlas_data['atlas-drawing'] = []
 
@@ -4484,7 +4558,8 @@ class HERBS(QMainWindow, FORM_Main):
                 piece_data = data[np.where(np.ravel(self.working_atlas_data['cell_layer_index']) == i)[0], :]
                 self.object_ctrl.add_object(object_name=object_type,
                                             object_type='cells piece',
-                                            object_data=piece_data)
+                                            object_data=piece_data,
+                                            object_mode=self.obj_display_mode)
                 self.object_3d_list.append([])
         self.working_atlas_data['atlas-cells'] = []
 
@@ -4495,20 +4570,24 @@ class HERBS(QMainWindow, FORM_Main):
         self.make_drawing_piece()
         self.make_contour_piece()
 
-    def add_3d_probe_lines(self, data_dict):
-        pos = np.stack([data_dict['new_insertion_coords_3d'], data_dict['new_terminus_coords_3d']], axis=0)
-        vis_color = get_object_vis_color(data_dict['vis_color'])
-        probe_line = gl.GLLinePlotItem(pos=pos, color=vis_color, width=2, mode='line_strip')
-        probe_line.setGLOptions('opaque')
-        self.object_3d_list.append(probe_line)
-        self.view3d.addItem(self.object_3d_list[-1])
-
-    def add_3d_drawing_lines(self, data_dict):
-        pos = np.asarray(data_dict['data'])
-        vis_color = get_object_vis_color(data_dict['vis_color'])
-        drawing_line = gl.GLLinePlotItem(pos=pos, color=vis_color, width=2, mode='line_strip')
-        drawing_line.setGLOptions('opaque')
-        self.object_3d_list.append(drawing_line)
+    def make_3d_object(self, data_dict, obj_type):
+        if obj_type == 'merged probe':
+            obj_3d = create_probe_line_in_3d(data_dict)
+        elif obj_type == 'merged virus':
+            obj_3d = create_plot_points_in_3d(data_dict)
+        elif obj_type == 'merged cells':
+            obj_3d = create_plot_points_in_3d(data_dict)
+        elif obj_type == 'merged contour':
+            obj_3d = create_contour_line_in_3d(data_dict)
+        elif obj_type == 'merged drawing':
+            obj_3d = create_drawing_line_in_3d(data_dict)
+        else:
+            return
+        if self.display_mode_3d == 'dark':
+            obj_3d.setGLOptions('opaque')
+        else:
+            obj_3d.setGLOptions('additive')
+        self.object_3d_list.append(obj_3d)
         self.view3d.addItem(self.object_3d_list[-1])
 
     # probe related functions
@@ -4517,17 +4596,15 @@ class HERBS(QMainWindow, FORM_Main):
         if probe_piece_count == 0:
             return
         data = self.object_ctrl.get_merged_data('probe piece')
-        print('data', data)
         label_data = np.transpose(self.atlas_view.atlas_label, (1, 2, 0))[:, :, ::-1]
-        print(self.atlas_view.origin_3d)
         for i in range(len(data)):
-            print(data[i])
             info_dict = calculate_probe_info(data[i], label_data, self.atlas_view.label_info,
                                              self.atlas_view.vox_size_um, self.probe_type,
                                              self.atlas_view.origin_3d, self.site_face)
-            self.object_ctrl.add_object('merged probe', 'merged probe', object_data=info_dict)
+            self.object_ctrl.add_object('merged probe', 'merged probe',
+                                        object_data=info_dict, object_mode=self.obj_display_mode)
 
-            self.add_3d_probe_lines(info_dict)
+            self.make_3d_object(info_dict, 'merged probe')
 
     # virus related functions
     def merge_virus(self):
@@ -4539,11 +4616,10 @@ class HERBS(QMainWindow, FORM_Main):
 
         for i in range(len(data)):
             info_dict = calculate_virus_info(data[i], label_data, self.atlas_view.label_info, self.atlas_view.origin_3d)
-            self.object_ctrl.add_object('merged virus', 'merged virus', object_data=info_dict)
+            self.object_ctrl.add_object('merged virus', 'merged virus',
+                                        object_data=info_dict, object_mode=self.obj_display_mode)
 
-            virus_points = create_plot_points_in_3d(info_dict)
-            self.object_3d_list.append(virus_points)
-            self.view3d.addItem(self.object_3d_list[-1])
+            self.make_3d_object(info_dict, 'merged virus')
 
     # cell related functions
     def merge_cells(self):
@@ -4551,17 +4627,15 @@ class HERBS(QMainWindow, FORM_Main):
         if cells_piece_count == 0:
             return
         data = self.object_ctrl.get_merged_data('cells piece')
-        print(data)
         label_data = np.transpose(self.atlas_view.atlas_label, (1, 2, 0))[:, :, ::-1]
 
         for i in range(len(data)):
             info_dict = calculate_cells_info(data[i], label_data, self.atlas_view.label_info,
                                              self.atlas_view.origin_3d)
-            self.object_ctrl.add_object('merged cells', 'merged cells', object_data=info_dict)
+            self.object_ctrl.add_object('merged cells', 'merged cells',
+                                        object_data=info_dict, object_mode=self.obj_display_mode)
 
-            cell_points = create_plot_points_in_3d(info_dict)
-            self.object_3d_list.append(cell_points)
-            self.view3d.addItem(self.object_3d_list[-1])
+            self.make_3d_object(info_dict, 'merged cells')
 
     # drawing related functions
     def merge_drawings(self):
@@ -4573,8 +4647,9 @@ class HERBS(QMainWindow, FORM_Main):
 
         for i in range(len(data)):
             info_dict = {'object_type': 'drawing', 'data': data[i]}
-            self.object_ctrl.add_object('merged drawing', 'merged drawing', object_data=info_dict)
-            self.add_3d_drawing_lines(info_dict)
+            self.object_ctrl.add_object('merged drawing', 'merged drawing',
+                                        object_data=info_dict, object_mode=self.obj_display_mode)
+            self.make_3d_object(info_dict, 'merged drawing')
 
     # contour related functions
     def merge_contour(self):
@@ -4585,11 +4660,10 @@ class HERBS(QMainWindow, FORM_Main):
 
         for i in range(len(data)):
             info_dict = {'object_type': 'contour', 'data': data[i]}
-            self.object_ctrl.add_object('merged contour', 'merged contour', object_data=info_dict)
+            self.object_ctrl.add_object('merged contour', 'merged contour',
+                                        object_data=info_dict, object_mode=self.obj_display_mode)
 
-            contour_points = create_plot_points_in_3d(info_dict)
-            self.object_3d_list.append(contour_points)
-            self.view3d.addItem(self.object_3d_list[-1])
+            self.make_3d_object(info_dict, 'merged contour')
 
     # common functions
     def obj_color_changed(self, ev):
@@ -4621,7 +4695,7 @@ class HERBS(QMainWindow, FORM_Main):
     def obj_size_changed(self, ev):
         obj_type = ev[0]
         val = ev[1]
-        if 'probe' in obj_type or 'drawing' in obj_type:
+        if 'probe' in obj_type or 'drawing' in obj_type or 'contour' in obj_type:
             self.object_3d_list[self.object_ctrl.current_obj_index].setData(width=val)
         else:
             self.object_3d_list[self.object_ctrl.current_obj_index].setData(size=val)
@@ -5047,7 +5121,8 @@ class HERBS(QMainWindow, FORM_Main):
                 object_dict = pickle.load(infile)
                 infile.close()
 
-                self.object_ctrl.add_object(object_dict['type'], object_data=object_dict['data'])
+                self.object_ctrl.add_object(object_dict['name'], object_dict['type'],
+                                            object_dict['data'], self.obj_display_mode)
                 self.object_3d_list.append(object_dict['widget3d'])
                 self.view3d.addItem(self.object_3d_list[-1])
             self.print_message('Objects loaded successfully.', self.normal_color)
@@ -5546,16 +5621,11 @@ class HERBS(QMainWindow, FORM_Main):
         if object_data is not None:
             self.object_ctrl.set_obj_data(object_data)
 
-
-        #
-        #
-        #
-        #
-        # obj_data = project_dict['objects']
-        # self.object_ctrl.set_layer_data(obj_data)
-        # self.object_3d_list = obj_data['object_3d_list']
-        # for i in range(len(self.object_3d_list)):
-        #     self.view3d.addItem(self.object_3d_list[i])
+            for i in range(len(self.object_ctrl.obj_type)):
+                data_dict = self.object_ctrl.obj_data[i]
+                obj_type = self.object_ctrl.obj_type[i]
+                if 'merged' in obj_type:
+                    self.make_3d_object(data_dict, obj_type)
 
         self.print_message('Project loaded successfully.', self.normal_color)
 
@@ -5632,7 +5702,13 @@ class HERBS(QMainWindow, FORM_Main):
             except (IOError, OSError, pickle.PickleError, pickle.UnpicklingError):
                 self.print_message('Loading project is failed. Please check your data.', self.error_message_color)
                 return
-            print('clear everything')
+
+            if self.object_3d_list:
+                del_ind = np.arange(len(self.object_3d_list))[::-1]
+                for i in del_ind:
+                    self.view3d.removeItem(self.object_3d_list[i])
+                    self.object_3d_list[i].deleteLater()
+                    del self.object_3d_list[i]
 
             if self.atlas_view.atlas_data is not None:
                 self.delete_all_atlas_layer()
@@ -5641,6 +5717,11 @@ class HERBS(QMainWindow, FORM_Main):
 
         else:
             self.print_message('', self.normal_color)
+
+
+
+
+
 
     # status
     def print_message(self, msg, col):

@@ -586,7 +586,7 @@ class SinglePiece(QWidget):
         self.text_btn.setText(self.l_line_edit.text())
         self.object_name = self.l_line_edit.text()
         self.text_btn.setVisible(True)
-        self.sig_name_changed.emit((self.id, self.object_name, self.group_id))
+        self.sig_name_changed.emit((self.id, self.object_name))
 
     def is_checked(self):
         return self.active
@@ -1059,7 +1059,7 @@ class ObjectControl(QObject):
         group_count = len([da_type for da_type in self.obj_type if da_type == object_type])
         return group_count
 
-    def add_object(self, object_name, object_type, object_data):
+    def add_object(self, object_name, object_type, object_data, object_mode):
         object_icon = self.get_object_icon(object_type)
         group_count = self.get_group_count(object_type)
         if object_icon is None:
@@ -1076,15 +1076,17 @@ class ObjectControl(QObject):
             new_layer.sig_link.connect(self.obj_link_changed)
             self.obj_opacity.append(self.default_opacity_val)
             self.obj_size.append(self.default_size_val)
-            self.obj_comp_mode.append('opaque')
+            self.obj_comp_mode.append(object_mode)
             da_color = (new_layer.color.red(), new_layer.color.green(), new_layer.color.blue(), 255)
             self.obj_data[-1]['vis_color'] = da_color
             if self.obj_size_slider.value() != self.default_size_val:
                 self.obj_size_slider.setValue(self.default_size_val)
             if self.obj_opacity_slider.value() != self.default_opacity_val:
                 self.obj_opacity_slider.setValue(self.default_opacity_val)
-            if self.obj_blend_combo.currentText() != 'opaque':
-                self.obj_blend_combo.setCurrentText('opaque')
+            if self.obj_blend_combo.currentText() != object_mode:
+                self.obj_blend_combo.blockSignals(True)
+                self.obj_blend_combo.setCurrentText(object_mode)
+                self.obj_blend_combo.blockSignals(False)
         else:
             new_layer = SinglePiece(index=self.obj_count, obj_name=object_name,
                                     obj_type=object_type, object_icon=object_icon)

@@ -359,8 +359,12 @@ border-color: rgb(75, 78, 84);</string>
     <addaction name="menu2_Windows"/>
     <addaction name="action4_Windows"/>
     <addaction name="separator"/>
-    <addaction name="actionShow_Grids"/>
-    <addaction name="actionHide_Grids"/>
+    <addaction name="actionMode_Dark"/>
+    <addaction name="actionPlanes_On"/>
+    <addaction name="actionAxes_On"/>
+    <addaction name="separator"/>
+    <addaction name="action2D_Mode_Dark"/>
+    <addaction name="actionGrids_Off"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="styleSheet">
@@ -799,6 +803,31 @@ selection-background-color: rgb(50, 50, 50);</string>
   <action name="actionDownload_Allen_Mice_Atlas">
    <property name="text">
     <string>Download Allen Mice Atlas</string>
+   </property>
+  </action>
+  <action name="actionMode_Dark">
+   <property name="text">
+    <string>3D Mode: Dark</string>
+   </property>
+  </action>
+  <action name="actionGrids_Off">
+   <property name="text">
+    <string>Grids: Off</string>
+   </property>
+  </action>
+  <action name="action2D_Mode_Dark">
+   <property name="text">
+    <string>2D Mode: Dark</string>
+   </property>
+  </action>
+  <action name="actionPlanes_On">
+   <property name="text">
+    <string>Planes: On</string>
+   </property>
+  </action>
+  <action name="actionAxes_On">
+   <property name="text">
+    <string>Axes: On</string>
    </property>
   </action>
  </widget>
