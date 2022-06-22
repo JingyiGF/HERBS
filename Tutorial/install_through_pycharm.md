@@ -31,29 +31,26 @@ Results
 </tr>
 <tr>
 <td>
-<ul>
-<li>Go to Python Interpreter <br>
+-Go to Python Interpreter <br>
 	**File | Settings | Project | Python Interpreter** for Windows and Linux <br>
 	**PyCharm | Preferences | Project | Python Interpreter** for macOS
 	
 And press the **+** button.
-</li>
-</ul>
 </td>
-<td align="center" width="50%">
-<img src="../image/download_pycharm1.png" width="500">
+<td align="center" width="40%">
+<img src="../image/download_pycharm1.jpg" width="500">
 </td>
 </tr>
 </tr>
 <tr>
 <td>
 <ul>
-<li>Type *herbs* and press *Install Package* button.
+<li>Type **herbs** and press **Install Package** button.
 </li>
 </ul>
 </td>
-<td align="center" width="50%">
-<img src="../image/download_pycharm2.png" width="500">
+<td align="center" width="40%">
+<img src="../image/download_pycharm2.jpg" width="500">
 </td>
 </tr>
 
