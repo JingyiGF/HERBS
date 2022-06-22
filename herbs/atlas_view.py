@@ -6,8 +6,8 @@ from pyqtgraph.Qt import QtGui, QtCore
 import pyqtgraph.functions as fn
 import pyqtgraph.opengl as gl
 from PyQt5.QtWidgets import *
-from PyQt5.QtGui import QIcon, QPixmap
-from PyQt5.QtCore import Qt, QSize, QObject
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
 
 from .image_stacks import SliceStack
 from .slice_stacks import SliceStacks
