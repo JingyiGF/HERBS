@@ -899,7 +899,7 @@ class HERBS(QMainWindow, FORM_Main):
         self.view3d.opts['fov'] = 60        # horizontal field of view in degrees
         # self.view3d.setBackgroundColor(pg.mkColor(255, 255, 255))
         self.view3d.addItem(self.atlas_view.axis)
-        self.view3d.addItem(self.atlas_view.grid)
+        # self.view3d.addItem(self.atlas_view.grid)
 
 
         # -------------------- initial window
