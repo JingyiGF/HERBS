@@ -41,7 +41,7 @@ And press the **+** button.
 </ul>
 </td>
 <td align="center" width="50%">
-<img src="../image/download_pycharm1.jpg" width="500">
+<img src="../image/download_pycharm1.png" width="500">
 </td>
 </tr>
 </tr>
@@ -53,7 +53,7 @@ And press the **+** button.
 </ul>
 </td>
 <td align="center" width="50%">
-<img src="../image/download_pycharm2.jpg" width="500">
+<img src="../image/download_pycharm2.png" width="500">
 </td>
 </tr>
 
