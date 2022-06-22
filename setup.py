@@ -3,15 +3,11 @@
 """
 import os
 import sys
-import subprocess
-import textwrap
-import warnings
-import builtins
-import re
+
 from setuptools import setup, find_packages
 
-if sys.version_info[:2] < (3, 8) or sys.version_info[:2] > (3, 11):
-    raise RuntimeError("Python version >= 3.8 < 3.11 required.")
+if sys.version_info[:3] < (3, 8, 10) or sys.version_info[:2] > (3, 11):
+    raise RuntimeError("Python version >= 3.8.10 < 3.11 required.")
 
 
 # Utility function to read the README file.
@@ -78,7 +74,7 @@ icons/toolbar/*.png
 
 setup(
     name="herbs",
-    version="0.0.6",
+    version="0.0.7",
     author="Jingyi GF",
     author_email="jingyi.g.fuglstad@gmail.com",
     description="A Python-based GUI for Histological E-data Registration in Brain Space",

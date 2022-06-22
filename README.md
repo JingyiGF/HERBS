@@ -40,5 +40,4 @@ Please feel free to start any discussion: https://github.com/JingyiGF/HERBS/disc
 HERBS is 'always' in development, please check updates every time before you use it.
 
 
-Hope this tool makes your amazing research life more tasty,
-Mvh, Jingyi GF
+Hope this tool makes your amazing research life more tasty :-)

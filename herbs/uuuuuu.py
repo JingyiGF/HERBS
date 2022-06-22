@@ -4,21 +4,10 @@ import math
 import pandas as pd
 import cv2
 import pickle
-import csv
-import time
 import scipy.ndimage as ndi
-from numba import jit
 import colorsys
 import pyqtgraph as pg
 import pyqtgraph.opengl as gl
-from PyQt5.QtGui import *
-from PyQt5.QtCore import *
-from PyQt5.QtWidgets import *
-
-import tifffile
-from aicspylibczi import CziFile
-from pathlib import Path
-from os.path import dirname, realpath, join
 from scipy.interpolate import interp1d, splprep, splev
 
 

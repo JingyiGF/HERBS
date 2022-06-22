@@ -1,10 +1,4 @@
-import os
-import sys
-import numpy as np
-import pyqtgraph as pg
-import pyqtgraph.functions as fn
 from PyQt5.QtWidgets import *
-from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 
 dialog_style = '''
@@ -138,28 +132,6 @@ class SliceSettingDialog(QDialog):
 
     def distance_val_changed(self):
         self.distance = self.distance_val.value()
-
-
-class QDoubleButton2(QPushButton):
-    doubleClicked = pyqtSignal()
-    clicked = pyqtSignal()
-
-    def __init__(self, *args, **kwargs):
-        QPushButton.__init__(self, *args, **kwargs)
-        self.timer = QTimer()
-        self.timer.setSingleShot(True)
-        self.timer.timeout.connect(self.clicked.emit)
-        super().clicked.connect(self.checkDoubleClick)
-
-        self.setFixedHeight(60)
-
-    @pyqtSlot()
-    def checkDoubleClick(self):
-        if self.timer.isActive():
-            self.doubleClicked.emit()
-            self.timer.stop()
-        else:
-            self.timer.start(60)
 
 
 class QDoubleButton(QPushButton):

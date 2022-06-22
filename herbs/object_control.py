@@ -4,9 +4,7 @@ import numpy as np
 from random import randint
 from PyQt5.QtWidgets import *
 import pyqtgraph as pg
-from pyqtgraph.Qt import QtGui, QtCore
-import pyqtgraph.functions as fn
-from PyQt5.QtGui import QIcon, QPixmap, QColor, QFont
+from PyQt5.QtGui import QIcon, QPixmap, QColor
 from PyQt5.QtCore import Qt, QSize
 from .wtiles import *
 
