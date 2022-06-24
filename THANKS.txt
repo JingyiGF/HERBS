@@ -14,6 +14,8 @@ Abraham Z. Vollan for NP2.0 histological image data sharing and anatomical infor
 
 Dr. Jerneja Rudolf for HERBS testing.
 
+Dr. Noam Almog for HERBS testing.
+
 Dr. Jonathan R. Whitlock for administration and coordination.
 
 

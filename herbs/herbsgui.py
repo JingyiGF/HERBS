@@ -1235,7 +1235,7 @@ class HERBS(QMainWindow, FORM_Main):
         self.atlas_view.working_cut_changed(self.atlas_display)
         self.reset_tri_points_atlas()
         self.working_atlas_data['atlas-mask'] = np.ones(self.atlas_view.slice_size).astype('uint8')
-        self.check_n_pre_trajectory()
+        self.check_n_trajectory()
 
     def clear_tri_inside(self):
         self.atlas_tri_inside_data.clear()  # renew tri_inside data to empty
@@ -2330,23 +2330,15 @@ class HERBS(QMainWindow, FORM_Main):
     #               ToolBar probe btn related
     #
     # ------------------------------------------------------------------
-    def check_n_pre_trajectory(self):
-        if self.probe_type == 1:
-            if self.atlas_display == 'coronal':
-                if self.site_face == 0:
-                    self.n_pre_trajectory = 4
-                else:
-                    self.n_pre_trajectory = 1
-            elif self.atlas_display == 'sagittal':
+    def check_n_trajectory(self):
+        if self.image_view.image_file is None:
+            if self.probe_type == 1:
                 if self.site_face == 0:
                     self.n_pre_trajectory = 4
                 else:
                     self.n_pre_trajectory = 1
             else:
-                if self.site_face == 0:
-                    self.n_pre_trajectory = 4
-                else:
-                    self.n_pre_trajectory = 1
+                self.n_pre_trajectory = 1
         else:
             self.n_pre_trajectory = 1
 
@@ -2365,12 +2357,13 @@ class HERBS(QMainWindow, FORM_Main):
             self.channel_size = None
             self.channel_number_in_banks = None
         self.atlas_view.pre_trajectory_changed()
-        self.check_n_pre_trajectory()
+        self.check_n_trajectory()
         self.atlas_view.working_atlas.image_dict['atlas-probe'].clear()
+        self.working_atlas_data['atlas-probe'].clear()
 
     def site_face_changed(self, index):
         self.site_face = index
-        self.check_n_pre_trajectory()
+        self.check_n_trajectory()
         self.atlas_view.pre_trajectory_changed()
         self.atlas_view.working_atlas.image_dict['atlas-probe'].clear()
 
@@ -3989,16 +3982,24 @@ class HERBS(QMainWindow, FORM_Main):
         # ------------------------- probe
         elif self.tool_box.checkable_btn_dict['probe_btn'].isChecked():
             self.working_atlas_data['atlas-probe'].append([x, y])
+            print(self.working_atlas_data['atlas-probe'])
             if len(self.working_atlas_data['atlas-probe']) > 2:
                 self.working_atlas_data['atlas-probe'].clear()
                 self.atlas_view.working_atlas.image_dict['atlas-probe'].clear()
 
-            if self.current_atlas == 'volume':
-                self.atlas_view.draw_volume_pre_trajectory(self.working_atlas_data['atlas-probe'], self.n_pre_trajectory)
-
+            if len(self.working_atlas_data['atlas-probe']) == 0:
+                return
+            if self.image_view.image_file is None:
+                if self.current_atlas == 'volume':
+                    self.atlas_view.draw_volume_pre_trajectory(
+                        self.working_atlas_data['atlas-probe'], self.n_pre_trajectory)
+                else:
+                    self.atlas_view.working_atlas.image_dict['atlas-probe'].setData(
+                        pos=np.asarray(self.working_atlas_data['atlas-probe']))
             else:
                 self.atlas_view.working_atlas.image_dict['atlas-probe'].setData(
                     pos=np.asarray(self.working_atlas_data['atlas-probe']))
+
             vis_img = create_vis_img(self.atlas_view.slice_size, self.working_atlas_data['atlas-probe'],
                                      self.probe_color, 'p')
             res = cv2.resize(vis_img, self.atlas_view.slice_tb_size, interpolation=cv2.INTER_AREA)

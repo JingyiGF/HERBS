@@ -6,9 +6,22 @@ import sys
 
 from setuptools import setup, find_packages
 
-if sys.version_info[:3] < (3, 8, 10) or sys.version_info[:2] > (3, 11):
-    raise RuntimeError("Python version >= 3.8.10 < 3.11 required.")
+is_problematic = False
 
+if sys.version_info[:2] < (3, 8) or sys.version_info[:2] > (3, 11):
+    is_problematic = True
+
+if sys.version_info.minor == 8 and sys.version_info.micro != 10:
+    is_problematic = True
+
+if sys.version_info.minor == 9 and sys.version_info.micro != 0:
+    is_problematic = True
+
+if sys.version_info.minor == 10 and sys.version_info.micro != 5:
+    is_problematic = True
+
+if is_problematic:
+    raise RuntimeError("Python version >= 3.8.10 < 3.10.5 / 3.9.0 required.")
 
 # Utility function to read the README file.
 def read(fname):
@@ -37,8 +50,8 @@ Operating System :: MacOS
 
 REQUIRES = """
 PyQt5 == 5.14.2
-pyqtgraph == 0.12.3
-PyOpenGL == 3.1.5
+pyqtgraph >= 0.12.3
+PyOpenGL >= 3.1.5
 QtRangeSlider == 0.1.5
 opencv-python >= 4.5.4.60
 numba >= 0.54.1
