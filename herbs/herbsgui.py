@@ -3876,6 +3876,26 @@ class HERBS(QMainWindow, FORM_Main):
         else:
             self.print_message('', self.normal_color)
 
+    def atlas_erasing_probe(self, pos):
+        x = pos[0]
+        y = pos[1]
+        if self.h2a_transferred:
+            return
+        if not self.working_atlas_data['atlas-probe']:
+            return
+        r = self.tool_box.eraser_size_slider.value()
+        temp = np.asarray(self.working_atlas_data['atlas-probe'])
+        remain_points, del_indexes = delete_points_inside_eraser(temp, np.array([x, y]), r)
+        if remain_points is None:
+            self.remove_single_link_related('atlas-probe')
+            return
+        self.working_atlas_data['atlas-probe'] = remain_points.tolist()
+        self.atlas_view.working_atlas.image_dict['atlas-probe'].setData(pos=remain_points)
+        da_color = self.layer_ctrl.layer_color[self.layer_ctrl.current_layer_index[0]]
+        vis_img = create_vis_img(self.atlas_view.slice_size, self.working_atlas_data['atlas-probe'], da_color, 'p')
+        res = cv2.resize(vis_img, self.atlas_view.slice_tb_size, interpolation=cv2.INTER_AREA)
+        self.layer_ctrl.layer_list[self.layer_ctrl.current_layer_index[0]].set_thumbnail_data(res)
+
     def atlas_stacks_clicked(self, pos):
         # print('atlas clicked')
         x = pos[0]
@@ -3914,46 +3934,27 @@ class HERBS(QMainWindow, FORM_Main):
             if not self.layer_ctrl.layer_id or len(self.layer_ctrl.current_layer_index) > 1:
                 self.print_message('Eraser only works on one single layer.', self.error_message_color)
                 return
+            da_link = self.layer_ctrl.layer_link[self.layer_ctrl.current_layer_index[0]]
+            if da_link == 'atlas-probe':
+                self.atlas_erasing_probe(pos)
             else:
-                da_link = self.layer_ctrl.layer_link[self.layer_ctrl.current_layer_index[0]]
-                if da_link == 'atlas-probe':
-                    if self.h2a_transferred:
-                        return
-                    if not self.working_atlas_data[da_link]:
-                        return
-                    r = self.tool_box.eraser_size_slider.value()
-                    temp = np.asarray(self.working_atlas_data[da_link])
-                    remain_points, del_indexes = delete_points_inside_eraser(temp, np.array([x, y]), r)
-                    if remain_points is None:
-                        return
-                    self.working_atlas_data[da_link] = remain_points.tolist()
-                    if self.working_atlas_data[da_link]:
-                        self.atlas_view.working_atlas.image_dict[da_link].setData(pos=remain_points)
-                        da_color = self.layer_ctrl.layer_color[self.layer_ctrl.current_layer_index[0]]
-                        vis_img = create_vis_img(self.atlas_view.slice_size, self.working_atlas_data[da_link],
-                                                 da_color, 'p')
-                        res = cv2.resize(vis_img, self.atlas_view.slice_tb_size, interpolation=cv2.INTER_AREA)
-                        self.layer_ctrl.layer_list[self.layer_ctrl.current_layer_index[0]].set_thumbnail_data(res)
-                    else:
-                        return
+                if self.current_atlas == 'volume':
+                    return
+                r = self.tool_box.eraser_size_slider.value()
+                mask_img = np.zeros(self.working_atlas_data[da_link].shape[:2], dtype=np.uint8)
+                cv2.circle(mask_img, center=(int(x), int(y)), radius=r, color=255, thickness=-1)
+                mask_img = 255 - mask_img
+                if da_link in ['atlas-mask', 'atlas-slice']:
+                    temp = self.working_atlas_data[da_link].astype(np.uint8)
+                    dst = cv2.bitwise_and(temp, temp, mask=mask_img)
+                    res = cv2.resize(dst, self.atlas_view.slice_tb_size, interpolation=cv2.INTER_AREA)
+                    self.atlas_view.slice_stack.image_dict[da_link].setImage(dst)
+                    self.working_atlas_data[da_link] = dst
                 else:
-                    if self.current_atlas == 'volume':
-                        return
-                    r = self.tool_box.eraser_size_slider.value()
-                    mask_img = np.zeros(self.working_atlas_data[da_link].shape[:2], dtype=np.uint8)
-                    cv2.circle(mask_img, center=(int(x), int(y)), radius=r, color=255, thickness=-1)
-                    mask_img = 255 - mask_img
-                    if da_link in ['atlas-mask', 'atlas-slice']:
-                        temp = self.working_atlas_data[da_link].astype(np.uint8)
-                        dst = cv2.bitwise_and(temp, temp, mask=mask_img)
-                        res = cv2.resize(dst, self.atlas_view.slice_tb_size, interpolation=cv2.INTER_AREA)
-                        self.atlas_view.slice_stack.image_dict[da_link].setImage(dst)
-                        self.working_atlas_data[da_link] = dst
-                    else:
-                        return
-                self.layer_ctrl.layer_list[self.layer_ctrl.current_layer_index[0]].set_thumbnail_data(res)
-                current_data = {'data': self.working_atlas_data[da_link].copy()}
-                self.save_current_action('eraser_btn', da_link, current_data, res)
+                    return
+            self.layer_ctrl.layer_list[self.layer_ctrl.current_layer_index[0]].set_thumbnail_data(res)
+            current_data = {'data': self.working_atlas_data[da_link].copy()}
+            self.save_current_action('eraser_btn', da_link, current_data, res)
         # ------------------------- lasso
         elif self.tool_box.checkable_btn_dict['lasso_btn'].isChecked():
             if self.working_img_data['lasso_path']:
@@ -4191,13 +4192,21 @@ class HERBS(QMainWindow, FORM_Main):
             return
         if not self.tool_box.checkable_btn_dict['eraser_btn'].isChecked():
             return
+        if not self.layer_ctrl.layer_id or len(self.layer_ctrl.current_layer_index) > 1:
+            self.print_message('Eraser only works on one single layer.', self.error_message_color)
+            return
+        da_link = self.layer_ctrl.layer_link[self.layer_ctrl.current_layer_index[0]]
+        if da_link != 'atlas-probe':
+            return
         clicked_ind = ev[0].index()
-        del self.working_atlas_data['atlas-probe'][clicked_ind]
-        if self.working_atlas_data['atlas-probe']:
-            self.atlas_view.working_atlas.image_dict['atlas-probe'].setData(
-                pos=np.asarray(self.working_atlas_data['atlas-probe']))
-        else:
-            self.atlas_view.working_atlas.image_dict['atlas-probe'].clear()
+        pos = self.working_atlas_data['atlas-probe'][clicked_ind]
+        self.atlas_erasing_probe(pos)
+        # del self.working_atlas_data['atlas-probe'][clicked_ind]
+        # if self.working_atlas_data['atlas-probe']:
+        #     self.atlas_view.working_atlas.image_dict['atlas-probe'].setData(
+        #         pos=np.asarray(self.working_atlas_data['atlas-probe']))
+        # else:
+        #     self.atlas_view.working_atlas.image_dict['atlas-probe'].clear()
 
     def atlas_contour_pnts_clicked(self, points, ev):
         if self.num_windows == 4 or not self.working_atlas_data['atlas-contour']:
@@ -4476,8 +4485,11 @@ class HERBS(QMainWindow, FORM_Main):
                                                 object_mode=self.obj_display_mode)
                     self.object_3d_list.append([])
             else:
+                print('np1')
                 data_2d = np.asarray(data_tobe_registered)
+                print('data2d', data_2d)
                 data_3d = self.atlas_view.get_3d_pnts(data_2d, self.atlas_display)
+                print('data3d', data_3d)
                 self.object_ctrl.add_object(object_name='probe - piece',
                                             object_type='probe piece',
                                             object_data=data_3d,

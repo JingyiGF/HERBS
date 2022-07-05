@@ -915,6 +915,8 @@ class ObjectControl(QObject):
 
     def blend_mode_changed(self):
         blend_mode = self.obj_blend_combo.currentText()
+        if self.current_obj_index is None:
+            return
         if 'merged' not in self.obj_type[self.current_obj_index]:
             return
         if blend_mode != self.obj_comp_mode[self.current_obj_index]:
@@ -927,6 +929,8 @@ class ObjectControl(QObject):
 
     def send_opacity_changed_signal(self):
         da_val = self.obj_opacity_slider.value()
+        if self.current_obj_index is None:
+            return
         if 'merged' not in self.obj_type[self.current_obj_index]:
             self.obj_opacity_slider.setValue(da_val)
             return
@@ -939,6 +943,8 @@ class ObjectControl(QObject):
 
     def send_size_changed_signal(self):
         da_val = self.obj_size_slider.value()
+        if self.current_obj_index is None:
+            return
         if 'merged' not in self.obj_type[self.current_obj_index]:
             self.obj_size_slider.setValue(da_val)
             return

@@ -66,13 +66,16 @@ def get_closest_point_to_line(p0, r, p):
     
 
 def line_fit(points):
+    print('input', points)
     points = np.asarray(points)
     sort_order = np.argsort(points[:, 2])[::-1]
     points = points[sort_order, :]
+    print('reorder', points)
     avg = np.mean(points, 0)
     substracted = points - avg
     u, s, vh = np.linalg.svd(substracted)
     direction = vh[0, :] / np.linalg.norm(vh[0, :])
+    print('direct', direction)
     p1 = points[0, :]
     p2 = points[-1, :]
     sp = get_closest_point_to_line(avg, direction, p1)
@@ -121,7 +124,7 @@ def correct_start_pnt(label_data, start_pnt, start_vox, direction):
     direction = direction / np.linalg.norm(direction)
     check_vec = label_data[int(start_vox[0]), int(start_vox[1]), :]
     top_vox = np.where(check_vec != 0)[0][-1]
-    if start_vox[2] < top_vox:
+    if int(start_vox[2]) < top_vox:
         for i in range(1000):
             temp = start_vox - i * direction
             check_vox = temp.astype(int)
@@ -130,7 +133,7 @@ def correct_start_pnt(label_data, start_pnt, start_vox, direction):
         if i == 999:
             print('something went wrong, please contact maintainer')
         new_sp = start_pnt - (i - 1) * direction
-    elif start_vox[2] > top_vox:
+    elif int(start_vox[2]) > top_vox:
         for i in range(1000):
             temp = start_vox + i * direction
             check_vox = temp.astype(int)
@@ -391,6 +394,7 @@ def calculate_probe_info(data, label_data, label_info, vxsize_um, probe_type, br
     # start_pnt and end_pnt are coordinates related to the given Bregma
     tip_length, channel_size, channel_number_in_banks = get_probe_info(probe_type)
     start_pnt, end_pnt, avg, direction = line_fit(data)
+    print(bregma)
     start_vox = start_pnt + bregma
     end_vox = end_pnt + bregma
     ap_angle, ml_angle = get_angles(direction)
