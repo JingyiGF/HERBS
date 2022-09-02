@@ -1059,12 +1059,16 @@ class AtlasView(QObject):
         self.himg.img.clear()
 
     def get_coronal_3d(self, points2, coronal_index=None):
+        print('points 2', points2)
+        print('points 2', self.origin_3d)
+
         if coronal_index is None:
             da_y = np.ones(len(points2)) * self.current_coronal_index
         else:
             da_y = coronal_index
         points3 = np.vstack([points2[:, 0], da_y, self.atlas_size[0] - points2[:, 1]]).T
         points3 = points3 - self.origin_3d
+        print('poitns3', points3)
         if self.coronal_rotated:
             rot_mat = self.c_rotm_3d
             rotation_origin = self.rotate_origin_3d

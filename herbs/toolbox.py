@@ -223,14 +223,14 @@ class ToolBox(QObject):
         self.eraser_size_slider = QSlider(Qt.Horizontal)
         self.eraser_size_slider.setFixedWidth(100)
         self.eraser_size_slider.setMinimum(1)
-        self.eraser_size_slider.setMaximum(100)
+        self.eraser_size_slider.setMaximum(500)
         self.eraser_size_slider.setValue(20)
         self.eraser_size_slider.valueChanged.connect(self.change_eraser_slider)
 
         self.eraser_size_valt = QLineEdit()
         self.eraser_size_valt.setFixedSize(50, 24)
         self.eraser_size_valt.setAlignment(Qt.AlignLeft)
-        self.eraser_size_valt.setValidator(QIntValidator(1, 100))
+        self.eraser_size_valt.setValidator(QIntValidator(1, 500))
         self.eraser_size_valt.setText('20')
         self.eraser_size_valt.textChanged.connect(self.change_eraser_val)
 

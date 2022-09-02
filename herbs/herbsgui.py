@@ -3124,6 +3124,10 @@ class HERBS(QMainWindow, FORM_Main):
         if self.working_img_data['img-cells']:
             res_pnts = self.transfer_pnt(np.asarray(self.working_img_data['img-cells']), tri_vet_inds)
             self.working_atlas_data['atlas-cells'] = res_pnts.tolist()
+            self.working_atlas_data['cell_count'] = self.working_img_data['cell_count'].copy()
+            self.working_atlas_data['cell_size'] = self.working_img_data['cell_size'].copy()
+            self.working_atlas_data['cell_symbol'] = self.working_img_data['cell_symbol'].copy()
+            self.working_atlas_data['cell_layer_index'] = self.working_img_data['cell_layer_index'].copy()
             self.atlas_view.working_atlas.image_dict['atlas-cells'].setData(
                 pos=np.asarray(self.working_atlas_data['atlas-cells']), symbol=self.working_img_data['cell_symbol'])
             vis_img = create_vis_img(self.atlas_view.slice_size, res_pnts, self.cell_color, vis_type='p')
@@ -3434,6 +3438,7 @@ class HERBS(QMainWindow, FORM_Main):
                         return
                     layer_ind = da_layer[0] + 1
 
+                print(layer_ind)
                 self.working_img_data['img-cells'].append([x, y])
                 self.working_img_data['cell_size'].append(1)
                 self.working_img_data['cell_symbol'].append(self.cell_base_symbol[layer_ind])
@@ -3454,6 +3459,7 @@ class HERBS(QMainWindow, FORM_Main):
                                 'symbol': self.working_img_data['cell_symbol'].copy(),
                                 'index': self.working_img_data['cell_layer_index'].copy(),
                                 'count': self.working_img_data['cell_count'].copy()}
+                print(current_data)
                 self.save_current_action('loc_btn', 'img-cells', current_data, res)
             if self.tool_box.cell_aim_btn.isChecked():
                 self.working_img_data['img-blob'].append([x, y])
@@ -4558,6 +4564,8 @@ class HERBS(QMainWindow, FORM_Main):
             data_tobe_registered = self.working_img_data['img-cells']
         else:
             data_tobe_registered = self.working_atlas_data['atlas-cells']
+
+        print('data_tobe_registered', data_tobe_registered)
         if not data_tobe_registered:
             return
         processing_data = np.asarray(data_tobe_registered)
