@@ -1105,7 +1105,7 @@ class AtlasView(QObject):
 
     def get_3d_pnts(self, processing_data, atlas_display):
         if atlas_display == 'coronal':
-            print(processing_data)
+            print('processing_data', processing_data)
             data = self.get_coronal_3d(processing_data)
             print(data)
         elif atlas_display == 'sagittal':

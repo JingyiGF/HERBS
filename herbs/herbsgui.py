@@ -4431,6 +4431,10 @@ class HERBS(QMainWindow, FORM_Main):
                 for i in range(5):
                     self.tool_box.self.cell_count_val_list[i].setText('0')
 
+            if da_link == 'atlas-overlay':
+                self.remove_h2a_transferred_layers()
+
+
     def layers_blend_mode_changed(self, ev):
         da_link = ev[0]
         blend_mode = ev[1]

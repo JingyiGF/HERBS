@@ -87,7 +87,7 @@ icons/toolbar/*.png
 
 setup(
     name="herbs",
-    version="0.0.7",
+    version="0.0.9",
     author="Jingyi GF",
     author_email="jingyi.g.fuglstad@gmail.com",
     description="A Python-based GUI for Histological E-data Registration in Brain Space",
