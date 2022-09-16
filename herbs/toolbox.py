@@ -28,11 +28,11 @@ class ToolBox(QObject):
 
         # action version
         self.add_atlas = QAction(QIcon('icons/toolbar/atlas_icon.png'), 'Upload Previous Loaded Volume Atlas', self)
-        self.add_image_stack = QAction(QIcon('icons/toolbar/image_icon.svg'), 'upload histological image', self)
+        self.add_image_stack = QAction(QIcon('icons/toolbar/image_icon.svg'), 'Upload Histological Image', self)
 
-        self.vis2 = QAction(QIcon('icons/toolbar/two_window.png'), 'show 2 windows', self)
-        self.vis4 = QAction(QIcon('icons/toolbar/window4.png'), 'show 4 windows', self)
-        self.vis3 = QAction(QIcon('icons/toolbar/window3.png'), 'show 3 windows', self)
+        self.vis2 = QAction(QIcon('icons/toolbar/two_window.png'), 'Show 2 Windows', self)
+        self.vis4 = QAction(QIcon('icons/toolbar/window4.png'), 'Show 4 Windows', self)
+        self.vis3 = QAction(QIcon('icons/toolbar/window3.png'), 'Show 3 Windows', self)
 
         self.toa_btn_off_icon = QIcon('icons/toolbar/toa.svg')
         self.toa_btn_on_icon = QIcon('icons/toolbar/toa_delete.svg')
@@ -40,35 +40,35 @@ class ToolBox(QObject):
         self.toh_btn_off_icon = QIcon('icons/toolbar/toh.svg')
         self.toh_btn_on_icon = QIcon('icons/toolbar/toh_delete.svg')
 
-        self.toa_btn = QAction(QIcon('icons/toolbar/toa.svg'), 'transform to atlas slice window', self)
-        self.toh_btn = QAction(QIcon('icons/toolbar/toh.svg'), 'transform to histologist image window', self)
-        self.check_btn = QAction(QIcon('icons/toolbar/accept.svg'), 'accept transformation', self)
+        self.toa_btn = QAction(QIcon('icons/toolbar/toa.svg'), 'Transform to Atlas Slice Window', self)
+        self.toh_btn = QAction(QIcon('icons/toolbar/toh.svg'), 'Transform to Histologist Image Window', self)
+        self.check_btn = QAction(QIcon('icons/toolbar/accept.svg'), 'Accept and Transfer', self)
 
-        lasso_btn = QAction(QIcon('icons/toolbar/lasso.svg'), 'polygon lasso', self)
+        lasso_btn = QAction(QIcon('icons/toolbar/lasso.svg'), 'Polygon Lasso', self)
         lasso_btn.setCheckable(True)
 
-        magic_wand_btn = QAction(QIcon('icons/toolbar/magic-wand.svg'), 'magic wand', self)
+        magic_wand_btn = QAction(QIcon('icons/toolbar/magic-wand.svg'), 'Magic Wand', self)
         magic_wand_btn.setCheckable(True)
 
-        pencil_btn = QAction(QIcon('icons/toolbar/pencil.svg'), 'pencil', self)
+        pencil_btn = QAction(QIcon('icons/toolbar/pencil.svg'), 'Pencil', self)
         pencil_btn.setCheckable(True)
 
-        eraser_btn = QAction(QIcon('icons/toolbar/eraser.svg'), 'eraser', self)
+        eraser_btn = QAction(QIcon('icons/toolbar/eraser.svg'), 'Eraser', self)
         eraser_btn.setCheckable(True)
 
-        mask_btn = QAction(QIcon('icons/toolbar/mask.svg'), 'mask maker', self)
+        mask_btn = QAction(QIcon('icons/toolbar/mask.svg'), 'Mask Maker', self)
         mask_btn.setCheckable(True)
 
-        probe_btn = QAction(QIcon('icons/toolbar/probe.svg'), 'probe maker', self)
+        probe_btn = QAction(QIcon('icons/toolbar/probe.svg'), 'Probe Marker', self)
         probe_btn.setCheckable(True)
 
-        triang_btn = QAction(QIcon('icons/toolbar/triangulation.svg'), 'triangulation', self)
+        triang_btn = QAction(QIcon('icons/toolbar/triangulation.svg'), 'Triangulation', self)
         triang_btn.setCheckable(True)
 
-        loc_btn = QAction(QIcon('icons/toolbar/location.svg'), 'cell selector', self)
+        loc_btn = QAction(QIcon('icons/toolbar/location.svg'), 'Cell Selector', self)
         loc_btn.setCheckable(True)
 
-        ruler_btn = QAction(QIcon('icons/toolbar/ruler.svg'), 'ruler', self)
+        ruler_btn = QAction(QIcon('icons/toolbar/ruler.svg'), 'Ruler', self)
         ruler_btn.setCheckable(True)
 
         self.checkable_btn_dict = {'ruler_btn': ruler_btn,

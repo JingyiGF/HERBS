@@ -165,6 +165,8 @@ class ImageView(QObject):
         self.scene_slider = QSlider(Qt.Horizontal)
         self.scene_slider.setMinimum(0)
         self.scene_slider.setValue(0)
+        self.scene_slider.setTickPosition(QSlider.TicksBelow)
+        self.scene_slider.setTickInterval(1)
         self.scene_slider.valueChanged.connect(self.scene_index_changed)
         self.scene_label = QLabel('0/ 0')
         self.scene_wrap = QFrame()
@@ -365,6 +367,7 @@ class ImageView(QObject):
         scene_index = self.scene_slider.value()
         self.scene_label.setText('{}/{}'.format(scene_index + 1, self.image_file.n_scenes))
         with pg.BusyCursor():
+            self.clear_image_stacks()
             if 'scene {}'.format(scene_index) not in list(self.image_file.data.keys()):
                 scale = self.scale_slider.value()
                 scale_val = scale * 0.01
@@ -372,11 +375,13 @@ class ImageView(QObject):
             self.current_img = copy.deepcopy(self.image_file.data['scene {}'.format(scene_index)])
             self.current_scale = self.image_file.scale['scene {}'.format(scene_index)]
 
-            if self.current_scale != self.scale_slider.value():
-                self.scale_slider.setValue(self.current_scale)
+            if self.current_scale != self.scale_slider.value() * 0.01:
+                self.scale_slider.setValue(self.current_scale * 100)
 
+            self.img_size = self.current_img.shape[:2]
             for i in range(self.image_file.n_channels):
                 self.img_stacks.image_list[i].clear()
+            self.img_stacks.image_dict['tri_pnts'].set_range(self.img_size[1], self.img_size[0])
 
             self.channel_selector_reset()
             self.curve_widget.curve_plot.reset_plot()
@@ -395,6 +400,7 @@ class ImageView(QObject):
         if self.image_file is None:
             return
         if self.image_file.is_czi:
+            self.clear_image_stacks()
             scale = self.scale_slider.value()
             scale_val = scale * 0.01
             scene_index = self.scene_slider.value()
@@ -548,24 +554,13 @@ class ImageView(QObject):
             check_res = False
         return check_res
 
-
-
-
     def save_img_process_data(self):
         data = {'data': self.processing_img,
                 'level': self.image_file.level,
                 'size': self.img_size}
         return data
 
-
-
-
-
-
-
-
-
-
+    # clear image stacks
     def clear_image_stacks(self):
         valid_keys = ['img-overlay', 'overlay_contour', 'img-mask', 'circle_follow', 'lasso_path', 'img-virus',
                       'img-contour', 'img-probe', 'img-cells', 'img-blob', 'img-drawing']

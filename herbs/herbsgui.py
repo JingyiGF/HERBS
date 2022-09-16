@@ -1342,6 +1342,7 @@ class HERBS(QMainWindow, FORM_Main):
         rotate_setting = LayerSettingDialog('Layer Rotating Setting', 0, 50, self.layer_rotate_val)
         rotate_setting.exec()
         self.layer_rotate_val = rotate_setting.val
+        print(self.layer_rotate_val)
 
     def get_valid_layer(self):
         if not self.layer_ctrl.current_layer_index or not self.h2a_transferred:
@@ -1450,9 +1451,9 @@ class HERBS(QMainWindow, FORM_Main):
         valid_links = self.get_valid_layer()
 
         if rotating_direction == 'clockwise':
-            rotating_val = self.rotating_step_val
+            rotating_val = self.layer_rotate_val * 1
         else:
-            rotating_val = - self.rotating_step_val
+            rotating_val = self.layer_rotate_val * -1
 
         for da_link in valid_links:
             self.rotate_layers(da_link, rotating_val)
@@ -4618,6 +4619,7 @@ class HERBS(QMainWindow, FORM_Main):
     # probe related functions
     def merge_probes(self):
         probe_piece_count = len([da_piece for da_piece in self.object_ctrl.obj_type if da_piece == 'probe piece'])
+        print(probe_piece_count)
         if probe_piece_count == 0:
             return
         data = self.object_ctrl.get_merged_data('probe piece')
@@ -4766,7 +4768,7 @@ class HERBS(QMainWindow, FORM_Main):
                     self.print_message('Load CZI file failed.', self.error_message_color)
                     return
                 scale = self.image_view.scale_slider.value()
-                scale = 0.01 if scale == 0 else scale * 0.01
+                scale = scale * 0.01
                 if scene_index is None:
                     if self.image_view.check_scenes.isChecked():
                         image_file.read_data(scale, scene_index=None)
@@ -5221,8 +5223,14 @@ class HERBS(QMainWindow, FORM_Main):
 
         if layer_link in ['img-process', 'img-mask', 'img-overlay']:
             if layer_link == 'img-process':
-                image_to_be_saved = merge_channels_into_single_img(self.image_view.processing_img,
-                                                                   self.image_view.channel_color)
+                if 'rgb' in self.image_view.image_file.pixel_type:
+                    print('rgb')
+                    image_to_be_saved = self.image_view.processing_img.copy()
+                    if self.image_view.image_file.pixel_type != 'rgb24':
+                        image_to_be_saved = cv2.normalize(image_to_be_saved, None, 0, 255, cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+                else:
+                    image_to_be_saved = merge_channels_into_single_img(self.image_view.processing_img,
+                                                                       self.image_view.channel_color)
             elif layer_link == 'img-mask':
                 image_to_be_saved = color_vis_img(self.working_img_data[layer_link], self.magic_wand_lut[1])
             else:
