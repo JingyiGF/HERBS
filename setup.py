@@ -3,21 +3,22 @@
 """
 import os
 import sys
-
+from sys import platform
 from setuptools import setup, find_packages
+
 
 is_problematic = False
 
 if sys.version_info[:2] < (3, 8) or sys.version_info[:2] > (3, 11):
     is_problematic = True
 
-if sys.version_info.minor == 8 and sys.version_info.micro != 10:
+if sys.version_info.minor == 8 and sys.version_info.micro < 10:
     is_problematic = True
 
-if sys.version_info.minor == 9 and sys.version_info.micro != 0:
+if sys.version_info.minor == 9 and sys.version_info.micro == 0:
     is_problematic = True
 
-if sys.version_info.minor == 10 and sys.version_info.micro != 5:
+if sys.version_info.minor == 10 and sys.version_info.micro >= 5:
     is_problematic = True
 
 if is_problematic:
@@ -49,7 +50,6 @@ Operating System :: MacOS
 """
 
 REQUIRES = """
-PyQt5 == 5.14.2
 pyqtgraph >= 0.12.3
 PyOpenGL >= 3.1.5
 QtRangeSlider == 0.1.5
@@ -67,8 +67,10 @@ natsort >= 8.0.2
 imagecodecs >= 2022.2.22
 h5py >= 3.7.0
 tables >= 3.7.0
+PyQt5 >= 5.14.2; python_version == "3.8"
+PyQt5 >= 5.15.1; python_version == "3.9"
+PyQt5 >= 5.15.5; python_version == "3.10"
 """
-
 
 PACKAGE_DATA = """
 main_window.ui
@@ -87,7 +89,7 @@ icons/toolbar/*.png
 
 setup(
     name="herbs",
-    version="0.0.9",
+    version="0.0.14",
     author="Jingyi GF",
     author_email="jingyi.g.fuglstad@gmail.com",
     description="A Python-based GUI for Histological E-data Registration in Brain Space",
