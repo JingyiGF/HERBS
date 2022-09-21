@@ -4,7 +4,7 @@ A Python-based GUI for Histological E-data Registration in Brain Space
 
 HERBS is an open source, extensible, intuitive and interactive software platform for image visualisation and image registration. Where the image registration is the process of identifying a spatial transformation that maps images to a template such that corresponding anatomical structures are optimally aligned, or in other words, a voxel-wise ‘correspondence’ is established between the images and template.
 
-HERBS has been tested on Windows (10 and 11), MacOSx (Big Sur - Monterey), Linux (Kubuntu 18.04, Ubuntu 22.04 LTS), and as a python application, it should run in all environments supporting python 3.8.10-3.10.4 / 3.9.0 with NumPy < 1.23 and PyQt5 >= 5.14.2 as a GUI framework. For details, please see HERBS CookBook (coming soon).
+HERBS has been tested on Windows 10, MacOSx (Big Sur - Monterey), Linux (Kubuntu 18.04, Ubuntu 22.04 LTS), and as a python application, it should run in all environments supporting python 3.8.10-3.10.4 / 3.9.0 with PyQt5 >= 5.14.2 as a GUI framework. For details, please see HERBS CookBook (on going).
 
 HERBS provides users:
 
@@ -31,7 +31,7 @@ After running the above scripts, a GUI window will pop up. Users can download at
 
 <img src="./herbs/herbs.png" width="800px"></img>
 
-For more information, please read HERBS CookBook (coming soon) or check the Tutorial folder for corresponding functionalities.
+For more information, please read HERBS CookBook (on going) or check the Tutorial folder for corresponding functionalities.
 
 ## Some Pre-Requirement Issues
 
@@ -48,6 +48,15 @@ For more information, please read HERBS CookBook (coming soon) or check the Tuto
 	- Please update pip to the newest version before installing HERBS.
 
 - We strongly recommend users to use Python and install packages with virtual environment. For no-coders, we strongly recommend to use IDE to create environment at the moment. A desktop app of HERBS is coming soon.   
+
+## Some Dependencies Conflict Issues
+- The initial of test of HERBS was carried on Windows 10 (one user claimed he had a Windows 11 before, but it turned out to be a Windows 10 at the end), MacOSx (Big Sur - Monterey) and Linux (Kubuntu 18.04, Ubuntu 22.04 LTS) with Python==3.8.10 and the corresponding dependencies listed in CookBook. 
+
+- The current tests showed that different version of Python accepts different versions of dependencies. For example, PyQt5 == 5.14.2 works when Python>=3.8.10, PyQt5 >= 5.15.0 works when Python==3.9 and PyQt5 >= 5.15.5 works when Python==3.10 on a Windows 10. 
+
+- HERBS depends on Numba and the valid version for Numba is highly depends on the version of Numpy. For example, Numba == 0.54 only works when Numpy <= 1.20 and Numba == 0.55 only works when Numpy <= 1.21 and so on.
+
+- If you face to these kinds of problems, the easiest way to install HERBS is to create a new environment and install HERBS without previous installation of any dependencies.
 
 ### 
 Please report your issues: https://github.com/JingyiGF/HERBS/issues. Please have a good description (maybe a screenshot or an error message). Any feedback welcome!
