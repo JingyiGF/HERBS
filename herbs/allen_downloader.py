@@ -297,10 +297,10 @@ class AllenDownloader(QDialog):
         self.segmentation_url = "http://download.alleninstitute.org/informatics-archive/current-release/mouse_ccf/annotation/ccf_2017/annotation_10.nrrd"
 
         self.label_local = "query.csv"
-        # self.data_local = "average_template_10.nrrd"
-        # self.segmentation_local = "annotation_10.nrrd"
-        self.data_local = "average_template_25.nrrd"
-        self.segmentation_local = "annotation_25.nrrd"
+        self.data_local = "average_template_10.nrrd"
+        self.segmentation_local = "annotation_10.nrrd"
+        # self.data_local = "average_template_25.nrrd"
+        # self.segmentation_local = "annotation_25.nrrd"
 
         self.saving_folder = None
 
