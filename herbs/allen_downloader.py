@@ -15,13 +15,13 @@ import numpy as np
 import pandas as pd
 
 from .atlas_loader import process_atlas_raw_data
-from .uuuuuu import render_volume, render_small_volume, hex2rgb, obj_data_to_mesh3d, make_atlas_label_contour
+from .uuuuuu import render_volume, render_small_volume, hex2rgb, obj_data_to_mesh3d, make_contour_img
 from .atlas_downloader import DownloadThread
 
 
 class WorkerProcessAllen(QObject):
     finished = pyqtSignal()
-    progress = pyqtSignal(int)
+    progress = pyqtSignal(float)
 
     def __init__(self):
         super(WorkerProcessAllen, self).__init__()
@@ -50,51 +50,168 @@ class WorkerProcessAllen(QObject):
         self.b_val = b_val
         self.vox_size = vox_size
 
+    def progress_control(self, total_count):
+        self.progress.emit(total_count)
+
     def run(self):
+        self.progress.emit(1)
         label_data, header = nrrd.read(os.path.join(self.saving_folder, self.segmentation_local))
-        self.progress.emit(5)
+        self.progress.emit(10)
         self.unique_label = np.unique(label_data)
-        self.progress.emit(9)
+        self.progress.emit(14)
 
         n_unique_labels = len(self.unique_label)
         mesh_path = os.path.join(self.saving_folder, 'meshes')
         if not os.path.exists(mesh_path):
             os.mkdir(mesh_path)
-
-        self.progress.emit(10)
+        self.progress.emit(15)
 
         atlas_size = label_data.shape
-
         downloaded_mesh_path = os.path.join(self.saving_folder, 'downloaded_meshes')
 
-        progress_step = np.linspace(10, 40, n_unique_labels)
+        progress_step = np.linspace(15, 30, n_unique_labels)
+        missing_mesh_index = []
         for i in range(n_unique_labels):
             ind = self.unique_label[i]
             self.progress.emit(progress_step[i])
-            if ind in [545, 0]:
+            if ind in [0]:
                 continue
 
             filename = os.path.join(downloaded_mesh_path, '{}.obj'.format(ind))
 
-            vertices, faces = obj_data_to_mesh3d(filename)
-            vertices = vertices / self.vox_size
+            if os.path.exists(filename):
+                try:
+                    vertices, faces = obj_data_to_mesh3d(filename)
+                    vertices = vertices / self.vox_size
 
-            vertices[:, 0] = atlas_size[0] - vertices[:, 0]
-            vertices[:, 1] = atlas_size[1] - vertices[:, 1]
+                    vertices[:, 0] = atlas_size[0] - vertices[:, 0]
+                    vertices[:, 1] = atlas_size[1] - vertices[:, 1]
 
-            verts = vertices.copy()
-            verts[:, 0] = vertices[:, 2].copy()
-            verts[:, 1] = vertices[:, 0].copy()
-            verts[:, 2] = vertices[:, 1].copy()
+                    verts = vertices.copy()
+                    verts[:, 0] = vertices[:, 2].copy()
+                    verts[:, 1] = vertices[:, 0].copy()
+                    verts[:, 2] = vertices[:, 1].copy()
 
-            md = gl.MeshData(vertexes=verts, faces=faces)
+                    md = gl.MeshData(vertexes=verts, faces=faces)
 
-            outfile = open(os.path.join(mesh_path, '{}.pkl'.format(ind)), 'wb')
-            pickle.dump(md, outfile)
-            outfile.close()
+                    outfile = open(os.path.join(mesh_path, '{}.pkl'.format(ind)), 'wb')
+                    pickle.dump(md, outfile)
+                    outfile.close()
+                except IndexError:
+                    missing_mesh_index.append(ind)
+            else:
+                missing_mesh_index.append(ind)
+
+        target = os.path.join(self.saving_folder, "atlas_meshdata.pkl")
+        shutil.copyfile(join(mesh_path, '997.pkl'), target)
+
+        self.progress.emit(31)
+
+        infile = open(os.path.join(self.saving_folder, 'atlas_meshdata.pkl'), 'rb')
+        self.mesh_data = pickle.load(infile)
+        infile.close()
+        self.progress.emit(33)
+
+        df = pd.read_csv(os.path.join(self.saving_folder, self.label_local))
+
+        da_labels = df['safe_name'].values
+        da_labels[da_labels == 'root'] = 'Brain'
+        self.progress.emit(34)
+
+        da_short_label = df['acronym'].values
+        da_short_label[da_short_label == 'root'] = 'Brain'
+        self.progress.emit(35)
+
+        hex_colors = df['color_hex_triplet'].values
+        rgb_colors = []
+        for i in range(len(hex_colors)):
+            r, g, b = hex2rgb(hex_colors[i])
+            rgb_colors.append([r, g, b])
+        rgb_colors = np.asarray(rgb_colors)
+
+        self.progress.emit(36)
+
+        levels = []
+        structure_id_path = df['structure_id_path'].values
+        for i in range(len(structure_id_path)):
+            da_path = structure_id_path[i]
+            da_path_split = da_path.split('/')
+            for j in np.arange(len(da_path_split))[::-1]:
+                if da_path_split[j] == '':
+                    da_path_split.pop(j)
+            levels.append(len(da_path_split))
+
+        self.progress.emit(37)
+
+        self.label_info = {'index': df['id'].values.astype(int),
+                           'label': da_labels,
+                           'parent': df['parent_structure_id'].values.astype(int),
+                           'abbrev': da_short_label,
+                           'color': rgb_colors,
+                           'level_indicator': levels}
+
+        with open(os.path.join(self.saving_folder, 'atlas_labels.pkl'), 'wb') as handle:
+            pickle.dump(self.label_info, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+        self.progress.emit(38)
+
+        volume_data, header = nrrd.read(os.path.join(self.saving_folder, self.data_local))
+        self.progress.emit(45)
+        volume_data = np.transpose(volume_data[::-1, ::-1, :], (2, 0, 1))
+        self.progress.emit(46)
+        self.atlas_data = volume_data.copy()
+        self.atlas_data = self.atlas_data - np.min(self.atlas_data)
+        self.atlas_data = self.atlas_data / np.max(self.atlas_data)
+        self.progress.emit(47)
+
+        b_val = self.b_val.copy()
+        if self.b_val[0] == 0:
+            b_val[0] = int(atlas_size[0] / 2)
+        if self.b_val[2] == 0:
+            b_val[2] = int(atlas_size[2] / 2)
+        self.progress.emit(48)
+
+        self.atlas_info = [
+            {'name': 'anterior', 'values': np.arange(self.atlas_data.shape[0]) * self.vox_size, 'units': 'um'},
+            {'name': 'dorsal', 'values': np.arange(self.atlas_data.shape[1]) * self.vox_size, 'units': 'um'},
+            {'name': 'right', 'values': np.arange(self.atlas_data.shape[2]) * self.vox_size, 'units': 'um'},
+            {'vxsize': self.vox_size,
+             'Bregma': [b_val[2], atlas_size[0] - 1 - b_val[0], atlas_size[1] - 1 - b_val[1]]}
+        ]
+        self.progress.emit(49)
+
+        atlas = {'data': self.atlas_data, 'info': self.atlas_info}
+
+        outfile = open(os.path.join(self.saving_folder, 'atlas_pre_made.pkl'), 'wb')
+        pickle.dump(atlas, outfile)
+        outfile.close()
+        self.progress.emit(53)
+
+        self.segmentation_data = np.transpose(label_data[::-1, ::-1, :], (2, 0, 1))
+        self.segmentation_data = self.segmentation_data.astype(int)
+        print(self.segmentation_data.shape)
+
+        self.progress.emit(54)
+
+        segment = {'data': self.segmentation_data, 'unique_label': self.unique_label}
+
+        outfile = open(os.path.join(self.saving_folder, 'segment_pre_made.pkl'), 'wb')
+        pickle.dump(segment, outfile)
+        outfile.close()
+
+        self.progress.emit(58)
+
+        if missing_mesh_index:
+            for da_ind in missing_mesh_index:
+                render_small_volume(da_ind, mesh_path, self.atlas_data, self.segmentation_data, factor=2, level=0.1)
+
+        self.progress.emit(60)
 
         file_list = os.listdir(mesh_path)
-        for da_file in file_list:
+        progress_step = np.linspace(60, 68, len(file_list))
+        for i in range(len(file_list)):
+            self.progress.emit(progress_step[i])
+            da_file = file_list[i]
             file_name = os.path.basename(da_file)
             da_name, file_extension = os.path.splitext(file_name)
             if file_extension == '.pkl':
@@ -107,116 +224,64 @@ class WorkerProcessAllen(QObject):
         outfile = open(os.path.join(self.saving_folder, 'atlas_small_meshdata.pkl'), 'wb')
         pickle.dump(self.small_mesh_list, outfile)
         outfile.close()
-
-        target = os.path.join(self.saving_folder, "atlas_meshdata.pkl")
-        shutil.copyfile(join(mesh_path, '997.pkl'), target)
-
-        infile = open(os.path.join(self.saving_folder, 'atlas_meshdata.pkl'), 'rb')
-        self.mesh_data = pickle.load(infile)
-        infile.close()
-
-        self.progress.emit(50)
-
-        df = pd.read_csv(os.path.join(self.saving_folder, self.label_local))
-
-        da_labels = df['safe_name'].values
-        for i in range(len(da_labels)):
-            if da_labels[i] == 'root':
-                da_labels[i] = 'Brain'
-
-        da_short_label = df['acronym'].values
-        for i in range(len(da_short_label)):
-            if da_short_label[i] == 'root':
-                da_short_label[i] = 'Brain'
-
-        hex_colors = df['color_hex_triplet'].values
-        rgb_colors = []
-        for i in range(len(hex_colors)):
-            r, g, b = hex2rgb(hex_colors[i])
-            rgb_colors.append([r, g, b])
-        rgb_colors = np.asarray(rgb_colors)
-
-        levels = []
-        structure_id_path = df['structure_id_path'].values
-        for i in range(len(structure_id_path)):
-            da_path = structure_id_path[i]
-            da_path_split = da_path.split('/')
-            for j in np.arange(len(da_path_split))[::-1]:
-                if da_path_split[j] == '':
-                    da_path_split.pop(j)
-            levels.append(len(da_path_split))
-
-        self.label_info = {'index': df['id'].values.astype(int),
-                           'label': da_labels,
-                           'parent': df['parent_structure_id'].values.astype(int),
-                           'abbrev': da_short_label,
-                           'color': rgb_colors,
-                           'level_indicator': levels}
-
-        with open(os.path.join(self.saving_folder, 'atlas_labels.pkl'), 'wb') as handle:
-            pickle.dump(self.label_info, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-        self.progress.emit(55)
-
-        volume_data, header = nrrd.read(os.path.join(self.saving_folder, self.data_local))
-
-        print(volume_data.shape)
-        volume_data = np.transpose(volume_data[::-1, ::-1, :], (2, 0, 1))
-
-        self.atlas_data = volume_data.copy()
-        self.atlas_data = self.atlas_data - np.min(self.atlas_data)
-        self.atlas_data = self.atlas_data / np.max(self.atlas_data)
-
-        self.progress.emit(60)
-
-        b_val = self.b_val.copy()
-        print(b_val)
-        if self.b_val[0] == 0:
-            b_val[0] = int(atlas_size[0] / 2)
-        if self.b_val[2] == 0:
-            b_val[2] = int(atlas_size[2] / 2)
-
-        self.progress.emit(61)
-
-        self.atlas_info = [
-            {'name': 'anterior', 'values': np.arange(self.atlas_data.shape[0]) * self.vox_size, 'units': 'um'},
-            {'name': 'dorsal', 'values': np.arange(self.atlas_data.shape[1]) * self.vox_size, 'units': 'um'},
-            {'name': 'right', 'values': np.arange(self.atlas_data.shape[2]) * self.vox_size, 'units': 'um'},
-            {'vxsize': self.vox_size,
-             'Bregma': [b_val[2], atlas_size[0] - 1 - b_val[0], atlas_size[1] - 1 - b_val[1]]}
-        ]
-
-        self.progress.emit(62)
-
-        atlas = {'data': self.atlas_data, 'info': self.atlas_info}
-
-        outfile = open(os.path.join(self.saving_folder, 'atlas_pre_made.pkl'), 'wb')
-        pickle.dump(atlas, outfile)
-        outfile.close()
-
-        self.progress.emit(65)
-
-        self.segmentation_data = np.transpose(label_data[::-1, ::-1, :], (2, 0, 1))
-        self.segmentation_data = self.segmentation_data.astype(int)
-        print(self.segmentation_data.shape)
-
-        self.progress.emit(67)
-
-        segment = {'data': self.segmentation_data, 'unique_label': self.unique_label}
-
-        outfile = open(os.path.join(self.saving_folder, 'segment_pre_made.pkl'), 'wb')
-        pickle.dump(segment, outfile)
-        outfile.close()
-
         self.progress.emit(70)
 
-        self.boundary = make_atlas_label_contour(self.saving_folder, self.segmentation_data)
+        segment_data_shape = self.segmentation_data.shape
+
+        sagital_contour_img = np.zeros(segment_data_shape, 'i')
+        coronal_contour_img = np.zeros(segment_data_shape, 'i')
+        horizontal_contour_img = np.zeros(segment_data_shape, 'i')
+
+        # pre-process boundary ----- todo: change this part as optional
+        process_index = np.linspace(70, 78, segment_data_shape[0])
+        for i in range(segment_data_shape[0]):
+            self.progress.emit(process_index[i])
+            da_slice = self.segmentation_data[i, :, :].copy()
+            contour_img = make_contour_img(da_slice)
+            sagital_contour_img[i, :, :] = contour_img
+
+        outfile_ct = open(os.path.join(self.saving_folder, 'sagital_contour_pre_made.pkl'), 'wb')
+        pickle.dump(sagital_contour_img, outfile_ct)
+        outfile_ct.close()
+        self.progress.emit(80)
+
+        process_index = np.linspace(80, 88, segment_data_shape[1])
+        for i in range(segment_data_shape[1]):
+            self.progress.emit(process_index[i])
+            da_slice = self.segmentation_data[:, i, :].copy()
+            contour_img = make_contour_img(da_slice)
+            coronal_contour_img[:, i, :] = contour_img
+
+        outfile_ct = open(os.path.join(self.saving_folder, 'coronal_contour_pre_made.pkl'), 'wb')
+        pickle.dump(coronal_contour_img, outfile_ct)
+        outfile_ct.close()
+        self.progress.emit(90)
+
+        process_index = np.linspace(90, 98, segment_data_shape[2])
+        for i in range(segment_data_shape[2]):
+            self.progress.emit(process_index[i])
+            da_slice = self.segmentation_data[:, :, i].copy()
+            contour_img = make_contour_img(da_slice)
+            horizontal_contour_img[:, :, i] = contour_img
+
+        outfile_ct = open(os.path.join(self.saving_folder, 'horizontal_contour_pre_made.pkl'), 'wb')
+        pickle.dump(horizontal_contour_img, outfile_ct)
+        outfile_ct.close()
+        self.progress.emit(100)
+
+        # boundary = {'s_contour': sagital_contour_img,
+        #             'c_contour': coronal_contour_img,
+        #             'h_contour': horizontal_contour_img}
+        #
+        # self.boundary = {'data': boundary}
+
+        # self.boundary = make_atlas_label_contour(self.saving_folder, self.segmentation_data)
 
         # target = os.path.join(self.saving_folder, 'atlas_labels.pkl')
         # if not os.path.exists(target):
         #     shutil.copyfile(join(dirname(__file__), "data/atlas_labels.pkl"), target)
 
-        self.progress.emit(100)
+        # self.progress.emit(100)
 
         self.finished.emit()
 
@@ -249,7 +314,7 @@ class MeshDownloader(QObject):
         for i in range(n_unique_labels):
             ind = unique_label[i]
             self.progress.emit(progress_step[i])
-            if ind == 0:
+            if ind in [0, 545]:
                 continue
             url = 'http://download.alleninstitute.org/informatics-archive/current-release/mouse_ccf/annotation/ccf_2017/structure_meshes/{}.obj'.format(
                 ind)
@@ -361,6 +426,13 @@ class AllenDownloader(QDialog):
 
         self.progress = QProgressBar(self)
         self.progress.setMinimumWidth(100)
+        self.progress.setTextVisible(True)
+        self.progress_label = QLabel()
+
+        progress_wrap = QFrame()
+        pw_layout = QHBoxLayout(progress_wrap)
+        pw_layout.addWidget(self.progress)
+        pw_layout.addWidget(self.progress_label)
 
         # ok button, used to close window
         ok_btn = QDialogButtonBox(QDialogButtonBox.Ok)
@@ -376,7 +448,7 @@ class AllenDownloader(QDialog):
         layout.addWidget(b_wrap)
         layout.addWidget(self.process_info)
         layout.addWidget(self.process_btn)
-        layout.addWidget(self.progress)
+        layout.addWidget(progress_wrap)
         # layout.addWidget(ok_btn)
 
         # Binding Button Event
@@ -483,8 +555,11 @@ class AllenDownloader(QDialog):
             self.finish[1] = True
             return
 
-    def report_progress(self, i):
-        self.progress.setValue(i)
+    def report_progress(self, val):
+        val = np.round(val, 2)
+        self.progress.setValue(int(val))
+        self.progress.setFormat("%.02f %%" % val)
+        self.progress_label.setText("%.02f %%" % val)
 
     def mesh_report_progress(self, i):
         self.mesh_bar.setValue(i)

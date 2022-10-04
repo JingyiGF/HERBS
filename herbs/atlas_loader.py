@@ -140,6 +140,148 @@ def check_data_path_and_load(file_path):
     return data, success
 
 
+
+def check_atlas_file_path(atlas_folder, data_file=None, segmentation_file=None):
+    atlas_path = os.path.join(atlas_folder, data_file)
+    segmentation_path = os.path.join(atlas_folder, segmentation_file)
+
+    if not os.path.exists(atlas_path) or not os.path.exists(segmentation_path):
+        msg = 'atlas_path or segmentation_path not exist.'
+        msg_flag = 0
+    else:
+        msg = 'atlas path and segmentation path exist.'
+        msg_flag = 1
+
+    return msg, msg_flag, atlas_path, segmentation_path
+
+
+def load_mask_file(atlas_folder, mask_file=None):
+    if mask_file is not None:
+        mask_path = os.path.join(atlas_folder, mask_file)
+        if os.path.exists(mask_path):
+            mask_data, mask_success = check_data_path_and_load(mask_path)
+            if not mask_success:
+                msg = 'Failed to load mask data.'
+                msg_flag = 0
+                mask_data = None
+            else:
+                msg = 'Mask data loaded successfully.'
+                msg_flag = 1
+                mask_data = mask_data[:, :, :, 0]  # ????? check data again when you have time, dear
+        else:
+            msg = 'Mask path not exist.'
+            msg_flag = 0
+            mask_data = None
+    else:
+        msg = 'No mask data is needed.'
+        msg_flag = 1
+        mask_data = None
+
+    return msg, msg_flag, mask_data
+
+
+def process_segmentation_data(atlas_folder, segmentation_path, mask_data):
+    segmentation_data, seg_success = check_data_path_and_load(segmentation_path)
+    if not seg_success:
+        msg = 'Failed to load segmentation data.'
+        msg_flag = 0
+    else:
+        if mask_data is not None:
+            # make segmentation with mask
+            for i in range(len(mask_data)):
+                segmentation_data[i][mask_data[i] == 0] = 0
+            segmentation_data = segmentation_data.astype('int')
+
+        unique_label = np.unique(segmentation_data)
+
+        segment = {'data': segmentation_data, 'unique_label': unique_label}
+
+        outfile = open(os.path.join(atlas_folder, 'segment_pre_made.pkl'), 'wb')
+        pickle.dump(segment, outfile)
+        outfile.close()
+
+        msg = 'Segmentation data processed successfully.'
+        msg_flag = 1
+
+    return msg, msg_flag
+
+
+def process_atlas_data(atlas_folder, atlas_path, mask_data,
+                       bregma_coordinates=None, lambda_coordinates=None, voxel_size=None):
+    atlas_data, atlas_success = check_data_path_and_load(atlas_path)
+    if not atlas_success:
+        msg = 'Failed to load atlas volume data.'
+        msg_flag = 0
+    else:
+
+        new_atlas_data = atlas_data.copy()
+        if mask_data is not None:
+            # make atlas with mask
+            new_atlas_data = new_atlas_data - np.min(new_atlas_data)
+            for i in range(len(mask_data)):
+                new_atlas_data[i][mask_data[i] == 0] = 0
+            new_atlas_data = new_atlas_data / np.max(new_atlas_data)
+        else:
+            new_atlas_data = new_atlas_data - np.min(new_atlas_data)
+            new_atlas_data = new_atlas_data / np.max(new_atlas_data)
+
+        atlas_info = [
+            {'name': 'anterior', 'values': np.arange(new_atlas_data.shape[0]) * voxel_size, 'units': 'um'},
+            {'name': 'dorsal', 'values': np.arange(new_atlas_data.shape[1]) * voxel_size, 'units': 'um'},
+            {'name': 'right', 'values': np.arange(new_atlas_data.shape[2]) * voxel_size, 'units': 'um'},
+            {'vxsize': voxel_size,
+             'Bregma': [bregma_coordinates[0], bregma_coordinates[1], bregma_coordinates[2]],
+             'Lambda': [lambda_coordinates[0], lambda_coordinates[1], lambda_coordinates[2]]}
+        ]
+
+        atlas = {'data': new_atlas_data, 'info': atlas_info}
+
+        atlas_data = atlas['data']
+        atlas_info = atlas['info']
+
+        outfile = open(os.path.join(atlas_folder, 'atlas_pre_made.pkl'), 'wb')
+        pickle.dump(atlas, outfile)
+        outfile.close()
+
+        msg = 'Volume Atlas data processed successfully.'
+        msg_flag = 1
+
+    return msg, msg_flag
+
+
+def process_contour_data(segmentation_data, dim_index=0):
+    contour_img = np.zeros(segmentation_data.shape, 'i')
+
+    # pre-process boundary
+    if dim_index == 0:
+        for i in range(segmentation_data.shape[dim_index]):
+            da_slice = segmentation_data[i, :, :].copy()
+            da_contour = make_contour_img(da_slice)
+            contour_img[i, :, :] = da_contour
+    elif dim_index == 1:
+        for i in range(segmentation_data.shape[dim_index]):
+            da_slice = segmentation_data[:, i, :].copy()
+            da_contour = make_contour_img(da_slice)
+            contour_img[:, i, :] = da_contour
+    else:
+        for i in range(segmentation_data.shape[dim_index]):
+            da_slice = segmentation_data[:, :, i].copy()
+            da_contour = make_contour_img(da_slice)
+            contour_img[:, :, i] = da_contour
+    return contour_img
+
+
+
+# boundary = {'s_contour': sagital_contour_img,
+#                 'c_contour': coronal_contour_img,
+#                 'h_contour': horizontal_contour_img}
+#
+#     bnd = {'data': boundary}
+#
+#     outfile_ct = open(os.path.join(atlas_folder, 'contour_pre_made.pkl'), 'wb')
+#     pickle.dump(bnd, outfile_ct)
+#     outfile_ct.close()
+
 def process_atlas_raw_data(atlas_folder, data_file=None, segmentation_file=None, mask_file=None,
                            bregma_coordinates=None, lambda_coordinates=None, voxel_size=None):
     atlas_data, atlas_info, segmentation_data, boundary = None, None, None, None
@@ -227,8 +369,6 @@ def process_atlas_raw_data(atlas_folder, data_file=None, segmentation_file=None,
 
 
 
-# AtlasMeshProcessor(atlas_folder, atlas_data, segmentation_data, mesh_data_factor, level)
-
 
 
 
@@ -239,21 +379,24 @@ class AtlasMeshProcessor(object):
         small_meshdata_list = render_small_volume(atlas_data, segmentation_data, atlas_folder,
                                                   factor=factor, level=level)
 
-# atlas_folder = '/Users/jingyig/Work/Kavli/AllenCCF10um'
+
 class AtlasLoader(object):
     def __init__(self, atlas_folder):
         pre_made_atlas_path = os.path.join(atlas_folder, 'atlas_pre_made.pkl')
         pre_made_segment_path = os.path.join(atlas_folder, 'segment_pre_made.pkl')
         pre_made_boundary_path = os.path.join(atlas_folder, 'contour_pre_made.pkl')
 
+        pre_s_boundary_path = os.path.join(atlas_folder, 'sagital_contour_pre_made.pkl')
+        pre_c_boundary_path = os.path.join(atlas_folder, 'coronal_contour_pre_made.pkl')
+        pre_h_boundary_path = os.path.join(atlas_folder, 'horizontal_contour_pre_made.pkl')
+
         pre_made_label_info_path = os.path.join(atlas_folder, 'atlas_labels.pkl')
 
         chk1 = os.path.exists(pre_made_label_info_path)
         chk2 = os.path.exists(pre_made_atlas_path)
         chk3 = os.path.exists(pre_made_segment_path)
-        chk4 = os.path.exists(pre_made_boundary_path)
 
-        if not np.all([chk1, chk2, chk3, chk4]):
+        if not np.all([chk1, chk2, chk3]):
             self.msg = 'Please pre-process the raw data of your desire atlas.'
             self.success = False
         else:
@@ -281,13 +424,60 @@ class AtlasLoader(object):
                 infile_seg.close()
 
                 self.segmentation_data = segment['data']
+
+                data_shape = self.segmentation_data.shape
+
                 self.unique_label = segment['unique_label']
                 self.success = True
             except (ValueError, pickle.UnpicklingError):
                 self.msg = 'Please re-process atlas and label segmentation file.'
                 self.success = False
 
-            # load boundary
+        bnd_chk0 = os.path.exists(pre_made_boundary_path)
+        bnd_chk1 = os.path.exists(pre_s_boundary_path)
+        bnd_chk2 = os.path.exists(pre_c_boundary_path)
+        bnd_chk3 = os.path.exists(pre_h_boundary_path)
+
+        if not bnd_chk0:
+            if not np.all([bnd_chk1, bnd_chk2, bnd_chk3]):
+                self.msg = 'Please pre-process boundary file.'
+                self.success = False
+            else:
+                # load boundary
+                self.boundary = {}
+                try:
+                    infile = open(pre_s_boundary_path, 'rb')
+                    sagital_contour_img = pickle.load(infile)
+                    infile.close()
+
+                    self.boundary['s_contour'] = sagital_contour_img
+                    self.success = True
+                except (ValueError, pickle.UnpicklingError, BrokenPipeError):
+                    self.msg = 'Please re-process boundary file.'
+                    self.success = False
+
+                try:
+                    infile = open(pre_c_boundary_path, 'rb')
+                    coronal_contour_img = pickle.load(infile)
+                    infile.close()
+
+                    self.boundary['c_contour'] = coronal_contour_img
+                    self.success = True
+                except (ValueError, pickle.UnpicklingError, BrokenPipeError):
+                    self.msg = 'Please re-process boundary file.'
+                    self.success = False
+
+                try:
+                    infile = open(pre_h_boundary_path, 'rb')
+                    horizontal_contour_img = pickle.load(infile)
+                    infile.close()
+
+                    self.boundary['h_contour'] = horizontal_contour_img
+                    self.success = True
+                except (ValueError, pickle.UnpicklingError, BrokenPipeError):
+                    self.msg = 'Please re-process boundary file.'
+                    self.success = False
+        else:
             try:
                 infile = open(pre_made_boundary_path, 'rb')
                 bnd = pickle.load(infile)
@@ -295,9 +485,15 @@ class AtlasLoader(object):
 
                 self.boundary = bnd['data']
                 self.success = True
-            except ValueError:
+            except (ValueError, pickle.UnpicklingError, BrokenPipeError):
                 self.msg = 'Please re-process boundary file.'
                 self.success = False
+
+
+
+
+
+
 
 
 
