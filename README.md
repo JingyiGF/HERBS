@@ -33,6 +33,19 @@ After running the above scripts, a GUI window will pop up. Users can download at
 
 For more information, please read HERBS CookBook (on going) or check the Tutorial folder for corresponding functionalities.
 
+## Atlas Storage
+
+- <span style="font-weight:700;font-size:18px">
+    Do not store Atlases inside HERBS folder. 
+</span>
+When downloading Atlases, HERBS asks users to select the folder to store the atlas. Please choose a folder other than HERBS folder.
+
+- <span style="font-weight:700;font-size:18px">
+    Save different Atlas in different folders. 
+</span>
+When downloading an atlas other than the one you already have, please store it in another folder.
+
+
 ## Some Pre-Requirement Issues
 
 - In order to run HERBS properly, 64 bit operating systems and 64 bit Python are required.

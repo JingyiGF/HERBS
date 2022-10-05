@@ -18,7 +18,7 @@ include herbs/main_window.ui
 include herbs/data/query.csv
 include herbs/data/atlas_labels.pkl
 
-# Included are: icons/, data/
+# Included are: icons/, data/, qss/
 recursive-include herbs/icons *.svg
 recursive-include herbs/icons *.png
 recursive-include herbs/icons/sidebar *.svg
@@ -27,3 +27,5 @@ recursive-include herbs/icons/toolbar *.svg
 recursive-include herbs/icons/toolbar *.png
 recursive-include herbs/icons/layers *.svg
 recursive-include herbs/icons/layers *.png
+
+recursive-include herbs/qss *.qss
