@@ -1,0 +1,11 @@
+QDialog{
+    background-color: rgb(50, 50, 50);
+    color: white;
+    font-size: 12px;
+}
+
+QLabel{
+    color: white;
+    font-size: 12px;
+}
+

@@ -7,7 +7,7 @@ import numpy as np
 import colorsys
 from .uuuuuu import hex2rgb
 
-czi_path = '~/Work/Kavli/Data/HERBS_DATA/abraham/Pecorino_mec_slide_1.czi'
+# czi_path = '~/Work/Kavli/Data/HERBS_DATA/abraham/Pecorino_mec_slide_1.czi'
 
 class CZIReader(object):
     def __init__(self, czi_path):

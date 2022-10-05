@@ -426,7 +426,7 @@ class AllenDownloader(QDialog):
 
         self.progress = QProgressBar(self)
         self.progress.setMinimumWidth(100)
-        self.progress.setTextVisible(True)
+        self.progress.setTextVisible(False)
         self.progress_label = QLabel()
 
         progress_wrap = QFrame()
@@ -558,7 +558,7 @@ class AllenDownloader(QDialog):
     def report_progress(self, val):
         val = np.round(val, 2)
         self.progress.setValue(int(val))
-        self.progress.setFormat("%.02f %%" % val)
+        # self.progress.setFormat("%.02f %%" % val)
         self.progress_label.setText("%.02f %%" % val)
 
     def mesh_report_progress(self, i):

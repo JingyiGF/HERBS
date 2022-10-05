@@ -50,7 +50,10 @@ Operating System :: MacOS
 """
 
 REQUIRES = """
-pyqtgraph >= 0.12.3
+PyQt5 >= 5.14.2; python_version == "3.8"
+PyQt5 >= 5.15.1; python_version == "3.9"
+PyQt5 >= 5.15.5; python_version == "3.10"
+pyqtgraph == 0.12.3
 PyOpenGL >= 3.1.5
 QtRangeSlider == 0.1.5
 opencv-python >= 4.5.4.60
@@ -67,9 +70,6 @@ natsort >= 8.0.2
 imagecodecs >= 2022.2.22
 h5py >= 3.7.0
 tables >= 3.7.0
-PyQt5 >= 5.14.2; python_version == "3.8"
-PyQt5 >= 5.15.1; python_version == "3.9"
-PyQt5 >= 5.15.5; python_version == "3.10"
 """
 
 PACKAGE_DATA = """
@@ -84,12 +84,13 @@ icons/sidebar/*.svg
 icons/sidebar/*.png
 icons/toolbar/*.svg
 icons/toolbar/*.png
+qss/*.qss
 """
 
 
 setup(
     name="herbs",
-    version="0.0.14",
+    version="0.0.18",
     author="Jingyi GF",
     author_email="jingyi.g.fuglstad@gmail.com",
     description="A Python-based GUI for Histological E-data Registration in Brain Space",

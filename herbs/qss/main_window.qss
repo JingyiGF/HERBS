@@ -1,0 +1,243 @@
+QMainWindow {
+    background-color: rgb(50, 50, 50);
+    color: white;
+    font-size: 12px;
+}
+
+/*---------------------- QComboBox -----------------------*/
+QComboBox {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    selection-background-color: transparent;
+    color: white;
+    background-color: #656565;
+    border: None;
+    border-radius: 5px;
+    padding: 0px 0px 0px 5px;
+    margin: 0px;
+}
+
+
+QComboBox:item {
+    background: #656565;
+    color: white;
+    height: 20px;
+    margin: 0px;
+    padding: 3px;
+}
+
+QComboBox:item:selected
+{
+    border: 3px solid #656565;
+    background: #232323;
+    margin: 0px;
+    color: white;
+    padding: 3px;
+}
+
+
+QComboBox:editable {
+    background: #656565;
+    margin: 0px;
+}
+
+QComboBox:!editable, QComboBox::drop-down:editable {
+     background: #656565;
+}
+
+QComboBox:!editable:on, QComboBox::drop-down:editable:on {
+    background: #656565;
+    margin: 0px;
+    padding: 0px;
+}
+
+QComboBox:on { /* shift the text when the popup opens */
+    margin: 0px;
+    padding: 0px;
+    color: white;
+    background-color: transparent;
+    selection-background-color: transparent;
+}
+
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 20px;
+    border-top: None;
+    border-bottom: None;
+    border-left-width: 1px;
+    border-left-color: transparent;
+    border-left-style: solid; /* just a single line */
+    border-top-right-radius: 3px; /* same radius as the QComboBox */
+    border-bottom-right-radius: 3px;
+    margin: 0px;
+}
+
+QComboBox::down-arrow {
+    image: url(icons/tdown.svg);
+    width: 13px;
+    height: 14px;
+    padding-right: 3px;
+}
+
+QComboBox::down-arrow:on { /* shift the arrow when popup is open */
+    top: 1px;
+    left: 1px;
+}
+
+
+
+/*---------------------- Slider -----------------------*/
+QSlider {
+    min-height: 20px;
+    max-height: 20px;
+    background: transparent;
+    border: None;
+}
+
+QSlider::groove:horizontal {
+    border: None;
+    height: 2px; /* the groove expands to the size of the slider by default. by giving it a height, it has a fixed size */
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #B1B1B1, stop:1 #c4c4c4);
+    margin: 2px 0px;
+}
+
+QSlider::handle:horizontal {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #b4b4b4, stop:1 #8f8f8f);
+    border: 1px solid #5c5c5c;
+    width: 10px;
+    height: 30px;
+    margin: -4px -2px; /* handle is placed by default on the contents rect of the groove. Expand outside the groove */
+    border-radius: 0px;
+}
+
+/*---------------------- LineEdit -----------------------*/
+QLineEdit {
+    background-color: transparent;
+    color: white;
+}
+
+/*---------------------- SpinBox -----------------------*/
+QSpinBox {
+    padding-right: 0px; /* make room for the arrows */
+    border: 1px solid #242424;
+    background: transparent;
+    color: white;
+}
+
+QSpinBox::up-button {
+    background: transparent;
+    subcontrol-origin: border;
+    subcontrol-position: top right; /* position at the top right corner */
+    width: 15px;
+    border-width: 0px;
+}
+
+QSpinBox::down-button {
+    background: transparent;
+    subcontrol-origin: border;
+    subcontrol-position: bottom right; /* position at bottom right corner */
+    width: 15px;
+    border-width: 0px;
+}
+
+QSpinBox::up-button:hover {
+    background-color: #282828;
+}
+
+QSpinBox::down-button:hover {
+    background-color: #282828;
+}
+
+QSpinBox::up-button:pressed {
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                      stop: 0 #282828, stop: 1 #323232);
+}
+
+QSpinBox::down-button:pressed {
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                      stop: 0 #323232, stop: 1 #282828);
+}
+
+QSpinBox::up-arrow {
+    image: url(icons/up-arrow.svg);
+    width: 7px;
+    height: 7px;
+}
+
+QSpinBox::down-arrow {
+    image: url(icons/down-arrow.svg);
+    width: 7px;
+    height: 7px;
+}
+
+/*---------------------- DoubleSpinBox -----------------------*/
+QDoubleSpinBox {
+    padding-right: 0px;
+    border: 1px solid #242424;
+    background: transparent;
+    color: white;
+
+}
+
+QDoubleSpinBox::up-button {
+    background: transparent;
+    subcontrol-origin: border;
+    subcontrol-position: top right; /* position at the top right corner */
+    width: 15px;
+    border: None;
+}
+
+QDoubleSpinBox::down-button {
+    background: transparent;
+    subcontrol-origin: border;
+    subcontrol-position: bottom right; /* position at bottom right corner */
+    width: 15px;
+    border: None;
+}
+
+QDoubleSpinBox::up-button:hover {
+    background-color: #282828;
+}
+
+QDoubleSpinBox::down-button:hover {
+    background-color: #282828;
+}
+
+QDoubleSpinBox::up-button:pressed {
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                      stop: 0 #282828, stop: 1 #000000);
+}
+
+QDoubleSpinBox::down-button:pressed {
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                      stop: 0 #000000, stop: 1 #282828);
+}
+
+QDoubleSpinBox::up-arrow {
+    image: url(icons/up-arrow.svg);
+    width: 7px;
+    height: 7px;
+}
+
+QDoubleSpinBox::down-arrow {
+    image: url(icons/down-arrow.svg);
+    width: 7px;
+    height: 7px;
+}
+
+
+
+/*---------------------- QSplitter -----------------------*/
+QSplitter::handle {
+    image: url(icons/dot.svg);
+}
+
+QSplitter::handle:horizontal {
+    width: 5px;
+}
+
+QSplitter::handle:vertical {
+    height: 5px;
+}
+

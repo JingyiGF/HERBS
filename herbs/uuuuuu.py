@@ -31,7 +31,6 @@ def read_label(file):
     
     return label_index, label_names, label_colors
 
-
 def rotation_x(theta):
     ct = np.cos(theta)
     st = np.sin(theta)
@@ -1383,3 +1382,8 @@ def rotate_base_points(data, base_loc):
     start_pnt = base_pnt + data[0]
     end_pnt = base_pnt + data[1]
     return start_pnt, end_pnt
+
+
+def read_qss_file(qss_file_name):
+    with open(qss_file_name, 'r', encoding='UTF-8') as file:
+        return file.read()
