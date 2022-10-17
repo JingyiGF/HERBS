@@ -731,7 +731,7 @@ class ObjectControl(QObject):
         self._sigprox = ObjectControl.SignalProxy()
         self.sig_opacity_changed = self._sigprox.sigOpacityChanged
         self.sig_visible_changed = self._sigprox.sigVisChanged
-        self.sig_delete_object = self._sigprox.sigDeleteObject
+        self.sig_delete_object = self._sigprox.sigDeleteObject  # for delete obj 3d gl widgets
         self.sig_color_changed = self._sigprox.sigColorChanged
         self.sig_size_changed = self._sigprox.sigSizeChanged
         self.sig_blend_mode_changed = self._sigprox.sigBlendModeChanged
@@ -864,6 +864,13 @@ class ObjectControl(QObject):
         outer_layout.addWidget(mid_frame)
 
         # bottom buttons
+        self.vis2d_btn = QPushButton()
+        self.vis2d_btn.setCheckable(True)
+        self.vis2d_btn.setFixedSize(48, 24)
+        self.vis2d_btn.setStyleSheet(btm_style)
+        self.vis2d_btn.setIcon(QIcon('icons/toolbar/vis2d.svg'))
+        self.vis2d_btn.setIconSize(QSize(40, 20))
+
         self.compare_btn = QPushButton()
         self.compare_btn.setFixedSize(24, 24)
         self.compare_btn.setStyleSheet(btm_style)
@@ -1067,12 +1074,12 @@ class ObjectControl(QObject):
 
     def add_object(self, object_name, object_type, object_data, object_mode):
         object_icon = self.get_object_icon(object_type)
-        group_count = self.get_group_count(object_type)
+        # group_count = self.get_group_count(object_type)
         if object_icon is None:
             return
         self.obj_id.append(self.obj_count)
         self.obj_data.append(object_data)
-        self.obj_name.append("{} {}".format(object_name, group_count))
+        self.obj_name.append(object_name)
         self.obj_type.append(object_type)
         if 'merged' in object_type:
             new_layer = RegisteredObject(obj_id=self.obj_count, obj_name=object_name,
@@ -1117,24 +1124,27 @@ class ObjectControl(QObject):
         self.obj_count += 1
 
     # merge object piece
-    def get_merged_data(self, obj_type='probe piece'):
+    def merge_pieces(self, obj_type='probe piece'):
         if obj_type not in ['probe piece', 'virus piece', 'contour piece', 'drawing piece', 'cells piece']:
             return
         n_obj = len(self.obj_id)
-        cind = [ind for ind in range(n_obj) if obj_type in self.obj_type[ind] and 'merged' not in self.obj_type[ind]]
-        da_type_object_names = np.ravel(self.obj_name)[cind]
+        cind = [ind for ind in range(n_obj) if self.obj_type[ind] == obj_type]
+        da_type_object_names = np.ravel(self.obj_name)[np.array(cind)]
         n_pieces = len(da_type_object_names)
         pieces_names = []
         for i in range(n_pieces):
             da_name = da_type_object_names[i]
-            da_name = da_name.replace(" ", "")
+            # da_name = da_name.replace(" ", "")
             da_name_split = da_name.split('-')
-            pieces_names.append(da_name_split[0])
-        unique_object_names = np.unique(pieces_names)
-        n_object = len(unique_object_names)
+            piece_name = da_name_split[0]
+            if piece_name[-1] == ' ':
+                piece_name = piece_name[:-1]
+            pieces_names.append(piece_name)
+        object_names = np.unique(pieces_names)
+        n_object = len(object_names)
         data = [[] for i in range(n_object)]
         for i in range(n_object):
-            da_piece_name = unique_object_names[i]
+            da_piece_name = object_names[i]
             da_piece_ind_in_obj_order = [cind[ind] for ind in range(n_pieces) if pieces_names[ind] == da_piece_name]
             temp = self.obj_data[da_piece_ind_in_obj_order[0]].T
             if len(da_piece_ind_in_obj_order) > 1:
@@ -1143,7 +1153,7 @@ class ObjectControl(QObject):
                     temp = np.hstack([temp, self.obj_data[da_piece_ind_in_obj_order[j]].T])
             data[i] = temp.T
         self.delete_objects(cind)
-        return data
+        return data, object_names
 
     # get obj data
     def get_obj_data(self):
@@ -1157,12 +1167,8 @@ class ObjectControl(QObject):
         return data
 
     def set_obj_data(self, data):
-        self.obj_name = data['obj_name']
-        self.obj_type = data['obj_type']
-        self.obj_data = data['obj_data']
-
-        for i in range(len(self.obj_type)):
-            self.add_object(self.obj_name[i], self.obj_type[i], self.obj_data[i])
+        for i in range(len(data['obj_type'])):
+            self.add_object(data['obj_name'][i], data['obj_type'][i], data['obj_data'][i], data['obj_comp_mode'][i])
 
         self.obj_size = data['obj_size']
         self.obj_opacity = data['obj_opacity']
@@ -1171,6 +1177,8 @@ class ObjectControl(QObject):
 
         self.obj_list[-1].set_checked(False)
         self.obj_list[self.current_obj_index].set_checked(True)
+
+        print(self.obj_type)
 
     def set_slider_combo_to_current(self):
         if 'merged' in self.obj_type[self.current_obj_index]:
@@ -1201,7 +1209,7 @@ class ObjectControl(QObject):
         self.obj_opacity = []
         self.obj_comp_mode = []
         self.obj_count = 0
-        self.current_obj_index = []
+        self.current_obj_index = None
 
     def compare_obj_called(self):
         compare_names = [self.obj_name[ind] for ind in self.linked_indexes]

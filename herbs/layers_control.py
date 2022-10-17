@@ -345,6 +345,7 @@ class LayersControl(QWidget):
     def add_layer(self, widget_link, color):
         self.layer_id.append(self.layer_count)
         self.layer_link.append(widget_link)
+        print(self.layer_link)
         self.layer_opacity.append(100)
         self.layer_blend_mode.append('Plus')
         self.layer_color.append(color)
@@ -371,6 +372,14 @@ class LayersControl(QWidget):
         if self.layer_blend_mode[-1] != self.layer_blend_combo.currentText():
             self.layer_blend_combo.setCurrentText(self.layer_blend_mode[-1])
 
+    def master_layers(self, res, layer_type, color):
+        if layer_type not in self.layer_link:
+            self.add_layer(layer_type, color)
+            self.layer_list[-1].set_thumbnail_data(res)
+        else:
+            da_ind = np.where(np.ravel(self.layer_link) == layer_type)[0][0]
+            self.layer_list[da_ind].set_thumbnail_data(res)
+
     def delete_layer_btn_clicked(self, clicked_id):
         delete_index = np.where(np.ravel(self.layer_id) == clicked_id)[0][0]
         self.sig_layer_deleted.emit(self.layer_link[delete_index])
@@ -384,6 +393,7 @@ class LayersControl(QWidget):
         del self.layer_link[delete_index]
         del self.layer_opacity[delete_index]
         del self.layer_blend_mode[delete_index]
+        del self.layer_color[delete_index]
         # del self.layer_data[delete_index]
         self.correct_current_layer_index(delete_index)
 
@@ -453,6 +463,7 @@ class LayersControl(QWidget):
         for i in range(len(self.layer_link)):
             da_tb = self.layer_list[i].thumbnail_data
             tb_list.append(da_tb)
+        print(self.layer_link)
         data = {'layer_link': self.layer_link,
                 'layer_color': self.layer_color,
                 'layer_thumbnail': tb_list,
@@ -462,13 +473,9 @@ class LayersControl(QWidget):
         return data
 
     def set_layer_data(self, data):
-        self.layer_link = data['layer_link']
-        self.layer_color = data['layer_color']
-
         for i in range(len(data['layer_link'])):
-            self.add_layer(data['layer_link'][i], data['layer_color'][i])
-            self.layer_list[-1].set_thumbnail_data(data['layer_thumbnail'][i])
-
+            self.master_layers(data['layer_thumbnail'][i], data['layer_link'][i], data['layer_color'][i])
+        self.layer_color = data['layer_color']
         self.layer_opacity = data['layer_opacity']
         self.layer_blend_mode = data['layer_blend_mode']
         self.current_layer_index = data['current_layer_index']

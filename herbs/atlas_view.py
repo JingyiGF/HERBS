@@ -55,44 +55,6 @@ QPushButton {
 }
 '''
 
-page_control_style = '''
-QLabel{
-    border: None;
-    color: white;
-}
-
-QPushButton{
-    border: 1px solid #242424;
-    background: #656565;
-    border-radius: 4px;
-    min-height: 16px;
-    width: 30px;
-    padding: 5px;
-}
-
-QSlider {
-    min-height: 20px;
-    max-height: 20px;
-    background: transparent;
-    border: None;
-}
-
-QSlider::groove:horizontal {
-    border: None;
-    height: 2px; /* the groove expands to the size of the slider by default. by giving it a height, it has a fixed size */
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #B1B1B1, stop:1 #c4c4c4);
-    margin: 2px 0px;
-}
-
-QSlider::handle:horizontal {
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #b4b4b4, stop:1 #8f8f8f);
-    border: 1px solid #5c5c5c;
-    width: 10px;
-    height: 30px;
-    margin: -4px -2px; /* handle is placed by default on the contents rect of the groove. Expand outside the groove */
-    border-radius: 0px;
-}
-'''
 
 sidebar_button_style = '''
 QPushButton{
@@ -130,7 +92,7 @@ class PageController(QWidget):
         self.sig_page_changed = self._sigprox.sigPageChanged
 
         QWidget.__init__(self)
-
+        page_control_style = read_qss_file('qss/page_control.qss')
         self.setStyleSheet(page_control_style)
 
         self.max_val = None
@@ -325,13 +287,8 @@ class AtlasView(QObject):
 
         self.atlas_data = None
         self.atlas_label = None
-        self.atlas_info = None
         self.label_info = None
-        self.atlas_contour = None
         self.atlas_boundary = None
-        self.coronal_size = None
-        self.sagital_size = None
-        self.horizontal_size = None
         self.slice_size = None
         self.slice_tb_size_base = 80
         self.coronal_tb_size = None
@@ -348,8 +305,6 @@ class AtlasView(QObject):
         self.slice_bregma = []
         self.slice_boundary_points = []
         self.slice_info_ready = False
-
-        self.label_level = None
 
         self.coronal_rotated = False
         self.sagital_rotated = False
@@ -387,13 +342,13 @@ class AtlasView(QObject):
         self.anchor_sagital_index = None
         self.anchor_horicontal_index = None
 
-        self.display_atlas = None
-        self.display_label = None
-        self.scale = None
-        self.interpolate = True
-        self.oy_vector = np.array([0, 1, 0])
-        self.oz_vector = np.array([0, 0, 1])
-        self.ox_vector = np.array([1, 0, 0])
+        # self.display_atlas = None
+        # self.display_label = None
+        # self.scale = None
+        # self.interpolate = True
+        # self.oy_vector = np.array([0, 1, 0])
+        # self.oz_vector = np.array([0, 0, 1])
+        # self.ox_vector = np.array([1, 0, 0])
 
         self.axis = gl.GLAxisItem()
         self.axis.setSize(250, 700, 250)
@@ -1045,36 +1000,17 @@ class AtlasView(QObject):
         self.hrotation_ctrl.h_spinbox.setValue(atlas_rotation[2][0])
         self.hrotation_ctrl.v_spinbox.setValue(atlas_rotation[2][1])
 
-    def clear_atlas_stacks(self):
-
-        valid_keys = ['atlas-overlay', 'atlas-contour', 'atlas-mask', 'circle_follow', 'lasso_path', 'atlas-virus',
-                      'atlas-probe', 'atlas-cells', 'atlas-drawing']
-
-        for da_key in valid_keys:
-            self.working_atlas.image_dict[da_key].clear()
-
-    def clear_atlas(self):
-        self.cimg.img.clear()
-        self.simg.img.clear()
-        self.himg.img.clear()
-
     def get_coronal_3d(self, points2, coronal_index=None):
-        print('points 2', points2)
-        print('points 2', self.origin_3d)
-
         if coronal_index is None:
             da_y = np.ones(len(points2)) * self.current_coronal_index
         else:
             da_y = coronal_index
         points3 = np.vstack([points2[:, 0], da_y, self.atlas_size[0] - points2[:, 1]]).T
         points3 = points3 - self.origin_3d
-        print('poitns3', points3)
         if self.coronal_rotated:
             rot_mat = self.c_rotm_3d
             rotation_origin = self.rotate_origin_3d
             points3 = np.dot(rot_mat, (points3 - rotation_origin).T).T + rotation_origin
-            print('p3', points3)
-
         return points3
 
     def get_sagital_3d(self, points2, sagital_index=None):
@@ -1245,6 +1181,41 @@ class AtlasView(QObject):
 
     def vis_3d_axes(self, vis):
         self.axis.setVisible(vis)
+
+    # ----------- clear atlas
+    def clear_atlas_stacks(self):
+        valid_keys = ['atlas-overlay', 'atlas-contour', 'atlas-mask', 'circle_follow', 'lasso_path', 'atlas-virus',
+                      'atlas-probe', 'atlas-cells', 'atlas-drawing']
+        for da_key in valid_keys:
+            self.working_atlas.image_dict[da_key].clear()
+
+    def clear_volume_atlas(self):
+        if self.atlas_label is None or self.atlas_data is None:
+            return
+        valid_keys = ['atlas-overlay', 'atlas-contour', 'atlas-mask', 'circle_follow', 'lasso_path', 'atlas-virus',
+                      'atlas-probe', 'atlas-cells', 'atlas-drawing']
+        for da_key in valid_keys:
+            self.cimg.image_dict[da_key].clear()
+            self.simg.image_dict[da_key].clear()
+            self.himg.image_dict[da_key].clear()
+        self.cimg.img.clear()
+        self.simg.img.clear()
+        self.himg.img.clear()
+
+
+    def clear_slice_atlas(self):
+        pass
+
+    def clear_atlas(self):
+        self.clear_volume_atlas()
+        self.clear_slice_atlas()
+
+
+
+
+
+
+
 
 
 
