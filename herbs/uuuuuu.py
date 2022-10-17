@@ -4,11 +4,29 @@ import math
 import pandas as pd
 import cv2
 import pickle
-import scipy.ndimage as ndi
 import colorsys
 import pyqtgraph as pg
-import pyqtgraph.opengl as gl
 from scipy.interpolate import interp1d, splprep, splev
+
+
+def check_loading_pickle_file(file_path):
+    layer_dict, msg = None, None
+    try:
+        infile = open(file_path, 'rb')
+        layer_dict = pickle.load(infile)
+        infile.close()
+    except OSError:
+        msg = 'OSError: possible reason - disk full, please contact maintainers.'
+        return msg
+    except (pickle.PickleError, pickle.UnpicklingError):
+        msg = 'Pickling error, please check your file or contact maintainers.'
+        return msg
+    except EOFError:
+        msg = 'EOFError: possible reason - suspecting loading a broken file, please contact maintainers.'
+        return msg
+
+    return layer_dict, msg
+
 
 
 def read_label(file):
@@ -30,6 +48,7 @@ def read_label(file):
         label_names.append(split_lines2[1])
     
     return label_index, label_names, label_colors
+
 
 def rotation_x(theta):
     ct = np.cos(theta)
@@ -65,16 +84,13 @@ def get_closest_point_to_line(p0, r, p):
     
 
 def line_fit(points):
-    print('input', points)
     points = np.asarray(points)
     sort_order = np.argsort(points[:, 2])[::-1]
     points = points[sort_order, :]
-    print('reorder', points)
     avg = np.mean(points, 0)
     substracted = points - avg
     u, s, vh = np.linalg.svd(substracted)
     direction = vh[0, :] / np.linalg.norm(vh[0, :])
-    print('direct', direction)
     p1 = points[0, :]
     p2 = points[-1, :]
     sp = get_closest_point_to_line(avg, direction, p1)
@@ -129,18 +145,18 @@ def correct_start_pnt(label_data, start_pnt, start_vox, direction):
             check_vox = temp.astype(int)
             if label_data[check_vox[0], check_vox[1], check_vox[2]] == 0:
                 break
-        if i == 999:
-            print('something went wrong, please contact maintainer')
-        new_sp = start_pnt - (i - 1) * direction
+            if i == 999:
+                print('something went wrong, please contact maintainer')
+            new_sp = start_pnt - (i - 1) * direction
     elif int(start_vox[2]) > top_vox:
         for i in range(1000):
             temp = start_vox + i * direction
             check_vox = temp.astype(int)
             if label_data[check_vox[0], check_vox[1], check_vox[2]] == 0:
                 break
-        if i == 999:
-            print('something went wrong, please contact maintainer')
-        new_sp = start_pnt + (i - 1) * direction
+            if i == 999:
+                print('something went wrong, please contact maintainer')
+            new_sp = start_pnt + (i - 1) * direction
     else:
         new_sp = start_pnt
     return new_sp
@@ -173,20 +189,6 @@ def angle_between_2vectors(vector1, vector2):
     dot_product = np.dot(unit_vector_1, unit_vector_2)
     angle = np.arccos(dot_product)
     return angle
-
-
-def rotation_y(theta):
-    ct = np.cos(theta)
-    st = np.sin(theta)
-    ry = np.array([[ct, 0, st], [0, 1, 0], [-st, 0, ct]])
-    return ry
-
-
-def rotation_z(theta):
-    ct = np.cos(theta)
-    st = np.sin(theta)
-    rz = np.array([[ct, -st, 0], [st, ct, 0], [0, 0, 1]])
-    return rz
 
 
 def get_probe_info(probe_type):
@@ -529,47 +531,11 @@ def calculate_contour_line(data):
     return pnts
 
 
-def get_object_vis_color(color):
-    vis_color = (color[0] / 255, color[1] / 255, color[2] / 255, 1)
-    return vis_color
 
-
-def create_plot_points_in_3d(data_dict):
-    pnts = data_dict['data']
-    vis_color = get_object_vis_color(data_dict['vis_color'])
-    vis_points = gl.GLScatterPlotItem(pos=pnts, color=vis_color, size=3)
-    return vis_points
-
-
-def create_probe_line_in_3d(data_dict):
-    pos = np.stack([data_dict['new_insertion_coords_3d'], data_dict['new_terminus_coords_3d']], axis=0)
-    vis_color = get_object_vis_color(data_dict['vis_color'])
-    probe_line = gl.GLLinePlotItem(pos=pos, color=vis_color, width=2, mode='line_strip')
-    return probe_line
-
-
-def create_drawing_line_in_3d(data_dict):
-    pos = np.asarray(data_dict['data'])
-    vis_color = get_object_vis_color(data_dict['vis_color'])
-    if np.all(pos[0] == pos[-1]):
-        drawing_obj = gl.GLSurfacePlotItem(x=pos[:, 0], y=pos[:, 1], z=pos[:, 2], colors=vis_color)
-    else:
-        drawing_obj = gl.GLLinePlotItem(pos=pos, color=vis_color, width=2, mode='line_strip')
-    return drawing_obj
-
-
-def create_contour_line_in_3d(data_dict):
-    temp = data_dict['data'].tolist()
-    if temp[0] != temp[-1]:
-        temp.append(temp[0])
-    pos = np.asarray(temp)
-    vis_color = get_object_vis_color(data_dict['vis_color'])
-    contour_obj = gl.GLLinePlotItem(pos=pos, color=vis_color, width=2, mode='line_strip')
-    return contour_obj
 
     
 def check_plotting_2d(points):
-    points = np.asarray(points)
+    pass
 
 
 def hex2rgb(hex):
@@ -1100,33 +1066,7 @@ def get_bound_color(color, tol, level, mode):
 
 # ----------------------------------------------------------------------------------
 # ----------------------------------------------------------------------------------
-def render_volume(atlas_data, atlas_folder, factor=2, level=0.1):
-    da_data = atlas_data.copy()
-    img = np.ascontiguousarray(da_data[::factor, ::factor, ::factor])
-    verts, faces = pg.isosurface(ndi.gaussian_filter(img.astype('float64'), (2, 2, 2)), np.max(da_data) * level)
 
-    md = gl.MeshData(vertexes=verts * factor, faces=faces)
-
-    outfile = open(os.path.join(atlas_folder, 'atlas_meshdata.pkl'), 'wb')
-    pickle.dump(md, outfile)
-    outfile.close()
-
-    return md
-
-
-def render_small_volume(label_id, save_path, atlas_data, atlas_label, factor=2, level=0.1):
-    temp_atlas = atlas_data.copy()
-    temp_atlas[atlas_label != label_id] = 0
-    pimg = np.ascontiguousarray(temp_atlas[::factor, ::factor, ::factor])
-    verts, faces = pg.isosurface(ndi.gaussian_filter(pimg.astype('float64'), (2, 2, 2)), np.max(temp_atlas) * level)
-    # small_verts_list[str(id)] = verts
-    # small_faces_list[str(id)] = faces
-
-    md = gl.MeshData(vertexes=verts * factor, faces=faces)
-
-    outfile = open(os.path.join(save_path, '{}.pkl'.format(label_id)), 'wb')
-    pickle.dump(md, outfile)
-    outfile.close()
 
 
 def get_statusbar_style(col):
