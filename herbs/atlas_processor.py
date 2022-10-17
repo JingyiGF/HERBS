@@ -14,25 +14,29 @@ from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 
-from .uuuuuu import make_contour_img, render_volume, render_small_volume
+from .uuuuuu import read_qss_file, make_contour_img
+from .obj_items import render_volume, render_small_volume
 from .atlas_loader import process_atlas_raw_data, AtlasLoader
 
 
 class AtlasProcessor(QDialog):
     def __init__(self):
         super().__init__()
-        self.setStyleSheet('color: black;')
+        qss_file_name = "qss/dialogs.qss"
+        qss_style_sheet = read_qss_file(qss_file_name)
+        self.setStyleSheet(qss_style_sheet)
         self.setWindowTitle("Atlas Processor")
 
         self.folder_path = None
         self.data_local = None
         self.segmentation_local = None
         self.mask_local = None
-        self.labinf_path = None
+        self.info_path = None
         self.bregma_coord = [0, 0, 0]
         self.lambda_coord = [0, 0, 0]
         self.voxel_size = 0
         self.factor_val = 2
+        self.directions = [None, None, None]
 
         layout = QGridLayout(self)
 
@@ -81,23 +85,30 @@ class AtlasProcessor(QDialog):
         self.factor_input1 = QLineEdit('2')
         self.factor_input1.setValidator(valid_input)
 
-        selector_vals = ['Left --> Right', 'Right --> Left',
-                         'Superior --> Inferior', 'Inferior --> Superior',
-                         'Posterior --> Anterior', 'Anterior --> Posterior']
+        selector_vals = ['L. --> R.', 'R. --> L.',
+                         'Sup. --> Inf.', 'Inf. --> Sup.',
+                         'Post. --> Ant.', 'Ant. --> Post.']
 
-        # x_axis_label = QLabel('x-axis: ')
-        # self.x_axis_combo = QComboBox()
-        # self.x_axis_combo.addItems(selector_vals)
-        #
-        # y_axis_label = QLabel('y-axis: ')
-        # self.y_axis_combo = QComboBox()
-        # self.y_axis_combo.addItems(selector_vals)
-        #
-        # z_axis_label = QLabel('z-axis: ')
-        # self.z_axis_combo = QComboBox()
-        # self.z_axis_combo.addItems(selector_vals)
+        dim_selector_label = QLabel('Dimension Selector: ')
+
+        self.x_axis_combo = QComboBox()
+        self.x_axis_combo.addItem('x-axis: ')
+        self.x_axis_combo.addItems(selector_vals)
+        self.x_axis_combo.currentIndexChanged.connect(lambda: self.dim_combo_changed('x'))
+
+        self.y_axis_combo = QComboBox()
+        self.y_axis_combo.addItem('y-axis: ')
+        self.y_axis_combo.addItems(selector_vals)
+        self.y_axis_combo.currentIndexChanged.connect(lambda: self.dim_combo_changed('y'))
+
+        self.z_axis_combo = QComboBox()
+        self.z_axis_combo.addItem('z-axis: ')
+        self.z_axis_combo.addItems(selector_vals)
+        self.z_axis_combo.currentIndexChanged.connect(lambda: self.dim_combo_changed('z'))
 
         self.process_btn = QPushButton('Start Process')
+        self.pre_check_label = QLabel()
+        self.pre_check_label.setText('')
 
         layout.addWidget(data_label, 0, 0, 1, 1)
         layout.addWidget(self.data_btn, 0, 1, 1, 1)
@@ -124,14 +135,13 @@ class AtlasProcessor(QDialog):
         layout.addWidget(factor_label, 6, 2, 1, 1)
         layout.addWidget(self.factor_input1, 6, 3, 1, 1)
 
-        # layout.addWidget(x_axis_label, 6, 0, 1, 1)
-        # layout.addWidget(self.x_axis_combo, 6, 1, 1, 3)
-        # layout.addWidget(y_axis_label, 7, 0, 1, 1)
-        # layout.addWidget(self.y_axis_combo, 7, 1, 1, 3)
-        # layout.addWidget(z_axis_label, 8, 0, 1, 1)
-        # layout.addWidget(self.z_axis_combo, 8, 1, 1, 3)
+        layout.addWidget(dim_selector_label, 7, 0, 1, 1)
+        layout.addWidget(self.x_axis_combo, 7, 1, 1, 1)
+        layout.addWidget(self.y_axis_combo, 7, 2, 1, 1)
+        layout.addWidget(self.z_axis_combo, 7, 3, 1, 1)
 
-        layout.addWidget(self.process_btn, 7, 0, 1, 4)
+        layout.addWidget(self.process_btn, 8, 0, 1, 4)
+        layout.addWidget(self.pre_check_label, 9, 0, 1, 4)
 
         # connect all buttons
         self.data_btn.clicked.connect(self.get_data_file)
@@ -147,6 +157,27 @@ class AtlasProcessor(QDialog):
         self.lambda_input3.textChanged.connect(self.lambda_input3_changed)
         self.vox_size_input1.textChanged.connect(self.vox_size_input_changed)
         self.factor_input1.textChanged.connect(self.factor_input_changed)
+
+    def dim_combo_changed(self, ax):
+        if ax == 'x':
+            x_direct_index = self.x_axis_combo.currentIndex()
+            if x_direct_index == 0:
+                self.directions[0] = None
+            else:
+                self.directions[0] = self.x_axis_combo.currentText()
+        elif ax == 'y':
+            y_direct_index = self.y_axis_combo.currentIndex()
+            if y_direct_index == 0:
+                self.directions[1] = None
+            else:
+                self.directions[1] = self.y_axis_combo.currentText()
+        else:
+            z_direct_index = self.z_axis_combo.currentIndex()
+            if z_direct_index == 0:
+                self.directions[2] = None
+            else:
+                self.directions[2] = self.z_axis_combo.currentText()
+
 
     def get_folder_path(self, file_path):
         self.folder_path = os.path.dirname(file_path)

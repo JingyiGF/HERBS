@@ -13,7 +13,7 @@ import shutil
 import requests
 
 from .atlas_loader import process_atlas_raw_data
-from .uuuuuu import render_volume, render_small_volume
+from .obj_items import render_volume, render_small_volume
 
 
 class DownloadThread(QThread):

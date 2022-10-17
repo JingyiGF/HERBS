@@ -14,7 +14,8 @@ from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 
-from .uuuuuu import make_contour_img, render_volume, render_small_volume, make_atlas_label_contour
+from .uuuuuu import make_contour_img, make_atlas_label_contour
+from .obj_items import render_volume, render_small_volume
 
 
 def _make_label_info_data_waxholm_rat(label_file_path, excel_file_path):
