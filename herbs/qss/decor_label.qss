@@ -1,0 +1,9 @@
+QLabel{
+    color: white;
+    background: #747a80;
+    width: 300px;
+    height: 20px;
+    padding-bottom: 5px;
+    padding-left: 5px;
+    padding-top: 2px;
+}

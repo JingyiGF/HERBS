@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 
 from .atlas_loader import process_atlas_raw_data
-from .uuuuuu import  hex2rgb, obj_data_to_mesh3d, make_contour_img
+from .uuuuuu import hex2rgb, obj_data_to_mesh3d, make_contour_img
 from .obj_items import render_volume, render_small_volume
 from .atlas_downloader import DownloadThread
 

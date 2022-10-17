@@ -1,0 +1,123 @@
+QWidget{
+    background-color: transparent;
+    color: white;
+}
+
+QColorDialog{
+    background-color: rgb(50, 50, 50);
+}
+
+QPushButton{
+    background: transparent;
+    border-radius: 3px;
+    color: white;
+    border: None;
+    height: 24px;
+    margin: 5px;
+    padding: 0px;
+}
+
+QTreeWidget{
+    background-color: transparent;
+    border: 1px solid #636363;
+}
+
+QTreeWidget::item{
+    background-color: transparent;
+    color: rgb(255, 255, 255);
+    min-height: 20px;
+}
+
+QTreeWidget::item:selected{
+    background-color: transparent;
+    color: white;
+}
+
+QTreeView {
+    border: 1px solid rgb(128, 128, 128);
+    background-color: transparent;
+    selection-background-color: transparent; /* Used on Mac */
+    selection-color: white; /* Used on Mac */
+    show-decoration-selected: 1;
+}
+
+QTreeView::item {
+    border: None;
+    background-color: transparent;
+}
+
+QTreeView::item:hover {
+    background: transparent;
+    border: None;
+}
+
+QTreeView::item:selected {
+    border: None;
+    background: transparent;
+    color: white;
+}
+
+QTreeView::indicator:unchecked {
+    border: 1px solid #656565;
+    border-radius: 5px;
+}
+
+QTreeView::indicator:checked {
+    border: 1px solid #656565;
+    border-radius: 5px;
+    image: url(icons/sidebar/tree_checked.svg);
+}
+
+QTreeView::branch {
+        background: transparent;
+}
+
+QTreeView::branch:selected {
+        background: transparent;
+}
+
+QTreeView::branch:selected:active {
+    background: transparent;
+}
+
+QTreeView::branch:selected:!active {
+    background: transparent;
+}
+QTreeView::branch:has-siblings:!adjoins-item {
+    border-image: None;
+    background: transparent;
+}
+
+QTreeView::branch:has-siblings:adjoins-item {
+    border-image: None;
+    background: transparent;
+}
+
+QTreeView::branch:!has-siblings:!adjoins-item {
+    border-image: None;
+    background: transparent;
+}
+
+QTreeView::branch:!has-siblings:adjoins-item {
+    border-image: None;
+    background: transparent;
+}
+
+QTreeView::branch:!has-children:!has-siblings:adjoins-item {
+    border-image: None;
+    background: transparent;
+}
+
+QTreeView::branch:has-children:!has-siblings:closed,
+QTreeView::branch:closed:has-children:has-siblings {
+        background: transparent;
+        border-image: none;
+        image: url(icons/tree_close.svg);
+}
+
+QTreeView::branch:open:has-children:!has-siblings,
+QTreeView::branch:open:has-children:has-siblings  {
+        border-image: none;
+        background: transparent;
+        image: url(icons/tree_open.svg);
+}

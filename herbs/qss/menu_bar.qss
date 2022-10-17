@@ -1,0 +1,42 @@
+QMenuBar {
+    background-color: rgb(25, 27, 29);
+    color: rgb(254, 252, 255);
+    border-bottom-color: rgb(37, 37, 37);
+}
+
+QMenuBar::item {
+    spacing: 50px;
+    background-color: rgb(25, 27, 29);
+    color: rgb(254, 252, 255);
+    border-bottom-color: rgb(37, 37, 37);
+}
+
+QMenuBar::item:selected {
+    background-color: red;
+    color: rgb(254, 252, 255);
+    border-bottom-color: rgb(37, 37, 37);
+}
+
+QMenu {
+    border: None;
+    color: rgb(255, 255, 255);
+    background-color: qlineargradient(spread:pad, x1:1, y1:1, x2:1, y2:0, stop:0 rgb(42, 49, 53), stop:1 rgb(85, 85, 88));
+}
+
+QMenu:hover {
+    border: None;
+    color: rgb(255, 255, 255);
+    background-color: red;
+}
+
+QMenu::item{
+    Background-color: qlineargradient(spread:pad, x1:1, y1:1, x2:1, y2:0, stop:0 rgba(42, 49, 53, 255), stop:1 rgba(85, 85, 88, 255));
+    Border: 2px solid transparent; // border
+    Padding: 20 25 20 20px;
+}
+
+QMenu::item:selected{
+    color: rgb(255, 255, 255);
+    background-color: rgb(63, 124, 234);
+
+}

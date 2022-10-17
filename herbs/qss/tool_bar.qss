@@ -1,0 +1,77 @@
+QToolBar::separator {
+    color: white;
+    background-color: gray;
+    width: 1px;
+    height: 10px;
+    border: 5px solid rgb(50, 50, 50);
+}
+
+
+QToolBar {
+    color: rgb(255, 255, 255);
+    background-color: rgb(50, 50, 50);
+    border: None;
+    selection-color: rgb(50, 50, 50);
+    selection-background-color: #27292a;
+    spacing: 0px;
+}
+
+QToolButton {
+    border-top: 2px solid rgb(50, 50, 50);
+    border-bottom: 2px solid rgb(50, 50, 50);
+}
+
+QRadioButton {
+    color: white;
+}
+
+
+QToolButton:hover {
+    background-color: #27292a;
+    border-top: 2px solid #27292a;
+    border-bottom: 2px solid #27292a;
+}
+
+QToolButton:checked {
+    border-bottom: 2px solid gray;
+}
+
+QPushButton {
+    background-color: rgb(50, 50, 50);
+    border: 0px solid gray;
+    width: 32px;
+    height: 32px;
+    margin: 0px;
+    padding: 0px;
+}
+
+QPushButton:hover {
+    background-color: #27292a;
+}
+
+QLabel {
+    color: #d6d6d6;
+    background-color: rgb(50, 50, 50);
+}
+
+QLineEdit {
+    border: 1px solid gray;
+}
+
+
+
+QSlider::groove:horizontal {
+    border: 1px solid #999999;
+    height: 2px;
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #B1B1B1, stop:1 #c4c4c4);
+    margin: 2px 0;
+}
+
+QSlider::handle:horizontal {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #b4b4b4, stop:1 #8f8f8f);
+    border: 1px solid #5c5c5c;
+    width: 18px;
+    margin: -2px 0; /* handle is placed by default on the contents rect of the groove. Expand outside the groove */
+    border-radius: 3px;
+}
+
