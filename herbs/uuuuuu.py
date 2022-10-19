@@ -139,26 +139,52 @@ def correct_start_pnt(label_data, start_pnt, start_vox, direction):
     direction = direction / np.linalg.norm(direction)
     check_vec = label_data[int(start_vox[0]), int(start_vox[1]), :]
     top_vox = np.where(check_vec != 0)[0][-1]
-    if int(start_vox[2]) < top_vox:
-        for i in range(1000):
-            temp = start_vox - i * direction
-            check_vox = temp.astype(int)
-            if label_data[check_vox[0], check_vox[1], check_vox[2]] == 0:
-                break
-            if i == 999:
-                print('something went wrong, please contact maintainer')
-            new_sp = start_pnt - (i - 1) * direction
-    elif int(start_vox[2]) > top_vox:
-        for i in range(1000):
-            temp = start_vox + i * direction
-            check_vox = temp.astype(int)
-            if label_data[check_vox[0], check_vox[1], check_vox[2]] == 0:
-                break
-            if i == 999:
-                print('something went wrong, please contact maintainer')
-            new_sp = start_pnt + (i - 1) * direction
+    check_vox = start_vox.astype(int)
+    if check_vox[2] < top_vox:
+        sign_flag = 1
+    elif check_vox[2] > top_vox:
+        sign_flag = -1
     else:
-        new_sp = start_pnt
+        sign_flag = 0
+
+    stop_steps = 0
+    while check_vox[2] != top_vox:
+        stop_steps += 1
+        temp = start_vox - sign_flag * stop_steps * direction
+        check_vox = temp.astype(int)
+        if np.any(check_vox) < 0:
+            print('something went wrong, please contact maintainer')
+            break
+        check_vec = label_data[check_vox[0], check_vox[1], :]
+        top_vox = np.where(check_vec != 0)[0]
+        if len(top_vox) == 0:
+            print('something went wrong, please contact maintainer')
+            break
+        else:
+            top_vox = top_vox[-1]
+
+    new_sp = start_pnt - sign_flag * stop_steps * direction
+
+    # if int(start_vox[2]) < top_vox:
+    #     for i in range(1000):
+    #         temp = start_vox - i * direction
+    #         check_vox = temp.astype(int)
+    #         new_sp = start_pnt - (i - 1) * direction
+    #         if label_data[check_vox[0], check_vox[1], check_vox[2]] == 0:
+    #             break
+    #         if i == 999:
+    #             print('something went wrong, please contact maintainer')
+    # elif int(start_vox[2]) > top_vox:
+    #     for i in range(1000):
+    #         temp = start_vox + i * direction
+    #         check_vox = temp.astype(int)
+    #         new_sp = start_pnt + (i - 1) * direction
+    #         if label_data[check_vox[0], check_vox[1], check_vox[2]] == 0:
+    #             break
+    #         if i == 999:
+    #             print('something went wrong, please contact maintainer')
+    # else:
+    #     new_sp = start_pnt
     return new_sp
 
 
@@ -395,30 +421,29 @@ def calculate_probe_info(data, label_data, label_info, vxsize_um, probe_type, br
     # start_pnt and end_pnt are coordinates related to the given Bregma
     tip_length, channel_size, channel_number_in_banks = get_probe_info(probe_type)
     start_pnt, end_pnt, avg, direction = line_fit(data)
-    print(bregma)
     start_vox = start_pnt + bregma
     end_vox = end_pnt + bregma
     ap_angle, ml_angle = get_angles(direction)
     new_sp = correct_start_pnt(label_data, start_pnt, start_vox, direction)
     new_start_vox = new_sp + bregma
-    print('sp', start_pnt)
-    print('sp_vox', start_vox)
-    print('new_sp', new_sp)
-    print('new_sp_vox', new_start_vox)
+    # print('sp', start_pnt)
+    # print('sp_vox', start_vox)
+    # print('new_sp', new_sp)
+    # print('new_sp_vox', new_start_vox)
     new_ep, probe_length_with_tip, probe_length_without_tip = correct_end_point(
         new_sp, end_pnt, direction, vxsize_um, tip_length, probe_type)
-    print('ep', end_pnt)
-    print('new_ep', new_ep)
-    print(probe_length_with_tip)
-    print(np.sqrt(np.sum((new_sp - new_ep) ** 2)) * vxsize_um)
+    # print('ep', end_pnt)
+    # print('new_ep', new_ep)
+    # print(probe_length_with_tip)
+    # print(np.sqrt(np.sum((new_sp - new_ep) ** 2)) * vxsize_um)
     new_end_vox = new_ep + bregma
     new_end_vox = new_end_vox.astype(int)
-    print(new_end_vox)
+    # print(new_end_vox)
 
     sites_loc, sites_label, region_label, region_length, region_channels = get_probe_sites(
         label_data, new_sp, new_ep, probe_length_without_tip,
         direction, vxsize_um, probe_type, channel_size, bregma, site_face)
-    print(region_label, region_length, region_channels)
+    # print(region_label, region_length, region_channels)
     enter_coords = new_sp * vxsize_um
     end_coords = new_ep * vxsize_um
 
