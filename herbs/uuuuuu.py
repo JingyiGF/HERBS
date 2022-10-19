@@ -28,6 +28,20 @@ def check_loading_pickle_file(file_path):
     return layer_dict, msg
 
 
+def read_excel_file(file_path):
+    msg = None
+    file_name, file_extension = os.path.splitext(file_path)
+    if file_extension == '.csv':
+        df = pd.read_csv(file_path)
+    elif file_extension == '.xlsx':
+        df = pd.read_excel(file_path)
+    else:
+        df = None
+        msg = 'Only CSV file and Excel file works.'
+    return df, msg
+
+
+
 
 def read_label(file):
     lines = []
@@ -1352,3 +1366,4 @@ def rotate_base_points(data, base_loc):
 def read_qss_file(qss_file_name):
     with open(qss_file_name, 'r', encoding='UTF-8') as file:
         return file.read()
+
