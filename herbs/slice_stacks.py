@@ -4,7 +4,6 @@ import numpy as np
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtGui, QtCore
 import pyqtgraph.functions as fn
-import pyqtgraph.functions as fn
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -134,12 +133,14 @@ class SliceStacks(pg.GraphicsLayoutWidget):
 
         self.vb.addItem(self.img)
         self.vb.addItem(self.label_img)
-        self.vb.addItem(self.boundary)
+        # self.vb.addItem(self.boundary)
         # for i in range(4):
         #     self.vb.addItem(self.overlay_img[i])
 
         for i in range(len(self.image_dict)):
             self.vb.addItem(self.image_dict[self.image_dict_keys[i]])
+
+        self.vb.addItem(self.boundary)
 
         for i in range(4):
             self.vb.addItem(self.pre_trajectory_list[i])
