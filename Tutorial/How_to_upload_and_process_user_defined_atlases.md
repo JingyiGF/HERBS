@@ -48,6 +48,9 @@ Contains the brain region names, label integers, hierarchy and so on.
 For HERBS to understand the label information included in the label info file from different atlases, 
 we require users to prepare an Excel file which has a uniform format based on the label info file. 
 Here we show an example with the minimum requirement of the compulsory information and format that HERBS needs.
+If users would like to specify colors for different brain regions, 
+an extra column need to be added with column name 'color_hex_triplet'. 
+For a .xlsx file, only the first sheet can be read. 
 
 <table width="100%">
     <tr>
@@ -139,7 +142,7 @@ Here we show an example with the minimum requirement of the compulsory informati
 
 Once you have all the files ready, go to the 'Atlas' menu and click 'Atlas Processor'.
 <p align="center">
-<img src="../image/atlas_processor_menu.png" width="50%">
+<img src="../image/atlas_processor_menu.png" width="30%">
 </p>
 
 A Atlas Processor window will pop up, select the correct file, 
@@ -147,7 +150,7 @@ type in the voxel size and select the correct axis direction, then process the r
 Here we take Fischer344 atlas for example.
 
 <p align="center">
-<img src="../image/atlas_processor_dialog.png" width="100%">
+<img src="../image/atlas_processor_dialog.png" width="80%">
 </p>
 
 A very important information here is the axis directions. 
