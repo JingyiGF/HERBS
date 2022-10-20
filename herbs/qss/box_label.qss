@@ -1,0 +1,7 @@
+QLabel {
+    color: white;
+    background-color: transparent;
+    border: 1px solid gray;
+}
+
+
