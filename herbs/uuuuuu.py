@@ -9,6 +9,11 @@ import pyqtgraph as pg
 from scipy.interpolate import interp1d, splprep, splev
 
 
+def read_qss_file(qss_file_name):
+    with open(qss_file_name, 'r', encoding='UTF-8') as file:
+        return file.read()
+
+
 def check_loading_pickle_file(file_path):
     layer_dict, msg = None, None
     try:
@@ -39,8 +44,6 @@ def read_excel_file(file_path):
         df = None
         msg = 'Only CSV file and Excel file works.'
     return df, msg
-
-
 
 
 def read_label(file):
@@ -85,7 +88,6 @@ def rotation_z(theta):
     return rz
 
 
-
 def d2td3(pos2d, ax, ay, o):
     pos3d = pos2d[0] * ax + pos2d[1] * ay + o
     return pos3d
@@ -95,12 +97,74 @@ def get_closest_point_to_line(p0, r, p):
     ap = p - p0
     res = p0 + np.dot(ap, r) * r
     return res
-    
+
+
+def line_fit_2d(points_2d, image=None):
+    msg = None
+    points = np.asarray(points_2d)
+    sort_order = np.argsort(points[:, 1])
+    print(sort_order)
+    points = points[sort_order, :]
+    avg = np.mean(points, 0)
+    substracted = points - avg
+    u, s, vh = np.linalg.svd(substracted)
+    direction = vh[0, :] / np.linalg.norm(vh[0, :])
+    p1 = points[0, :]
+    p2 = points[-1, :]
+    sp = get_closest_point_to_line(avg, direction, p1)
+    ep = get_closest_point_to_line(avg, direction, p2)
+    # x = points[:, 0]
+    # y = points[:, 1]
+    # mx = np.mean(x)
+    # my = np.mean(y)
+    # beta1 = np.sum((x - mx) * (y - my)) / np.sum((x - mx) ** 2)
+    # beta0 = my - beta1 * mx
+    # end_y = points[-1, 1]
+    # end_x = (end_y - beta0) / beta1
+    # start_y = points[0, 1]
+    # start_x = (start_y - beta0) / beta1
+    # print(start_y, end_y)
+    # print(points)
+    # if image is not None:
+    #     valid_ind = np.where(image[:, int(start_x)] != 0)[0]
+    #     if len(valid_ind) > 0:
+    #         valid_ind = valid_ind[0]
+    #     else:
+    #         msg = 'something went wrong for the probe location.'
+    #
+    #     if int(start_y) < valid_ind:
+    #         sign_flag = 1
+    #     elif int(start_y) > valid_ind:
+    #         sign_flag = -1
+    #     else:
+    #         sign_flag = 0
+    #
+    #     print(start_y, valid_ind)
+    #
+    #     steps = 0
+    #     while int(start_y) != valid_ind:
+    #         steps += 1
+    #         new_start_x = start_x + sign_flag * steps
+    #         valid_ind = np.where(image[:, int(new_start_x)] != 0)[0]
+    #         if len(valid_ind) > 0:
+    #             valid_ind = valid_ind[0]
+    #         else:
+    #             msg = 'something went wrong for the probe location.'
+    #             break
+    #         start_y = beta0 + beta1 * new_start_x
+    #         # print(start_y, valid_ind)
+    #
+    #     start_x = start_x + sign_flag * steps
+    #
+    p2 = np.array([sp, ep])
+    return p2, msg
+
 
 def line_fit(points):
     points = np.asarray(points)
     sort_order = np.argsort(points[:, 2])[::-1]
     points = points[sort_order, :]
+    print(points)
     avg = np.mean(points, 0)
     substracted = points - avg
     u, s, vh = np.linalg.svd(substracted)
@@ -149,11 +213,34 @@ def pandas_to_str(label_name, label_ano, length, channels):
     return df.to_string(col_space=30, justify="justify")
 
 
-def correct_start_pnt(label_data, start_pnt, start_vox, direction):
+def correct_start_pnt(label_data, start_pnt, start_vox, direction, bregma):
     direction = direction / np.linalg.norm(direction)
     check_vec = label_data[int(start_vox[0]), int(start_vox[1]), :]
     top_vox = np.where(check_vec != 0)[0][-1]
     check_vox = start_vox.astype(int)
+    new_sp = start_pnt.copy()
+
+    # if int(start_vox[2]) < top_vox:
+    #     steps = 0
+    #     while label_data[check_vox[0], check_vox[1], check_vox[2]] != 0:
+    #         steps += 1
+    #         new_sp = start_pnt - steps * direction
+    #         check_vox = new_sp + bregma
+    #         check_vox = check_vox.astype(int)
+    #         if steps == 1000:
+    #             raise Exception('higher limit, please contact maintainer')
+    # elif int(start_vox[2]) > top_vox:
+    #     steps = 0
+    #     while label_data[check_vox[0], check_vox[1], check_vox[2]] == 0:
+    #         steps += 1
+    #         new_sp = start_pnt + steps * direction
+    #         check_vox = new_sp + bregma
+    #         check_vox = check_vox.astype(int)
+    #         if steps == 1000:
+    #             raise Exception('higher limit, please contact maintainer')
+    # else:
+    #     new_sp = start_pnt
+
     if check_vox[2] < top_vox:
         sign_flag = 1
     elif check_vox[2] > top_vox:
@@ -164,8 +251,9 @@ def correct_start_pnt(label_data, start_pnt, start_vox, direction):
     stop_steps = 0
     while check_vox[2] != top_vox:
         stop_steps += 1
-        temp = start_vox - sign_flag * stop_steps * direction
-        check_vox = temp.astype(int)
+        temp = start_pnt - sign_flag * stop_steps * direction
+        check_vox = temp + bregma
+        check_vox = check_vox.astype(int)
         if np.any(check_vox) < 0:
             print('something went wrong, please contact maintainer')
             break
@@ -179,26 +267,6 @@ def correct_start_pnt(label_data, start_pnt, start_vox, direction):
 
     new_sp = start_pnt - sign_flag * stop_steps * direction
 
-    # if int(start_vox[2]) < top_vox:
-    #     for i in range(1000):
-    #         temp = start_vox - i * direction
-    #         check_vox = temp.astype(int)
-    #         new_sp = start_pnt - (i - 1) * direction
-    #         if label_data[check_vox[0], check_vox[1], check_vox[2]] == 0:
-    #             break
-    #         if i == 999:
-    #             print('something went wrong, please contact maintainer')
-    # elif int(start_vox[2]) > top_vox:
-    #     for i in range(1000):
-    #         temp = start_vox + i * direction
-    #         check_vox = temp.astype(int)
-    #         new_sp = start_pnt + (i - 1) * direction
-    #         if label_data[check_vox[0], check_vox[1], check_vox[2]] == 0:
-    #             break
-    #         if i == 999:
-    #             print('something went wrong, please contact maintainer')
-    # else:
-    #     new_sp = start_pnt
     return new_sp
 
 
@@ -208,6 +276,7 @@ def correct_end_point(sp, ep, direction, vox_size, tip_length, probe_type):
     if probe_type != 2:
         if probe_length_without_tip > 9600:
             probe_length_without_tip = 9600
+            print('correct length')
             probe_length_with_tip = probe_length_without_tip + tip_length
         new_ep = sp + direction * probe_length_with_tip / vox_size
     else:
@@ -385,9 +454,6 @@ def block_same_label_one_side(sites_label_one_side, sites_color_one_side):
     return merged_labels, merged_colors, block_count
 
 
-
-
-
 def get_tilt_info(sp, ep):
     if ep[0] < sp[0]:
         ap_tilt = 'posterior'
@@ -435,10 +501,12 @@ def calculate_probe_info(data, label_data, label_info, vxsize_um, probe_type, br
     # start_pnt and end_pnt are coordinates related to the given Bregma
     tip_length, channel_size, channel_number_in_banks = get_probe_info(probe_type)
     start_pnt, end_pnt, avg, direction = line_fit(data)
+    direction = end_pnt - start_pnt
+    direction = direction / np.linalg.norm(direction)
     start_vox = start_pnt + bregma
     end_vox = end_pnt + bregma
     ap_angle, ml_angle = get_angles(direction)
-    new_sp = correct_start_pnt(label_data, start_pnt, start_vox, direction)
+    new_sp = correct_start_pnt(label_data, start_pnt, start_vox, direction, bregma)
     new_start_vox = new_sp + bregma
     # print('sp', start_pnt)
     # print('sp_vox', start_vox)
@@ -569,12 +637,6 @@ def calculate_contour_line(data):
     print(pnts)
     return pnts
 
-
-
-
-    
-def check_plotting_2d(points):
-    pass
 
 
 def hex2rgb(hex):
@@ -1363,7 +1425,5 @@ def rotate_base_points(data, base_loc):
     return start_pnt, end_pnt
 
 
-def read_qss_file(qss_file_name):
-    with open(qss_file_name, 'r', encoding='UTF-8') as file:
-        return file.read()
+
 
