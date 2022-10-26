@@ -15,36 +15,10 @@ import cv2
 
 from .image_stacks import ImageStacks
 from .image_reader import ImageReader
-from .uuuuuu import hsv2rgb, gamma_line, get_qhsv_from_czi_hsv, make_hist_data
-from .widgets_utils import BWSpin, GammaSpin, ColorCombo, ChannelSelector
+from .uuuuuu import hsv2rgb, gamma_line, get_qhsv_from_czi_hsv, make_hist_data, read_qss_file
+from .widgets_utils import BWSpin, GammaSpin
 from .movable_points import MovablePoints
-from .styles import Styles
 
-
-multi_handle_slider_style = """
-QSlider::groove:horizontal {
-    border: 1px solid #999999;
-    height: 8px; /* the groove expands to the size of the slider by default. by giving it a height, it has a fixed size */
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 black, stop:1 white);
-    margin: 2px 0;
-}
-
-QSlider::handle:horizontal {
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #b4b4b4, stop:1 #8f8f8f);
-    border: 1px solid #5c5c5c;
-    width: 18px;
-    margin: -2px 0; /* handle is placed by default on the contents rect of the groove. Expand outside the groove */
-    border-radius: 3px;
-}
-
-"""
-
-chn_widget_warp_frame_style = '''
-QFrame {
-    border: 1px solid #747a80; 
-    border-radius: 5px;
-}
-'''
 
 reset_button_style = '''
 QPushButton{
@@ -62,115 +36,6 @@ QPushButton:hover{
     border: 1px solid #656565;
 }
 
-'''
-
-spinbox_style = '''
-/*---------------------- SpinBox -----------------------*/
-QSpinBox {
-    padding-right: 0px; /* make room for the arrows */
-    border: 1px solid #242424;
-    background: transparent;
-}
-
-QSpinBox::up-button {
-    background: transparent;
-    subcontrol-origin: border;
-    subcontrol-position: top right; /* position at the top right corner */
-    width: 15px; 
-    border-width: 0px;
-}
-
-QSpinBox::down-button {
-    background: transparent;
-    subcontrol-origin: border;
-    subcontrol-position: bottom right; /* position at bottom right corner */
-    width: 15px;
-    border-width: 0px;
-}
-
-QSpinBox::up-button:hover {
-    background-color: #282828;
-}
-
-QSpinBox::down-button:hover {
-    background-color: #282828;
-}
-
-QSpinBox::up-button:pressed {
-    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                      stop: 0 #282828, stop: 1 #323232);
-}
-
-QSpinBox::down-button:pressed {
-    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                      stop: 0 #323232, stop: 1 #282828);
-}
-
-QSpinBox::up-arrow {
-    image: url(icons/up-arrow.svg);
-    width: 7px;
-    height: 7px;
-}
-
-QSpinBox::down-arrow {
-    image: url(icons/down-arrow.svg);
-    width: 7px;
-    height: 7px;
-}
-
-/*---------------------- DoubleSpinBox -----------------------*/
-QDoubleSpinBox {
-    padding-right: 0px; 
-    border: 1px solid #242424;
-    background: transparent;
-    
-}
-
-QDoubleSpinBox::up-button {
-    background: transparent;
-    subcontrol-origin: border;
-    subcontrol-position: top right; /* position at the top right corner */
-    width: 15px; 
-    border: None;
-}
-
-QDoubleSpinBox::down-button {
-    background: transparent;
-    subcontrol-origin: border;
-    subcontrol-position: bottom right; /* position at bottom right corner */
-    width: 15px;
-    border: None;
-}
-
-QDoubleSpinBox::up-button:hover {
-    background-color: #282828;
-}
-
-QDoubleSpinBox::down-button:hover {
-    background-color: #282828;
-}
-
-QDoubleSpinBox::up-button:pressed {
-    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                      stop: 0 #282828, stop: 1 #000000);
-}
-
-QDoubleSpinBox::down-button:pressed {
-    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                      stop: 0 #000000, stop: 1 #282828);
-}
-
-QDoubleSpinBox::up-arrow {
-    image: url(icons/up-arrow.svg);
-    width: 7px;
-    height: 7px;
-}
-
-QDoubleSpinBox::down-arrow {
-    image: url(icons/down-arrow.svg);
-    width: 7px;
-    height: 7px;
-}
 '''
 
 
@@ -430,7 +295,7 @@ class CurveWidget(QWidget):
         self.curve_plot = CurvesPlot()
         self.curve_plot.sig_line_change.connect(self.table_changed)
         # self.curve_plot.sigBoundChange.connect(self.spinbox_bound_changed)
-
+        multi_handle_slider_style = read_qss_file('qss/multi_handle_slider.qss')
         self.multi_handle_slider = QRangeSlider(Qt.Horizontal)
         self.multi_handle_slider.setStyleSheet(multi_handle_slider_style)
         self.multi_handle_slider.setMinimum(0)

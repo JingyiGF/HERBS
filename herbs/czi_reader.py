@@ -11,7 +11,9 @@ from .uuuuuu import hex2rgb
 
 class CZIReader(object):
     def __init__(self, czi_path):
+        self.error_index = 0
         self.is_czi = True
+        self.status = None
         self.file_name_list = [czi_path[:-4]]
         self.czi = CziFile(czi_path)
         self.czi_info = self.czi.dims
@@ -21,6 +23,10 @@ class CZIReader(object):
         self.n_pages = 1
         self.data = {}
         self.scale = {}
+
+        if 'T' in self.czi_info:
+            if self.dimensions[0]['T'][1] != 1:
+                self.status = 'multi-T'
 
         if 'A' in self.czi_info:
             self.is_rgb = True

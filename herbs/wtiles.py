@@ -250,7 +250,6 @@ class LineEditEntered(QLineEdit):
     def keyPressEvent(self, event):
         super(LineEditEntered, self).keyPressEvent(event)
 
-        if event.key() == Qt.Key_Return:
+        if event.key() == Qt.Key_Return or event.key() == Qt.Key_Enter:
             self.sig_return_pressed.emit()
-        elif event.key() == Qt.Key_Enter:
-            self.sig_return_pressed.emit()
+

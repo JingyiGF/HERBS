@@ -15,36 +15,10 @@ from pyqtgraph.Qt import QtGui, QtCore
 import scipy.ndimage as ndi
 
 from .image_stacks import ImageStacks
-from .image_curves import CurveWidget, ChannelSelector
+from .widgets_utils import ChannelSelector
+from .image_curves import CurveWidget
 from .uuuuuu import hsv2rgb, gamma_line, color_img, make_color_lut, get_corner_line_from_rect, \
-    rotate, rotate_bound, get_tb_size
-
-
-sidebar_button_style = '''
-QPushButton{
-    background: #656565;
-    border-radius: 5px;
-    color: white;
-    border-style: outset;
-    border-bottom: 1px solid rgb(30, 30, 30);
-    height: 24px;
-    margin: 0px;
-}
-
-QPushButton:hover{
-    background-color: #323232;
-    border: 1px solid #656565;
-}
-
-QPushButton:checked{
-    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                      stop: 0 #17bb00, stop: 1 #0e6900);
-    border-bottom: 1px solid rgb(30, 30, 30);
-    border-top: None;
-    border-left: None;
-    border-right: None;  
-}
-'''
+    rotate, rotate_bound, get_tb_size, read_qss_file
 
 
 class ImagePageController(QWidget):
@@ -159,6 +133,7 @@ class ImageView(QObject):
         self.display_img_index = 0
 
         # scene control
+        sidebar_button_style = read_qss_file('qss/side_bar.qss')
         self.check_scenes = QPushButton('Load ALL Scenes')
         self.check_scenes.setStyleSheet(sidebar_button_style)
         self.check_scenes.setCheckable(True)

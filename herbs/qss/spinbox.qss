@@ -1,0 +1,106 @@
+/*---------------------- SpinBox -----------------------*/
+QSpinBox {
+    padding-right: 0px; /* make room for the arrows */
+    border: 1px solid #242424;
+    background: transparent;
+}
+
+QSpinBox::up-button {
+    background: transparent;
+    subcontrol-origin: border;
+    subcontrol-position: top right; /* position at the top right corner */
+    width: 15px;
+    border-width: 0px;
+}
+
+QSpinBox::down-button {
+    background: transparent;
+    subcontrol-origin: border;
+    subcontrol-position: bottom right; /* position at bottom right corner */
+    width: 15px;
+    border-width: 0px;
+}
+
+QSpinBox::up-button:hover {
+    background-color: #282828;
+}
+
+QSpinBox::down-button:hover {
+    background-color: #282828;
+}
+
+QSpinBox::up-button:pressed {
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                      stop: 0 #282828, stop: 1 #323232);
+}
+
+QSpinBox::down-button:pressed {
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                      stop: 0 #323232, stop: 1 #282828);
+}
+
+QSpinBox::up-arrow {
+    image: url(icons/up-arrow.svg);
+    width: 7px;
+    height: 7px;
+}
+
+QSpinBox::down-arrow {
+    image: url(icons/down-arrow.svg);
+    width: 7px;
+    height: 7px;
+}
+
+/*---------------------- DoubleSpinBox -----------------------*/
+QDoubleSpinBox {
+    padding-right: 0px;
+    border: 1px solid #242424;
+    background: transparent;
+
+}
+
+QDoubleSpinBox::up-button {
+    background: transparent;
+    subcontrol-origin: border;
+    subcontrol-position: top right; /* position at the top right corner */
+    width: 15px;
+    border: None;
+}
+
+QDoubleSpinBox::down-button {
+    background: transparent;
+    subcontrol-origin: border;
+    subcontrol-position: bottom right; /* position at bottom right corner */
+    width: 15px;
+    border: None;
+}
+
+QDoubleSpinBox::up-button:hover {
+    background-color: #282828;
+}
+
+QDoubleSpinBox::down-button:hover {
+    background-color: #282828;
+}
+
+QDoubleSpinBox::up-button:pressed {
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                      stop: 0 #282828, stop: 1 #000000);
+}
+
+QDoubleSpinBox::down-button:pressed {
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                      stop: 0 #000000, stop: 1 #282828);
+}
+
+QDoubleSpinBox::up-arrow {
+    image: url(icons/up-arrow.svg);
+    width: 7px;
+    height: 7px;
+}
+
+QDoubleSpinBox::down-arrow {
+    image: url(icons/down-arrow.svg);
+    width: 7px;
+    height: 7px;
+}

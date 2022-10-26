@@ -103,7 +103,6 @@ def line_fit_2d(points_2d, image=None):
     msg = None
     points = np.asarray(points_2d)
     sort_order = np.argsort(points[:, 1])
-    print(sort_order)
     points = points[sort_order, :]
     avg = np.mean(points, 0)
     substracted = points - avg
@@ -113,49 +112,38 @@ def line_fit_2d(points_2d, image=None):
     p2 = points[-1, :]
     sp = get_closest_point_to_line(avg, direction, p1)
     ep = get_closest_point_to_line(avg, direction, p2)
-    # x = points[:, 0]
-    # y = points[:, 1]
-    # mx = np.mean(x)
-    # my = np.mean(y)
-    # beta1 = np.sum((x - mx) * (y - my)) / np.sum((x - mx) ** 2)
-    # beta0 = my - beta1 * mx
-    # end_y = points[-1, 1]
-    # end_x = (end_y - beta0) / beta1
-    # start_y = points[0, 1]
-    # start_x = (start_y - beta0) / beta1
-    # print(start_y, end_y)
-    # print(points)
-    # if image is not None:
-    #     valid_ind = np.where(image[:, int(start_x)] != 0)[0]
-    #     if len(valid_ind) > 0:
-    #         valid_ind = valid_ind[0]
-    #     else:
-    #         msg = 'something went wrong for the probe location.'
-    #
-    #     if int(start_y) < valid_ind:
-    #         sign_flag = 1
-    #     elif int(start_y) > valid_ind:
-    #         sign_flag = -1
-    #     else:
-    #         sign_flag = 0
-    #
-    #     print(start_y, valid_ind)
-    #
-    #     steps = 0
-    #     while int(start_y) != valid_ind:
-    #         steps += 1
-    #         new_start_x = start_x + sign_flag * steps
-    #         valid_ind = np.where(image[:, int(new_start_x)] != 0)[0]
-    #         if len(valid_ind) > 0:
-    #             valid_ind = valid_ind[0]
-    #         else:
-    #             msg = 'something went wrong for the probe location.'
-    #             break
-    #         start_y = beta0 + beta1 * new_start_x
-    #         # print(start_y, valid_ind)
-    #
-    #     start_x = start_x + sign_flag * steps
-    #
+
+    if image is not None:
+        direction = sp - ep
+        direction = direction / np.linalg.norm(direction)
+
+        valid_ind = np.where(image[:, int(sp[0])] != 0)[0]
+        if len(valid_ind) > 0:
+            valid_ind = valid_ind[0]
+        else:
+            msg = 'something went wrong for the probe location.'
+
+        if int(sp[1]) < valid_ind:
+            sign_flag = -1
+        elif int(sp[1]) > valid_ind:
+            sign_flag = 1
+        else:
+            sign_flag = 0
+
+        stop_steps = 0
+        temp = sp + 0
+        while int(temp[1]) != valid_ind:
+            stop_steps += 1
+            temp = sp + sign_flag * stop_steps * direction
+            valid_ind = np.where(image[:, int(temp[0])] != 0)[0]
+            if len(valid_ind) > 0:
+                valid_ind = valid_ind[0]
+            else:
+                msg = 'something went wrong for the probe location.'
+                break
+
+        sp = sp + sign_flag * stop_steps * direction
+
     p2 = np.array([sp, ep])
     return p2, msg
 

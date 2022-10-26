@@ -103,6 +103,7 @@ class SliceStacks(pg.GraphicsLayoutWidget):
         cell_pnts = pg.ScatterPlotItem(pen=(0, 255, 0), brush=(0, 255, 0), size=5, hoverSize=8)
         drawing_pnts = pg.PlotDataItem(pen=pg.mkPen(color=(255, 102, 0), width=2), brush=None)
         contour_pnts = pg.PlotDataItem(pen=pg.mkPen(color=(255, 0, 255), width=3), brush=None)
+        probe_trajectory = pg.PlotDataItem(pen=pg.mkPen(color=(0, 0, 255), width=2), brush=None)
 
         self.pre_trajectory_list = []
         for i in range(4):
@@ -119,7 +120,8 @@ class SliceStacks(pg.GraphicsLayoutWidget):
                            'atlas-probe': probe_pnts,
                            'atlas-cells': cell_pnts,
                            'ruler_path': ruler_path,
-                           'atlas-drawing': drawing_pnts}
+                           'atlas-drawing': drawing_pnts,
+                           'atlas-trajectory': probe_trajectory}
         self.image_dict_keys = list(self.image_dict.keys())
 
         self.v_line = pg.InfiniteLine(angle=90, movable=False)
@@ -127,15 +129,8 @@ class SliceStacks(pg.GraphicsLayoutWidget):
         self.v_line.setVisible(False)
         self.h_line.setVisible(False)
 
-        # self.overlay_img = []
-        # for i in range(4):
-        #     self.overlay_img.append(pg.ImageItem())
-
         self.vb.addItem(self.img)
         self.vb.addItem(self.label_img)
-        # self.vb.addItem(self.boundary)
-        # for i in range(4):
-        #     self.vb.addItem(self.overlay_img[i])
 
         for i in range(len(self.image_dict)):
             self.vb.addItem(self.image_dict[self.image_dict_keys[i]])
@@ -144,6 +139,8 @@ class SliceStacks(pg.GraphicsLayoutWidget):
 
         for i in range(4):
             self.vb.addItem(self.pre_trajectory_list[i])
+
+        # self.vb.addItem(self.after_trajectory)
 
         self.vb.addItem(self.v_line, ignoreBounds=True)
         self.vb.addItem(self.h_line, ignoreBounds=True)

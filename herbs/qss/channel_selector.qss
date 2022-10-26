@@ -1,0 +1,19 @@
+QPushButton {
+    margin: 0 px;
+    padding: 0 px;
+    border-color: transparent;
+    background-color: #747a80;
+    color: white;
+    border-top-right-radius: 5px;
+    border-top-left-radius: 5px;
+    border-bottom-right-radius: 0px;
+    border-bottom-left-radius: 0px;
+}
+
+QLabel {
+    border-radius: 0px;
+    border-top: 5px solid rgb(255, 255, 255);
+    border-bottom: None;
+    border-left: None;
+    border-right: None;
+}

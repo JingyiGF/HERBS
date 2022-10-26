@@ -7,8 +7,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtGui, QtCore
-import pyqtgraph.functions as fn
-from .movable_points import TriangulationPoints, TriangulationPointsTest
+from .movable_points import TriangulationPoints
 
 
 class ClickableImage(pg.ImageItem):
@@ -22,6 +21,8 @@ class ClickableImage(pg.ImageItem):
         self.mouseClicked = self._sigprox.mouseClicked
 
         pg.ImageItem.__init__(self)
+
+        self.hist_data = None
 
         self.setAcceptHoverEvents(True)
         # self.setOpts(axisOrder='row-major')
@@ -234,6 +235,8 @@ class ImageStacks(pg.GraphicsLayoutWidget):
         drawing_pnts = pg.PlotDataItem(pen=pg.mkPen(color=(255, 102, 0), width=2), brush=None)
         contour_pnts = pg.PlotDataItem(pen=pg.mkPen(color=(255, 0, 255), width=3), brush=None)
 
+        probe_trajectory = pg.PlotDataItem(pen=pg.mkPen(color=(0, 0, 255), width=2), brush=None)
+
         virus_img = pg.ImageItem()
         virus_img.setLevels(levels=(0, 1))
 
@@ -251,7 +254,8 @@ class ImageStacks(pg.GraphicsLayoutWidget):
                            'img-probe': probe_pnts,
                            'img-cells': cell_pnts,
                            'img-blob': blob_pnts,
-                           'img-drawing': drawing_pnts}
+                           'img-drawing': drawing_pnts,
+                           'img-trajectory': probe_trajectory}
         self.image_dict_keys = list(self.image_dict.keys())
 
         self.vb.addItem(self.base_layer)
@@ -302,7 +306,7 @@ class ImageStacks(pg.GraphicsLayoutWidget):
         self.setBackground(color)
 
     def keyPressEvent(self, event):
-        if event.key() == QtCore.Qt.Key_Backspace:
+        if event.key() == Qt.Key_Backspace or event.key() == Qt.Key_Delete:
             print("Killing")
             self.sig_key_pressed.emit('delete')
         # elif event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
