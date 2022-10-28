@@ -1,5 +1,6 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
+from .uuuuuu import read_qss_file
 
 dialog_style = '''
 QDialog {
@@ -141,6 +142,9 @@ class QDoubleButton(QPushButton):
 
     def __init__(self, *args, **kwargs):
         super(QDoubleButton, self).__init__(*args, **kwargs)
+
+        btn_style = read_qss_file('qss/object_text_button.qss')
+        self.setStyleSheet(btn_style)
 
         self.timer = QTimer()
         self.timer.setSingleShot(True)

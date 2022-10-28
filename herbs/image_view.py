@@ -2,7 +2,6 @@ import colorsys
 import os
 import sys
 
-import PyQt5.QtGui
 import cv2
 import copy
 import pyqtgraph.functions as fn
