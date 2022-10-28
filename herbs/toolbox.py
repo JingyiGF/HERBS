@@ -6,15 +6,6 @@ import numpy as np
 from pyqtgraph.Qt import QtGui, QtCore
 
 
-toolbar_spinbox_textedit_style = '''
-QLineEdit { 
-    background-color: #292929;
-    border: 0px;
-    color: white;
-}
-'''
-
-
 class ToolBox(QObject):
 
     def __init__(self):
@@ -454,6 +445,13 @@ class ToolBox(QObject):
 
         # ---------------------------- define all cursor shape
         # self.eraser_cursor = QCursor(QPixmap('icons/eraser_cursor.png'), hotX=7, hotY=27)
+
+    def update_cell_count_label(self, cell_count_list):
+        for layer_index in range(5):
+            self.update_single_cell_count_label(cell_count_list, layer_index)
+
+    def update_single_cell_count_label(self, cell_count_list, layer_index):
+        self.cell_count_val_list[layer_index].setText(str(cell_count_list[layer_index]))
 
     def lasso_type_changed(self):
         if self.lasso_type_btn.isChecked():
