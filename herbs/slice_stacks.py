@@ -2,11 +2,9 @@ import os
 import sys
 import numpy as np
 import pyqtgraph as pg
-from pyqtgraph.Qt import QtGui, QtCore
-import pyqtgraph.functions as fn
-from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
+
 from .movable_points import TriangulationPoints
 
 
@@ -77,6 +75,8 @@ class SliceStacks(pg.GraphicsLayoutWidget):
         self.boundary = pg.ImageItem()
         self.boundary.setCompositionMode(QPainter.CompositionMode.CompositionMode_Plus)
         self.boundary.setVisible(False)
+
+        self.display_objects = []
 
         tri_pnts = TriangulationPoints()
         self.tri_lines_list = []
@@ -150,6 +150,18 @@ class SliceStacks(pg.GraphicsLayoutWidget):
         self.label_img.setImage(label, autoLevels=False)
         self.boundary.setImage(contour, atutoLevels=False)
 
+    def add_display_obj_to_view(self, obj_data, obj_color, obj_type):
+        if obj_type == 'probe':
+            obj_vis = pg.PlotDataItem(pen=pg.mkPen(color=obj_color, width=2),
+                                      symbolPen=obj_color, symbolBrush=None, symbol='s', symbolSize=3)
+            obj_vis.setData(np.asarray(obj_data))
+            self.display_objects.append(obj_vis)
+            self.vb.addItem(self.display_objects[-1])
+
+    def remove_display_obj_from_view(self, obj_index):
+        self.vb.removeItem(self.display_objects[obj_index])
+        self.display_objects[obj_index].deleteLater()
+        del self.display_objects[obj_index]
 
     def boundingRect(self):
         return self.label_img.boundingRect()
@@ -158,7 +170,7 @@ class SliceStacks(pg.GraphicsLayoutWidget):
         self.label_img.setLookupTable(lut)
 
     def set_overlay(self, overlay):
-        mode = getattr(QtGui.QPainter, 'CompositionMode_' + overlay)
+        mode = getattr(QPainter, 'CompositionMode_' + overlay)
         self.label_img.setCompositionMode(mode)
 
     def set_label_opacity(self, o):

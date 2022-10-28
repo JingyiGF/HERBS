@@ -2,39 +2,12 @@ import os
 import sys
 import numpy as np
 from random import randint
-from PyQt5.QtWidgets import *
 import pyqtgraph as pg
-from PyQt5.QtGui import QIcon, QPixmap, QColor
-from PyQt5.QtCore import Qt, QSize
-from .wtiles import *
-
-btm_style = '''
-
-QPushButton {
-    border : None; 
-    background: transparent;
-    margin: 0px;
-    padding-top: 0px;
-    border-radius: 0px;
-    min-width: 24px;
-    min-height: 24px;
-}
-QPushButton:checked {
-    background-color: #383838; 
-    border: 1px solid #636363; 
-}
-
-QPushButton:pressed {
-    background-color: #383838; 
-    border: 1px solid #636363; 
-}
-
-QPushButton:hover {
-    background-color: #383838; 
-    border: 1px solid #636363; 
-}
-
-'''
+from PyQt5.QtWidgets import *
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+from .wtiles import QDoubleButton
+from .uuuuuu import read_qss_file
 
 
 eye_button_style = '''
@@ -44,29 +17,6 @@ eye_button_style = '''
     border-bottom: None;
     border-radius: 0px;
     background: transparent;
-'''
-
-
-text_btn_style = '''
-QPushButton {
-    background: transparent;
-    border: None;
-    border-radius:0px;
-    text-align:left; 
-    padding-left: 5px; 
-    padding-right: 0px;
-    padding-top: 0px;
-    padding-bottom: 0px;
-    color:rgb(240, 240, 240);
-    margin: 0px;
-    height: 40px;
-    width: 220px;
-}
-
-
-QPushButton:disabled {
-    color: rgb(190, 190, 190);
-}
 '''
 
 
@@ -83,6 +33,14 @@ QLineEdit {
     width: 220px; 
 }
 '''
+
+
+class ObjectTextButton(QPushButton):
+    def __init__(self):
+        QPushButton.__init__(self)
+        btn_style = read_qss_file('qss/object_text_button.qss')
+        self.setStyleSheet(btn_style)
+        self.setFixedSize(QSize(150, 40))
 
 
 class CompareWindow(QDialog):
@@ -530,7 +488,6 @@ class SinglePiece(QWidget):
         self.tbnail.clicked.connect(self.on_click)
 
         self.text_btn = QDoubleButton()
-        self.text_btn.setStyleSheet(text_btn_style)
         self.text_btn.setFixedSize(QSize(240, 40))
         self.text_btn.left_clicked.connect(self.on_click)
         self.text_btn.double_clicked.connect(self.on_doubleclick)
@@ -604,6 +561,7 @@ class RegisteredObject(QWidget):
     eye_clicked = pyqtSignal(object)
     sig_clicked = pyqtSignal(object)
     sig_link = pyqtSignal(object)
+    sig_double_clicked = pyqtSignal(object)
 
     def __init__(self, parent=None, obj_id=0, obj_name='', obj_type='merged probe', object_icon=None):
         QWidget.__init__(self, parent=parent)
@@ -637,11 +595,10 @@ class RegisteredObject(QWidget):
         self.tbnail.setIconSize(QSize(20, 20))
         self.tbnail.clicked.connect(self.change_object_color)
 
-        self.text_btn = QPushButton(self.object_name)
-        self.text_btn.setStyleSheet(text_btn_style)
-        self.text_btn.setFixedSize(QSize(150, 40))
+        self.text_btn = ObjectTextButton()
+        self.text_btn.setText(self.object_name)
+        self.text_btn.clicked.connect(self.text_btn_on_click)
         # self.text_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
-        self.text_btn.clicked.connect(self.on_click)
 
         self.link_button = QPushButton()
         self.link_button.setFixedSize(QSize(25, 40))
@@ -701,8 +658,7 @@ class RegisteredObject(QWidget):
         else:
             self.inner_frame.setStyleSheet(self.active_style)
 
-    def on_click(self):
-        print("Click")
+    def text_btn_on_click(self):
         self.set_checked(True)
         self.sig_clicked.emit(self.id)
 
@@ -711,6 +667,17 @@ class RegisteredObject(QWidget):
 
     def on_linked(self):
         self.sig_link.emit(self.id)
+
+
+class BottomButton(QPushButton):
+    def __init__(self, icon_path):
+        QPushButton.__init__(self)
+        btm_style = read_qss_file('qss/obj_ctrl_bottom_button.qss')
+        self.setFixedSize(24, 24)
+        self.setStyleSheet(btm_style)
+        self.setIcon(QIcon(icon_path))
+        self.setIconSize(QSize(20, 20))
+
 
 
 class ObjectControl(QObject):
@@ -864,60 +831,18 @@ class ObjectControl(QObject):
         outer_layout.addWidget(mid_frame)
 
         # bottom buttons
-        self.vis2d_btn = QPushButton()
-        self.vis2d_btn.setCheckable(True)
-        self.vis2d_btn.setFixedSize(48, 24)
-        self.vis2d_btn.setStyleSheet(btm_style)
-        self.vis2d_btn.setIcon(QIcon('icons/toolbar/vis2d.svg'))
-        self.vis2d_btn.setIconSize(QSize(40, 20))
+        self.info_btn = BottomButton('icons/sidebar/info.svg')
+        self.info_btn.clicked.connect(self.info_btn_clicked)
 
-        self.compare_btn = QPushButton()
-        self.compare_btn.setFixedSize(24, 24)
-        self.compare_btn.setStyleSheet(btm_style)
-        self.compare_btn.setIcon(QIcon('icons/sidebar/compare.svg'))
-        self.compare_btn.setIconSize(QSize(20, 20))
-
-        self.merge_probe_btn = QPushButton()
-        self.merge_probe_btn.setFixedSize(24, 24)
-        self.merge_probe_btn.setStyleSheet(btm_style)
-        self.merge_probe_btn.setIcon(QIcon('icons/sidebar/probe.svg'))
-        self.merge_probe_btn.setIconSize(QSize(20, 20))
-
-        self.merge_drawing_btn = QPushButton()
-        self.merge_drawing_btn.setFixedSize(24, 24)
-        self.merge_drawing_btn.setStyleSheet(btm_style)
-        self.merge_drawing_btn.setIcon(QIcon('icons/toolbar/pencil.svg'))
-        self.merge_drawing_btn.setIconSize(QSize(20, 20))
-
-        self.merge_cell_btn = QPushButton()
-        self.merge_cell_btn.setFixedSize(24, 24)
-        self.merge_cell_btn.setStyleSheet(btm_style)
-        self.merge_cell_btn.setIcon(QIcon('icons/toolbar/location.svg'))
-        self.merge_cell_btn.setIconSize(QSize(20, 20))
-
-        self.merge_virus_btn = QPushButton()
-        self.merge_virus_btn.setFixedSize(24, 24)
-        self.merge_virus_btn.setStyleSheet(btm_style)
-        self.merge_virus_btn.setIcon(QIcon('icons/sidebar/virus.svg'))
-        self.merge_virus_btn.setIconSize(QSize(20, 20))
-
-        self.merge_contour_btn = QPushButton()
-        self.merge_contour_btn.setFixedSize(24, 24)
-        self.merge_contour_btn.setStyleSheet(btm_style)
-        self.merge_contour_btn.setIcon(QIcon('icons/sidebar/contour.svg'))
-        self.merge_contour_btn.setIconSize(QSize(20, 20))
-
-        self.add_object_btn = QPushButton()
-        self.add_object_btn.setFixedSize(24, 24)
-        self.add_object_btn.setStyleSheet(btm_style)
-        self.add_object_btn.setIcon(QIcon('icons/sidebar/add.png'))
-        self.add_object_btn.setIconSize(QSize(20, 20))
-
-        self.delete_object_btn = QPushButton()
-        self.delete_object_btn.setFixedSize(24, 24)
-        self.delete_object_btn.setStyleSheet(btm_style)
-        self.delete_object_btn.setIcon(QIcon('icons/sidebar/trash.png'))
-        self.delete_object_btn.setIconSize(QSize(20, 20))
+        self.vis2d_btn = BottomButton('icons/toolbar/vis2d.svg')
+        self.compare_btn = BottomButton('icons/sidebar/compare.svg')
+        self.merge_probe_btn = BottomButton('icons/sidebar/probe.svg')
+        self.merge_drawing_btn = BottomButton('icons/toolbar/pencil.svg')
+        self.merge_cell_btn = BottomButton('icons/toolbar/location.svg')
+        self.merge_virus_btn = BottomButton('icons/sidebar/virus.svg')
+        self.merge_contour_btn = BottomButton('icons/sidebar/contour.svg')
+        self.add_object_btn = BottomButton('icons/sidebar/add.png')
+        self.delete_object_btn = BottomButton('icons/sidebar/trash.png')
         self.delete_object_btn.clicked.connect(self.delete_object_btn_clicked)
 
     def blend_mode_changed(self):
@@ -970,10 +895,12 @@ class ObjectControl(QObject):
             return
         self.delete_objects(self.current_obj_index)
 
-    def obj_clicked(self, clicked_id):
-        self.set_active_layer_to_current(clicked_id)
+    def info_btn_clicked(self):
         if 'merged' in self.obj_type[self.current_obj_index]:
             self.obj_info_on_click()
+
+    def obj_clicked(self, clicked_id):
+        self.set_active_layer_to_current(clicked_id)
 
     def obj_info_on_click(self):
         da_data = self.obj_data[self.current_obj_index]
@@ -1178,7 +1105,7 @@ class ObjectControl(QObject):
         self.obj_list[-1].set_checked(False)
         self.obj_list[self.current_obj_index].set_checked(True)
 
-        print(self.obj_type)
+        # print(self.obj_type)
 
     def set_slider_combo_to_current(self):
         if 'merged' in self.obj_type[self.current_obj_index]:

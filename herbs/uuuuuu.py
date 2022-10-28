@@ -168,11 +168,9 @@ def get_angles(direction):
     direction = direction / np.linalg.norm(direction)
     
     vertical_vec = np.array([0, 0, 1])
-    
     ap_proj = direction.copy()
     ap_proj[0] = 0
     ap_proj = ap_proj / np.linalg.norm(ap_proj)
-
     ml_proj = direction.copy()
     ml_proj[1] = 0
     ml_proj = ml_proj / np.linalg.norm(ml_proj)
@@ -202,6 +200,7 @@ def pandas_to_str(label_name, label_ano, length, channels):
 
 
 def correct_start_pnt(label_data, start_pnt, start_vox, direction, bregma):
+    error_index = 0
     direction = direction / np.linalg.norm(direction)
     check_vec = label_data[int(start_vox[0]), int(start_vox[1]), :]
     top_vox = np.where(check_vec != 0)[0][-1]
@@ -228,34 +227,46 @@ def correct_start_pnt(label_data, start_pnt, start_vox, direction, bregma):
     #             raise Exception('higher limit, please contact maintainer')
     # else:
     #     new_sp = start_pnt
-
-    if check_vox[2] < top_vox:
-        sign_flag = 1
-    elif check_vox[2] > top_vox:
+    enter_label = label_data[check_vox[0], check_vox[1], check_vox[2]]
+    z_diff = new_sp[2] + bregma[2] - top_vox
+    if z_diff >= 1:
         sign_flag = -1
+        if enter_label != 0:
+            error_index = 10
+            return new_sp, error_index
+    elif z_diff < 0:
+        sign_flag = 1
+        if enter_label == 0:
+            error_index = 11
+            return new_sp, error_index
     else:
         sign_flag = 0
 
+    # ToDo: the following code only works when there is no 0 label inside the brain (label data)
+    # that means label 0 only indicates the area outside the brain
+    # if some atlas uses label 0 to indicate the unspecified area inside the brain, this code may have problems
+    # should make a pseudo label index (xxxx) inside the brain for unspecified regions ===> need to re-process atlas
+
     stop_steps = 0
-    while check_vox[2] != top_vox:
-        stop_steps += 1
-        temp = start_pnt - sign_flag * stop_steps * direction
-        check_vox = temp + bregma
-        check_vox = check_vox.astype(int)
-        if np.any(check_vox) < 0:
-            print('something went wrong, please contact maintainer')
-            break
-        check_vec = label_data[check_vox[0], check_vox[1], :]
-        top_vox = np.where(check_vec != 0)[0]
-        if len(top_vox) == 0:
-            print('something went wrong, please contact maintainer')
-            break
-        else:
-            top_vox = top_vox[-1]
+    if sign_flag != 0:
+        enter_condition = (enter_label == 0) if z_diff >= 1 else (enter_label != 0)
+        while enter_condition:
+            stop_steps += 1
+            new_sp = start_pnt - sign_flag * stop_steps * direction
+            check_vox = new_sp + bregma
+            check_vox = check_vox.astype(int)
+            if np.any(check_vox >= np.ravel(label_data.shape)) or np.any(check_vox) < 0:
+                error_index = 12
+                break
+            enter_label = label_data[check_vox[0], check_vox[1], check_vox[2]]
+            enter_condition = (enter_label == 0) if z_diff >= 1 else (enter_label != 0)
+        if error_index != 0:
+            return new_sp, error_index
 
-    new_sp = start_pnt - sign_flag * stop_steps * direction
+        new_sp = start_pnt - sign_flag * (stop_steps - 1) * direction if z_diff < 0 else new_sp
+        print('correct enter pnt with {} steps'.format(stop_steps))
 
-    return new_sp
+    return new_sp, error_index
 
 
 def correct_end_point(sp, ep, direction, vox_size, tip_length, probe_type):
@@ -443,32 +454,49 @@ def block_same_label_one_side(sites_label_one_side, sites_color_one_side):
 
 
 def get_tilt_info(sp, ep):
-    if ep[0] < sp[0]:
+    if ep[1] < sp[1]:
         ap_tilt = 'posterior'
-    elif ep[0] > sp[0]:
+    elif ep[1] > sp[1]:
         ap_tilt = 'anterior'
     else:
         ap_tilt = 'no tilt'
 
-    if sp[1] > 0:
-        if ep[1] < sp[1]:
+    if sp[0] > 0:
+        if ep[0] < sp[0]:
             ml_tilt = 'medial'
-        elif ep[1] > sp[1]:
+        elif ep[0] > sp[0]:
             ml_tilt = 'lateral'
         else:
             ml_tilt = 'no tilt'
-    elif sp[1] < 0:
-        if ep[1] < sp[1]:
+    elif sp[0] < 0:
+        if ep[0] < sp[0]:
             ml_tilt = 'lateral'
-        elif ep[1] > sp[1]:
+        elif ep[0] > sp[0]:
             ml_tilt = 'medial'
         else:
             ml_tilt = 'no tilt'
     else:
-        if ep[1] != sp[1]:
+        if ep[0] != sp[0]:
             ml_tilt = 'lateral'
         else:
             ml_tilt = 'no tilt'
+    return ap_tilt, ml_tilt
+
+
+def get_tilt_sign(sp, ep):
+    if ep[1] < sp[1]:
+        ap_tilt = -1
+    elif ep[1] > sp[1]:
+        ap_tilt = 1
+    else:
+        ap_tilt = 0
+
+    if ep[0] < sp[0]:
+        ml_tilt = -1
+    elif ep[0] > sp[0]:
+        ml_tilt = 1
+    else:
+        ml_tilt = 0
     return ap_tilt, ml_tilt
 
 
@@ -484,8 +512,7 @@ def calculate_probe_info(data, label_data, label_info, vxsize_um, probe_type, br
     :param bregma:
     :return:
     """
-    # find the best fit line of the given points
-    # direction is from ???
+    data_dict = None
     # start_pnt and end_pnt are coordinates related to the given Bregma
     tip_length, channel_size, channel_number_in_banks = get_probe_info(probe_type)
     start_pnt, end_pnt, avg, direction = line_fit(data)
@@ -494,7 +521,9 @@ def calculate_probe_info(data, label_data, label_info, vxsize_um, probe_type, br
     start_vox = start_pnt + bregma
     end_vox = end_pnt + bregma
     ap_angle, ml_angle = get_angles(direction)
-    new_sp = correct_start_pnt(label_data, start_pnt, start_vox, direction, bregma)
+    new_sp, error_index = correct_start_pnt(label_data, start_pnt, start_vox, direction, bregma)
+    if error_index != 0:
+        return data_dict, error_index
     new_start_vox = new_sp + bregma
     # print('sp', start_pnt)
     # print('sp_vox', start_vox)
@@ -537,7 +566,7 @@ def calculate_probe_info(data, label_data, label_info, vxsize_um, probe_type, br
 
     # print(merged_labels, merged_colors, block_count)
 
-    da_dict = {'object_name': 'probe', 'data': data, 'ap_tilt': ap_tilt, 'ml_tilt': ml_tilt,
+    data_dict = {'object_name': 'probe', 'data': data, 'ap_tilt': ap_tilt, 'ml_tilt': ml_tilt,
                'insertion_coords_3d': start_pnt, 'terminus_coords_3d': end_pnt,
                'new_insertion_coords_3d': new_sp, 'new_terminus_coords_3d': new_ep,
                'direction': direction, 'probe_length': probe_length_with_tip, 'dv': dv,
@@ -548,7 +577,7 @@ def calculate_probe_info(data, label_data, label_info, vxsize_um, probe_type, br
                'merged_labels': merged_labels, 'merged_color': merged_colors, 'block_count': block_count,
                'region_label': region_label, 'region_length': region_length, 'region_channels': region_channels,
                'label_name': label_names, 'label_acronym': label_acronym, 'label_color': label_color}
-    return da_dict
+    return data_dict, error_index
 
 
 def get_region_label(data, label_data, bregma):
@@ -1413,5 +1442,10 @@ def rotate_base_points(data, base_loc):
     return start_pnt, end_pnt
 
 
-
+def get_cell_count(cell_layer_index):
+    cell_count = [0 for _ in range(5)]
+    cell_layer_index = np.ravel(cell_layer_index)
+    for i in range(5):
+        cell_count[i] = np.sum(cell_layer_index == i)
+    return cell_count
 

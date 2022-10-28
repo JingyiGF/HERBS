@@ -40,7 +40,12 @@ from pyqtgraph import metaarray
 import warnings
 
 
-from .uuuuuu import *
+from .uuuuuu import get_cell_count, num_side_pnt_changed, rotate, merge_channels_into_single_img, gamma_correction, \
+    create_vis_img, color_vis_img, get_tri_lines, match_sides_points, get_vertex_ind_in_triangle, \
+    warp_triangle, warp_points, get_pnts_triangle_ind, make_label_rgb_img, line_fit_2d, line_fit, \
+    delete_points_inside_eraser, get_bound_color, get_tilt_sign, \
+    calculate_probe_info, calculate_cells_info, calculate_virus_info, calculate_contour_line, \
+    check_loading_pickle_file, check_bounding_contains, get_statusbar_style
 from .czi_reader import CZIReader
 from .atlas_downloader import AtlasDownloader
 from .allen_downloader import AllenDownloader
@@ -260,6 +265,7 @@ class HERBS(QMainWindow, FORM_Main):
         self.object_ctrl.merge_contour_btn.clicked.connect(self.merge_contour)
         self.object_ctrl.merge_drawing_btn.clicked.connect(self.merge_drawings)
         self.object_ctrl.compare_btn.clicked.connect(self.compare_object)
+        self.object_ctrl.vis2d_btn.clicked.connect(self.display_object_in_2d_atlas)
 
         self.image_view = ImageView()
         self.image_view.sig_image_changed.connect(self.update_histo_tri_onside_data)
@@ -898,8 +904,8 @@ class HERBS(QMainWindow, FORM_Main):
                 self.working_atlas_data[da_key] = []
             else:
                 self.working_atlas_data[da_key] = None
-        self.working_img_data['cell_count'] = [0 for i in range(5)]
-        self.working_atlas_data['cell_count'] = [0 for i in range(5)]
+        self.working_img_data['cell_count'] = [0 for _ in range(5)]
+        self.working_atlas_data['cell_count'] = [0 for _ in range(5)]
         self.remove_h2a_transferred_layers()
         self.remove_a2h_transferred_layers()
 
@@ -1729,6 +1735,7 @@ class HERBS(QMainWindow, FORM_Main):
 
         object_btm_layout.addSpacing(10)
         object_btm_layout.addWidget(self.object_ctrl.vis2d_btn)
+        object_btm_layout.addWidget(self.object_ctrl.info_btn)
         object_btm_layout.addStretch(1)
         object_btm_layout.addWidget(self.object_ctrl.compare_btn)
         object_btm_layout.addWidget(self.object_ctrl.merge_probe_btn)
@@ -2668,7 +2675,8 @@ class HERBS(QMainWindow, FORM_Main):
             vis_img = create_vis_img(self.atlas_view.slice_size, res_pnts, self.contour_color, vis_type='l')
             res = cv2.resize(vis_img, self.atlas_view.slice_tb_size, interpolation=cv2.INTER_AREA)
             self.layer_ctrl.master_layers(res, layer_type='atlas-contour', color=self.contour_color)
-            self.remove_single_link_related('img-contour')
+            # self.remove_single_link_related('img-contour')
+            self.working_img_data['img-contour'].clear()
             self.print_message('Contour transferred.', self.normal_color)
 
         if self.working_img_data['img-probe']:
@@ -2676,10 +2684,15 @@ class HERBS(QMainWindow, FORM_Main):
             self.working_atlas_data['atlas-probe'] = res_pnts.tolist()
             self.atlas_view.working_atlas.image_dict['atlas-probe'].setData(
                 pos=np.asarray(self.working_atlas_data['atlas-probe']))
+            if len(self.working_atlas_data['atlas-probe']) > 1:
+                current_img = self.atlas_view.working_atlas.label_img.image.copy()
+                vis_points, msg = line_fit_2d(self.working_atlas_data['atlas-probe'], current_img)
+                self.atlas_view.working_atlas.image_dict['atlas-trajectory'].setData(vis_points)
             vis_img = create_vis_img(self.atlas_view.slice_size, res_pnts, self.probe_color, vis_type='p')
             res = cv2.resize(vis_img, self.atlas_view.slice_tb_size, interpolation=cv2.INTER_AREA)
             self.layer_ctrl.master_layers(res, layer_type='atlas-probe', color=self.probe_color)
-            self.remove_single_link_related('img-probe')
+            # self.remove_single_link_related('img-probe')
+            self.working_img_data['img-probe'].clear()
             self.print_message('Probe transferred.', self.normal_color)
 
         if self.working_img_data['img-drawing']:
@@ -2695,7 +2708,8 @@ class HERBS(QMainWindow, FORM_Main):
                                      self.tool_box.is_closed)
             res = cv2.resize(vis_img, self.atlas_view.slice_tb_size, interpolation=cv2.INTER_AREA)
             self.layer_ctrl.master_layers(res, layer_type='atlas-drawing', color=self.pencil_color)
-            self.remove_single_link_related('img-drawing')
+            # self.remove_single_link_related('img-drawing')
+            self.working_img_data['img-drawing'].clear()
             self.print_message('Drawing transferred.', self.normal_color)
 
         if self.working_img_data['img-cells']:
@@ -2710,7 +2724,12 @@ class HERBS(QMainWindow, FORM_Main):
             vis_img = create_vis_img(self.atlas_view.slice_size, res_pnts, self.cell_color, vis_type='p')
             res = cv2.resize(vis_img, self.atlas_view.slice_tb_size, interpolation=cv2.INTER_AREA)
             self.layer_ctrl.master_layers(res, layer_type='atlas-cells', color=self.cell_color)
-            self.remove_single_link_related('img-cells')
+            # self.remove_single_link_related('img-cells')
+            self.working_img_data['img-cells'].clear()
+            self.working_img_data['cell_size'].clear()
+            self.working_img_data['cell_symbol'].clear()
+            self.working_img_data['cell_layer_index'].clear()
+            self.working_img_data['cell_count'] = [0 for _ in range(5)]
             self.print_message('Cells transferred.', self.normal_color)
 
         if self.working_img_data['img-virus'] is not None:
@@ -2736,7 +2755,8 @@ class HERBS(QMainWindow, FORM_Main):
             vis_img = create_vis_img(self.atlas_view.slice_size, res_pnts, self.virus_lut[1], 'p')
             res = cv2.resize(vis_img, self.atlas_view.slice_tb_size, interpolation=cv2.INTER_AREA)
             self.layer_ctrl.master_layers(res, layer_type='atlas-virus', color=self.virus_lut[1])
-            self.remove_single_link_related('img-virus')
+            # self.remove_single_link_related('img-virus')
+            self.working_img_data['img-virus'] = None
             self.print_message('Virus transferred.', self.normal_color)
 
         self.print_message('All objects transferred.', self.normal_color)
@@ -2882,12 +2902,10 @@ class HERBS(QMainWindow, FORM_Main):
                                     del self.working_img_data['cell_size'][da_ind]
                                     del self.working_img_data['cell_symbol'][da_ind]
                                     del self.working_img_data['cell_layer_index'][da_ind]
-                                for i in range(5):
-                                    self.working_img_data['cell_count'][i] = \
-                                        np.sum(np.ravel(self.working_img_data['cell_layer_index']) == i)
-                                for i in range(5):
-                                    self.tool_box.cell_count_val_list[i].setText(
-                                        str(self.working_img_data['cell_count'][i]))
+                                cell_layer_index = self.working_img_data['cell_layer_index'].copy()
+                                self.working_img_data['cell_count'] = get_cell_count(cell_layer_index)
+                                self.tool_box.update_cell_count_label(self.working_img_data['cell_count'])
+
                                 self.image_view.img_stacks.image_dict[da_link].setData(
                                     pos=remain_points, symbol=self.working_img_data['cell_symbol'])
                             else:
@@ -3015,14 +3033,12 @@ class HERBS(QMainWindow, FORM_Main):
                         return
                     layer_ind = da_layer[0] + 1
 
-                print(layer_ind)
                 self.working_img_data['img-cells'].append([x, y])
                 self.working_img_data['cell_size'].append(1)
                 self.working_img_data['cell_symbol'].append(self.cell_base_symbol[layer_ind])
                 self.working_img_data['cell_layer_index'].append(layer_ind)
                 self.working_img_data['cell_count'][layer_ind] += 1
-                self.tool_box.cell_count_val_list[layer_ind].setText(
-                    str(self.working_img_data['cell_count'][layer_ind]))
+                self.tool_box.update_single_cell_count_label(self.working_img_data['cell_count'], layer_ind)
 
                 self.image_view.img_stacks.image_dict['img-cells'].setData(
                     pos=np.asarray(self.working_img_data['img-cells']), symbol=self.working_img_data['cell_symbol'])
@@ -3036,7 +3052,7 @@ class HERBS(QMainWindow, FORM_Main):
                                 'symbol': self.working_img_data['cell_symbol'].copy(),
                                 'index': self.working_img_data['cell_layer_index'].copy(),
                                 'count': self.working_img_data['cell_count'].copy()}
-                print(current_data)
+
                 self.save_current_action('loc_btn', 'img-cells', current_data, res)
             if self.tool_box.cell_aim_btn.isChecked():
                 self.working_img_data['img-blob'].append([x, y])
@@ -3047,6 +3063,12 @@ class HERBS(QMainWindow, FORM_Main):
             self.working_img_data['img-probe'].append([x, y])
             self.image_view.img_stacks.image_dict['img-probe'].setData(
                 pos=np.asarray(self.working_img_data['img-probe']))
+            if len(self.working_img_data['img-probe']) > 1:
+                vis_points, msg = line_fit_2d(self.working_img_data['img-probe'])
+                if msg is not None:
+                    self.print_message(msg, self.error_message_color)
+                    return
+                self.image_view.img_stacks.image_dict['img-trajectory'].setData(vis_points)
             vis_img = create_vis_img(self.image_view.img_size, self.working_img_data['img-probe'], self.probe_color, 'p')
             res = cv2.resize(vis_img, self.image_view.tb_size, interpolation=cv2.INTER_AREA)
             self.layer_ctrl.master_layers(res, layer_type='img-probe', color=self.probe_color)
@@ -3209,7 +3231,7 @@ class HERBS(QMainWindow, FORM_Main):
         clicked_ind = ev[0].index()
         layer_ind = self.working_img_data['cell_layer_index'][clicked_ind]
         self.working_img_data['cell_count'][layer_ind] -= 1
-        self.tool_box.cell_count_val_list[layer_ind].setText(str(self.working_img_data['cell_count'][layer_ind]))
+        self.tool_box.update_single_cell_count_label(self.working_img_data['cell_count'], layer_ind)
         del self.working_img_data['img-cells'][clicked_ind]
         del self.working_img_data['cell_symbol'][clicked_ind]
         del self.working_img_data['cell_size'][clicked_ind]
@@ -3566,11 +3588,12 @@ class HERBS(QMainWindow, FORM_Main):
         # ------------------------- probe
         elif self.tool_box.checkable_btn_dict['probe_btn'].isChecked():
             self.working_atlas_data['atlas-probe'].append([x, y])
-            print(self.working_atlas_data['atlas-probe'])
+
             if len(self.working_atlas_data['atlas-probe']) > 2:
                 self.working_atlas_data['atlas-probe'].clear()
                 self.atlas_view.working_atlas.image_dict['atlas-probe'].clear()
-
+                self.atlas_view.working_atlas.image_dict['atlas-trajectory'].clear()
+            print(self.working_atlas_data['atlas-probe'])
             if len(self.working_atlas_data['atlas-probe']) == 0:
                 return
             if self.image_view.image_file is None:
@@ -3583,6 +3606,11 @@ class HERBS(QMainWindow, FORM_Main):
             else:
                 self.atlas_view.working_atlas.image_dict['atlas-probe'].setData(
                     pos=np.asarray(self.working_atlas_data['atlas-probe']))
+                if len(self.working_atlas_data['atlas-probe']) > 1:
+                    current_img = self.atlas_view.working_atlas.label_img.image.copy()
+                    print(np.any(current_img != 0))
+                    vis_points, msg = line_fit_2d(self.working_atlas_data['atlas-probe'], current_img)
+                    self.atlas_view.working_atlas.image_dict['atlas-trajectory'].setData(vis_points)
 
             vis_img = create_vis_img(self.atlas_view.slice_size, self.working_atlas_data['atlas-probe'],
                                      self.probe_color, 'p')
@@ -3991,6 +4019,11 @@ class HERBS(QMainWindow, FORM_Main):
                     if 'drawing' in da_link:
                         self.atlas_view.working_atlas.image_dict[da_link].updateItems()
 
+            if da_link == 'atlas-probe':
+                for i in range(4):
+                    self.atlas_view.working_atlas.pre_trajectory_list[i].clear()
+                self.atlas_view.working_atlas.image_dict['atlas-trajectory'].clear()
+
             if da_link == 'img-cells':
                 for da_key in ['cell_count', 'cell_size', 'cell_symbol', 'cell_layer_index']:
                     self.working_img_data[da_key] = []
@@ -4040,6 +4073,34 @@ class HERBS(QMainWindow, FORM_Main):
     #              Sidebar - Object Control
     #
     # ------------------------------------------------------------------
+    def display_object_in_2d_atlas(self):
+        if not self.object_ctrl.obj_list:
+            self.print_message('No object to display.', self.reminder_color)
+            return
+        if self.object_ctrl.obj_type[self.object_ctrl.current_obj_index] != 'merged probe':
+            self.print_message('At the moment only merged probe can be displayed.', self.reminder_color)
+            return
+
+        if self.atlas_view.has_display_objects:
+            self.atlas_view.clear_all_display_obj()
+
+        if self.object_ctrl.linked_indexes:
+            self.print_message('Displaying linked objects is under development.', self.reminder_color)
+            return
+            # linked_data = []
+            # for link_index in self.object_ctrl.linked_indexes:
+            #     linked_data.append(self.object_ctrl.obj_data[link_index])
+        else:
+            display_data = self.object_ctrl.obj_data[self.object_ctrl.current_obj_index].copy()
+
+            self.atlas_view.rotate_cs_plane_after_merging_probe(display_data)
+
+
+
+        # display all linked object, for probe, all probe limited in some angle
+
+        # for cell/virus, show only on the current page
+
     def compare_object(self):
         if len(self.object_ctrl.linked_indexes) < 2:
             self.print_message('Need at least 2 objects to compare.', self.reminder_color)
@@ -4072,6 +4133,7 @@ class HERBS(QMainWindow, FORM_Main):
                 print('np1')
                 data_2d = np.asarray(data_tobe_registered)
                 print('data2d', data_2d)
+                print(self.atlas_display)
                 data_3d = self.atlas_view.get_3d_pnts(data_2d, self.atlas_display)
                 print('data3d', data_3d)
                 self.object_ctrl.add_object(object_name='probe - piece',
@@ -4143,7 +4205,6 @@ class HERBS(QMainWindow, FORM_Main):
         else:
             data_tobe_registered = self.working_atlas_data['atlas-cells']
 
-        print('data_tobe_registered', data_tobe_registered)
         if not data_tobe_registered:
             return
         processing_data = np.asarray(data_tobe_registered)
@@ -4160,7 +4221,13 @@ class HERBS(QMainWindow, FORM_Main):
                                             object_data=piece_data,
                                             object_mode=self.obj_display_mode)
                 self.object_3d_list.append([])
-        self.working_atlas_data['atlas-cells'] = []
+        self.working_atlas_data['atlas-cells'].clear()
+        self.working_atlas_data['cell_size'].clear()
+        self.working_atlas_data['cell_symbol'].clear()
+        self.working_atlas_data['cell_layer_index'].clear()
+        self.working_atlas_data['cell_count'] = [0 for _ in range(5)]
+        self.tool_box.update_cell_count_label(self.working_atlas_data['cell_count'])
+
 
     def make_object_pieces(self):
         self.make_probe_piece()
@@ -4190,9 +4257,14 @@ class HERBS(QMainWindow, FORM_Main):
                     return
         label_data = np.transpose(self.atlas_view.atlas_label, (1, 2, 0))[:, :, ::-1]
         for i in range(len(data)):
-            info_dict = calculate_probe_info(data[i], label_data, self.atlas_view.label_info,
-                                             self.atlas_view.vox_size_um, self.probe_type,
-                                             self.atlas_view.origin_3d, self.site_face)
+            info_dict, error_index = calculate_probe_info(data[i], label_data, self.atlas_view.label_info,
+                                                          self.atlas_view.vox_size_um, self.probe_type,
+                                                          self.atlas_view.origin_3d, self.site_face)
+            if error_index != 0:
+                msg = 'Error index: {}, please contact maintainers.'.format(error_index)
+                self.print_message(msg, self.error_message_color)
+                return
+
             self.object_ctrl.add_object(obj_names[i], 'merged probe',
                                         object_data=info_dict, object_mode=self.obj_display_mode)
 
@@ -4312,7 +4384,7 @@ class HERBS(QMainWindow, FORM_Main):
         image_file_path = file_dialog.getOpenFileName(self, file_title, file_path, file_filter, options=file_options)
 
         if image_file_path[0] != '':
-            image_file_type = image_file_path[0][-4:].lower()
+            image_name, image_file_type = os.path.splitext(image_file_path[0])
             self.current_img_path = image_file_path[0]
             self.current_img_name = os.path.basename(os.path.realpath(image_file_path[0]))
             self.load_single_image_file(self.current_img_path, image_file_type)
@@ -4331,6 +4403,9 @@ class HERBS(QMainWindow, FORM_Main):
                     image_file = CZIReader(image_file_path)
                 except (IOError, OSError, IndexError, AttributeError):
                     self.print_message('Load CZI file failed.', self.error_message_color)
+                    return
+                if image_file.error_index != 0:
+                    self.print_message('Error Index: {}'.format(image_file.error_index), self.error_message_color)
                     return
                 scale = self.image_view.scale_slider.value()
                 scale = scale * 0.01
@@ -4354,6 +4429,9 @@ class HERBS(QMainWindow, FORM_Main):
                 except (IOError, OSError, IndexError, AttributeError):
                     self.print_message('Load TIF file failed.', self.error_message_color)
                     return
+                if image_file.error_index != 0:
+                    self.print_message('Error Index: {}'.format(image_file.error_index), self.error_message_color)
+                    return
                 if image_file.is_rgb:
                     self.tool_box.cell_count_label_list[0].setVisible(True)
                     self.tool_box.cell_count_val_list[0].setVisible(True)
@@ -4366,6 +4444,9 @@ class HERBS(QMainWindow, FORM_Main):
                     image_file = ImageReader(image_file_path)
                 except (IOError, OSError, IndexError, AttributeError):
                     self.print_message('Load RGB image file failed.', self.error_message_color)
+                    return
+                if image_file.error_index != 0:
+                    self.print_message('Error Index: {}'.format(image_file.error_index), self.error_message_color)
                     return
                 self.tool_box.cell_count_label_list[0].setVisible(True)
                 self.tool_box.cell_count_val_list[0].setVisible(True)
@@ -4970,8 +5051,7 @@ class HERBS(QMainWindow, FORM_Main):
             self.working_img_data['cell_symbol'] = layer_dict['cell_symbol']
             self.working_img_data['cell_layer_index'] = layer_dict['cell_layer_index']
             self.working_img_data['cell_count'] = layer_dict['cell_count']
-            for i in range(5):
-                self.tool_box.cell_count_val_list[i].setText(str(self.working_img_data['cell_count'][i]))
+            self.tool_box.update_cell_count_label(self.working_img_data['cell_count'])
         elif layer_link == 'img-overlay':
             if not np.all(layer_dict['data'].shape[:2] == self.image_view.img_size):
                 msg = 'Current loaded img-overlay layer is not the same size as current image.'
@@ -5408,8 +5488,6 @@ class HERBS(QMainWindow, FORM_Main):
 
         else:
             self.print_message('', self.normal_color)
-
-
 
 
 

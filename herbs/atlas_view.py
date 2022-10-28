@@ -2,7 +2,7 @@ import os
 import sys
 import numpy as np
 import pyqtgraph as pg
-from pyqtgraph.Qt import QtGui, QtCore
+# from pyqtgraph.Qt import QtGui, QtCore
 import pyqtgraph.functions as fn
 import pyqtgraph.opengl as gl
 from PyQt5.QtWidgets import *
@@ -12,75 +12,8 @@ from PyQt5.QtCore import *
 from .image_stacks import SliceStack
 from .slice_stacks import SliceStacks
 from .label_tree import LabelTree
-from .uuuuuu import *
-
-
-atlas_rotation_gb_style = '''
-QGroupBox {
-    background-color: transparent; 
-    border: 1px solid gray; 
-    border-radius: 3px; 
-    padding: 5px;  
-    margin-top: 20px
-}
-
-QGroupBox::title {
-    subcontrol-origin: margin;
-    subcontrol-position: top left;
-    padding-left: 10px;
-    padding-right: 3px;
-    padding-top: 10px;
-}
-
-'''
-
-atlas_tab_spinbox_textedit_style = '''
-QLineEdit { 
-    background-color: #292929;
-    border: 0px;
-    color: white;
-}
-
-'''
-
-slice_label_btn_style = '''
-QPushButton {
-    border : None; 
-    background: transparent;
-    margin: 0px;
-    padding-top: 0px;
-    border-radius: 0px;
-    min-width: 15px;
-    min-height: 15px;
-}
-'''
-
-
-sidebar_button_style = '''
-QPushButton{
-    background: #656565;
-    border-radius: 5px;
-    color: white;
-    border-style: outset;
-    border-bottom: 1px solid rgb(30, 30, 30);
-    height: 24px;
-    margin: 0px;
-}
-
-QPushButton:hover{
-    background-color: #323232;
-    border: 1px solid #656565;
-}
-
-QPushButton:checked{
-    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                      stop: 0 #17bb00, stop: 1 #0e6900);
-    border-bottom: 1px solid rgb(30, 30, 30);
-    border-top: None;
-    border-left: None;
-    border-right: None;  
-}
-'''
+from .uuuuuu import read_qss_file, get_corner_line_from_rect, get_slice_atlas_coord, make_contour_img, get_tilt_sign, \
+    rotate_base_points, rotation_x, rotation_y, rotation_z
 
 
 class PageController(QWidget):
@@ -105,23 +38,23 @@ class PageController(QWidget):
         self.page_label.setFixedSize(50, 20)
 
         self.page_left_btn = QPushButton()
-        self.page_left_btn.setIcon(QtGui.QIcon("icons/backward.svg"))
-        self.page_left_btn.setIconSize(QtCore.QSize(16, 16))
+        self.page_left_btn.setIcon(QIcon("icons/backward.svg"))
+        self.page_left_btn.setIconSize(QSize(16, 16))
         self.page_left_btn.clicked.connect(self.left_btn_clicked)
 
         self.page_right_btn = QPushButton()
-        self.page_right_btn.setIcon(QtGui.QIcon("icons/forward.svg"))
-        self.page_right_btn.setIconSize(QtCore.QSize(16, 16))
+        self.page_right_btn.setIcon(QIcon("icons/forward.svg"))
+        self.page_right_btn.setIconSize(QSize(16, 16))
         self.page_right_btn.clicked.connect(self.right_btn_clicked)
 
         self.page_fast_left_btn = QPushButton()
-        self.page_fast_left_btn.setIcon(QtGui.QIcon("icons/fast_backward.svg"))
-        self.page_fast_left_btn.setIconSize(QtCore.QSize(16, 16))
+        self.page_fast_left_btn.setIcon(QIcon("icons/fast_backward.svg"))
+        self.page_fast_left_btn.setIconSize(QSize(16, 16))
         self.page_fast_left_btn.clicked.connect(self.fast_left_btn_clicked)
 
         self.page_fast_right_btn = QPushButton()
-        self.page_fast_right_btn.setIcon(QtGui.QIcon("icons/fast_forward.svg"))
-        self.page_fast_right_btn.setIconSize(QtCore.QSize(16, 16))
+        self.page_fast_right_btn.setIcon(QIcon("icons/fast_forward.svg"))
+        self.page_fast_right_btn.setIconSize(QSize(16, 16))
         self.page_fast_right_btn.clicked.connect(self.fast_right_btn_clicked)
 
         page_ctrl_layout = QHBoxLayout()
@@ -188,6 +121,7 @@ class SliceRotation(QWidget):
 
         QWidget.__init__(self)
 
+        spinbox_line_edit_style = read_qss_file('qss/hidden_line_edit.qss')
         self.prec = 0.01
         self.rot_range = 30
         self.n_steps = int(self.rot_range / self.prec)
@@ -198,7 +132,7 @@ class SliceRotation(QWidget):
         self.h_slider.setRange(-self.n_steps, self.n_steps)
 
         self.h_spinbox = QDoubleSpinBox()
-        self.h_spinbox.lineEdit().setStyleSheet(atlas_tab_spinbox_textedit_style)
+        self.h_spinbox.lineEdit().setStyleSheet(spinbox_line_edit_style)
         self.h_spinbox.valueChanged.connect(self.h_spinbox_changed)
         self.h_spinbox.setDecimals(2)
         self.h_spinbox.setValue(0)
@@ -212,7 +146,7 @@ class SliceRotation(QWidget):
         self.v_slider.setRange(-self.n_steps, self.n_steps)
 
         self.v_spinbox = QDoubleSpinBox()
-        self.v_spinbox.lineEdit().setStyleSheet(atlas_tab_spinbox_textedit_style)
+        self.v_spinbox.lineEdit().setStyleSheet(spinbox_line_edit_style)
         self.v_spinbox.valueChanged.connect(self.v_spinbox_changed)
         self.v_spinbox.setDecimals(2)
         self.v_spinbox.setValue(0)
@@ -269,7 +203,8 @@ class ImageLabel(QWidget):
 class RotationBtn(QPushButton):
     def __init__(self, icon_path):
         super(QPushButton, self).__init__()
-        self.setStyleSheet(slice_label_btn_style)
+        btn_style = read_qss_file('qss/rotation_button.qss')
+        self.setStyleSheet(btn_style)
         self.setFixedSize(15, 15)
         self.setIcon(QIcon(icon_path))
         self.setIconSize(QSize(15, 15))
@@ -341,6 +276,12 @@ class AtlasView(QObject):
         self.anchor_coronal_index = None
         self.anchor_sagital_index = None
         self.anchor_horicontal_index = None
+
+        self.has_display_objects = False
+
+        rotation_gb_style = read_qss_file('qss/atlas_view_group_box.qss')
+        button_style = read_qss_file('qss/side_bar.qss')
+        spinbox_line_edit_style = read_qss_file('qss/hidden_line_edit.qss')
 
         # self.display_atlas = None
         # self.display_label = None
@@ -435,7 +376,7 @@ class AtlasView(QObject):
 
         # opacity
         atlas_op_label = QLabel('Opacity: ')
-        self.atlas_op_slider = QSlider(QtCore.Qt.Horizontal)
+        self.atlas_op_slider = QSlider(Qt.Horizontal)
         self.atlas_op_slider.setValue(100)
         self.atlas_op_slider.setMinimum(0)
         self.atlas_op_slider.setMaximum(100)
@@ -443,7 +384,7 @@ class AtlasView(QObject):
         # self.atlas_op_slider.valueChanged.connect(self.sig_rescale_slider)
 
         self.atlas_op_spinbox = QDoubleSpinBox()
-        self.atlas_op_spinbox.lineEdit().setStyleSheet(atlas_tab_spinbox_textedit_style)
+        self.atlas_op_spinbox.lineEdit().setStyleSheet(spinbox_line_edit_style)
         self.atlas_op_spinbox.setValue(1)
         self.atlas_op_spinbox.setRange(0, 1)
         self.atlas_op_spinbox.setSingleStep(0.05)
@@ -460,18 +401,18 @@ class AtlasView(QObject):
 
         # boundary
         self.show_boundary_btn = QPushButton('Show Boundary')
-        self.show_boundary_btn.setStyleSheet(sidebar_button_style)
+        self.show_boundary_btn.setStyleSheet(button_style)
         self.show_boundary_btn.setCheckable(True)
 
         #
         self.navigation_btn = QPushButton('Navigation')
-        self.navigation_btn.setStyleSheet(sidebar_button_style)
+        self.navigation_btn.setStyleSheet(button_style)
         self.navigation_btn.setCheckable(True)
         self.navigation_btn.clicked.connect(self.navigation_btn_clicked)
 
         # coronal section control
         coronal_rotation_wrap = QGroupBox('Coronal Section')
-        coronal_rotation_wrap.setStyleSheet(atlas_rotation_gb_style)
+        coronal_rotation_wrap.setStyleSheet(rotation_gb_style)
         coronal_wrap_layout = QGridLayout(coronal_rotation_wrap)
         coronal_wrap_layout.setContentsMargins(0, 0, 0, 0)
         coronal_wrap_layout.setSpacing(10)
@@ -494,7 +435,7 @@ class AtlasView(QObject):
 
         # sagital section control
         sagital_rotation_wrap = QGroupBox('Sagittal Section')
-        sagital_rotation_wrap.setStyleSheet(atlas_rotation_gb_style)
+        sagital_rotation_wrap.setStyleSheet(rotation_gb_style)
         sagital_wrap_layout = QGridLayout(sagital_rotation_wrap)
         sagital_wrap_layout.setContentsMargins(0, 0, 0, 0)
         sagital_wrap_layout.setSpacing(10)
@@ -517,7 +458,7 @@ class AtlasView(QObject):
 
         # horizontal section control
         horizontal_rotation_wrap = QGroupBox('Horizontal Section')
-        horizontal_rotation_wrap.setStyleSheet(atlas_rotation_gb_style)
+        horizontal_rotation_wrap.setStyleSheet(rotation_gb_style)
         horizontal_wrap_layout = QGridLayout(horizontal_rotation_wrap)
         horizontal_wrap_layout.setContentsMargins(0, 0, 0, 0)
         horizontal_wrap_layout.setSpacing(10)
@@ -624,8 +565,6 @@ class AtlasView(QObject):
         else:
             self.slice_info_ready = True
 
-
-
     def clear_slice_info(self):
         if self.slice_image_data is not None:
             self.slice_cut = 'Coronal'
@@ -639,8 +578,8 @@ class AtlasView(QObject):
 
     def set_data(self, atlas_data, atlas_label, atlas_info, label_info, boundaries):
         if self.atlas_data is not None:
-            print('sdfsdfd')
             self.reset_3d_plates()
+            self.clear_all_display_obj()
 
         self.atlas_data = atlas_data
         self.atlas_label = atlas_label
@@ -787,13 +726,14 @@ class AtlasView(QObject):
 
     def opacity_changed(self):
         val = self.atlas_op_spinbox.value()
-        self.atlas_op_slider.setValue(val * 100)
+        self.atlas_op_slider.setValue(int(val * 100))
         self.cimg.label_img.setOpts(opacity=val)
         self.simg.label_img.setOpts(opacity=val)
         self.himg.label_img.setOpts(opacity=val)
 
     # slice number changed
     def coronal_slice_page_changed(self, page_number):
+        self.clear_all_display_obj()
         self.crotation_ctrl.h_spinbox.setValue(0)
         self.crotation_ctrl.v_spinbox.setValue(0)
         if self.atlas_data is None or self.atlas_label is None:
@@ -811,6 +751,7 @@ class AtlasView(QObject):
         self.get_3d_origin()
 
     def sagital_slice_page_changed(self, page_number):
+        self.clear_all_display_obj()
         self.srotation_ctrl.h_spinbox.setValue(0)
         self.srotation_ctrl.v_spinbox.setValue(0)
         if self.atlas_data is None or self.atlas_label is None:
@@ -828,6 +769,7 @@ class AtlasView(QObject):
         self.get_3d_origin()
 
     def horizontal_slice_page_changed(self, page_number):
+        self.clear_all_display_obj()
         self.hrotation_ctrl.h_spinbox.setValue(0)
         self.hrotation_ctrl.v_spinbox.setValue(0)
         if self.atlas_data is None or self.atlas_label is None:
@@ -853,6 +795,7 @@ class AtlasView(QObject):
         self.rotate_origin_3d = o_rot - self.origin_3d
 
     def coronal_slice_rotated(self, rads):
+        self.clear_all_display_obj()
         if self.atlas_data is None or self.atlas_label is None:
             return
         if np.all(np.ravel(rads) == 0):
@@ -864,7 +807,7 @@ class AtlasView(QObject):
         # calculate for 2d rotation
         c_id = self.current_coronal_index
         s_id = self.current_sagital_index
-        h_id = self.atlas_size[0] - self.current_horizontal_index
+        h_id = self.atlas_size[0] - 1 - self.current_horizontal_index
 
         z_angle = rads[0]
         x_angle = rads[1]
@@ -897,6 +840,7 @@ class AtlasView(QObject):
         self.ap_plate_mesh.setMeshData(meshdata=ap_plate_md)
 
     def sagital_slice_rotated(self, rads):
+        self.clear_all_display_obj()
         if self.atlas_data is None or self.atlas_label is None:
             return
         if np.all(np.ravel(rads) == 0):
@@ -907,7 +851,7 @@ class AtlasView(QObject):
 
         c_id = self.current_coronal_index
         s_id = self.current_sagital_index
-        h_id = self.current_horizontal_index
+        h_id = self.atlas_size[0] - 1 - self.current_horizontal_index
 
         z_angle = rads[0]
         y_angle = rads[1]
@@ -940,6 +884,7 @@ class AtlasView(QObject):
         self.ml_plate_mesh.setMeshData(meshdata=ml_plate_md)
 
     def horizontal_slice_rotated(self, rads):
+        self.clear_all_display_obj()
         if self.atlas_data is None or self.atlas_label is None:
             return
         if np.all(np.ravel(rads) == 0):
@@ -950,7 +895,7 @@ class AtlasView(QObject):
 
         c_id = self.current_coronal_index
         s_id = self.current_sagital_index
-        h_id = self.current_horizontal_index
+        h_id = self.atlas_size[0] - 1 - self.current_horizontal_index
 
         x_angle = rads[0]
         y_angle = rads[1]
@@ -981,6 +926,83 @@ class AtlasView(QObject):
         dv_plate_verts = np.dot(self.h_rotm_3d, (dv_plate_verts - self.rotate_origin_3d).T).T + self.rotate_origin_3d
         dv_plate_md = gl.MeshData(vertexes=dv_plate_verts, faces=self.dv_plate_faces)
         self.dv_plate_mesh.setMeshData(meshdata=dv_plate_md)
+
+    def rotate_cs_plane_after_merging_probe(self, display_data):
+        # display data has to be the merged probe data
+        self.cpage_ctrl.set_val(display_data['insertion_vox'][1])
+        self.spage_ctrl.set_val(display_data['insertion_vox'][0])
+        self.hpage_ctrl.set_val(display_data['insertion_vox'][2])
+
+        ap_sign, ml_sign = get_tilt_sign(display_data['insertion_coords'], display_data['terminus_coords'])
+
+        ap_angle = -1 * ap_sign * display_data['ap_angle']
+        ml_angle = ml_sign * display_data['ml_angle']
+
+        start_pnt = display_data['new_insertion_coords_3d'].copy()
+        end_pnt = display_data['new_terminus_coords_3d'].copy()
+        # if ap_angle <= 30 and ap_angle >= -30:
+        if ap_angle <= -1e-6 or ap_angle >= 1e-6:
+            self.coronal_slice_rotated((0, np.radians(ap_angle)))
+            rotated_back_p1 = np.dot(self.c_rotm_3d.T, start_pnt - self.rotate_origin_3d)
+            rotated_back_p2 = np.dot(self.c_rotm_3d.T, end_pnt - self.rotate_origin_3d)
+
+            rotated_back_p1 = rotated_back_p1 + self.origin_3d + self.rotate_origin_3d
+            rotated_back_p2 = rotated_back_p2 + self.origin_3d + self.rotate_origin_3d
+
+            c_start_pnt = [rotated_back_p1[0], self.atlas_size[0] - rotated_back_p1[2]]
+            c_end_pnt = [rotated_back_p2[0], self.atlas_size[0] - rotated_back_p2[2]]
+        else:
+            c_start_pnt_3d = start_pnt + self.origin_3d
+            c_end_pnt_3d = end_pnt + self.origin_3d
+
+            c_start_pnt = [c_start_pnt_3d[0], self.atlas_size[0] - c_start_pnt_3d[2]]
+            c_end_pnt = [c_end_pnt_3d[0], self.atlas_size[0] - c_end_pnt_3d[2]]
+
+        if ml_angle <= -1e-6 or ml_angle >= 1e-6:
+            self.sagital_slice_rotated((0, np.radians(ml_angle)))
+            rotated_back_p1 = np.dot(self.s_rotm_3d.T, start_pnt - self.rotate_origin_3d)
+            rotated_back_p2 = np.dot(self.s_rotm_3d.T, end_pnt - self.rotate_origin_3d)
+
+            rotated_back_p1 = rotated_back_p1 + self.origin_3d + self.rotate_origin_3d
+            rotated_back_p2 = rotated_back_p2 + self.origin_3d + self.rotate_origin_3d
+
+            s_start_pnt = [rotated_back_p1[1], self.atlas_size[0] - rotated_back_p1[2]]
+            s_end_pnt = [rotated_back_p2[1], self.atlas_size[0] - rotated_back_p2[2]]
+        else:
+            s_start_pnt_3d = start_pnt + self.origin_3d
+            s_end_pnt_3d = end_pnt + self.origin_3d
+
+            s_start_pnt = [s_start_pnt_3d[0], self.atlas_size[0] - s_start_pnt_3d[2]]
+            s_end_pnt = [s_end_pnt_3d[0], self.atlas_size[0] - s_end_pnt_3d[2]]
+
+        c_pos = np.stack([c_start_pnt, c_end_pnt], axis=0)
+        s_pos = np.stack([s_start_pnt, s_end_pnt], axis=0)
+
+        self.cimg.add_display_obj_to_view(c_pos, display_data['vis_color'], 'probe')
+        self.simg.add_display_obj_to_view(s_pos, display_data['vis_color'], 'probe')
+        self.has_display_objects = True
+
+
+    def clear_all_display_obj(self):
+        if not self.has_display_objects:
+            return
+        c_n_obj = len(self.cimg.display_objects)
+        c_obj_indexes = np.arange(c_n_obj)[::-1]
+        for i in c_obj_indexes:
+            self.cimg.remove_display_obj_from_view(i)
+
+        s_n_obj = len(self.simg.display_objects)
+        s_obj_indexes = np.arange(s_n_obj)[::-1]
+        for j in s_obj_indexes:
+            self.simg.remove_display_obj_from_view(j)
+
+        self.cimg.display_objects.clear()
+        self.simg.display_objects.clear()
+
+        self.has_display_objects = False
+
+
+
 
     def get_atlas_angles(self):
         c_ang = (self.crotation_ctrl.h_spinbox.value(), self.crotation_ctrl.v_spinbox.value())
@@ -1043,7 +1065,6 @@ class AtlasView(QObject):
         if atlas_display == 'coronal':
             print('processing_data', processing_data)
             data = self.get_coronal_3d(processing_data)
-            print(data)
         elif atlas_display == 'sagittal':
             data = self.get_sagital_3d(processing_data)
         else:
