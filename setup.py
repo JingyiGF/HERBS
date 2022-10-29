@@ -90,7 +90,7 @@ qss/*.qss
 
 setup(
     name="herbs",
-    version="0.1.0",
+    version="0.1.1",
     author="Jingyi GF",
     author_email="jingyi.g.fuglstad@gmail.com",
     description="A Python-based GUI for Histological E-data Registration in Brain Space",

@@ -42,13 +42,13 @@ class ImagePageController(QWidget):
         self.page_label.setFixedSize(50, 20)
 
         self.page_left_btn = QPushButton()
-        self.page_left_btn.setIcon(QtGui.QIcon("icons/backward.svg"))
-        self.page_left_btn.setIconSize(QtCore.QSize(16, 16))
+        self.page_left_btn.setIcon(QIcon("icons/backward.svg"))
+        self.page_left_btn.setIconSize(QSize(16, 16))
         self.page_left_btn.clicked.connect(self.left_btn_clicked)
 
         self.page_right_btn = QPushButton()
-        self.page_right_btn.setIcon(QtGui.QIcon("icons/forward.svg"))
-        self.page_right_btn.setIconSize(QtCore.QSize(16, 16))
+        self.page_right_btn.setIcon(QIcon("icons/forward.svg"))
+        self.page_right_btn.setIconSize(QSize(16, 16))
         self.page_right_btn.clicked.connect(self.right_btn_clicked)
 
         page_ctrl_layout = QHBoxLayout()

@@ -1151,7 +1151,7 @@ class HERBS(QMainWindow, FORM_Main):
         self.print_message('Processing image is created.', self.normal_color)
 
     def reset_current_image(self):
-        if self.image_view.image_file is None or not self.image_view.image_file.is_rgb:
+        if self.image_view.image_file is None:
             return
         if self.image_view.processing_img is None:
             return

@@ -127,7 +127,7 @@ class SliceRotation(QWidget):
         self.n_steps = int(self.rot_range / self.prec)
 
         self.h_slider = QSlider(Qt.Horizontal)
-        self.h_slider.sliderMoved.connect(self.h_slider_changed)
+        self.h_slider.valueChanged.connect(self.h_slider_changed)
         self.h_slider.setValue(0)
         self.h_slider.setRange(-self.n_steps, self.n_steps)
 
@@ -141,7 +141,7 @@ class SliceRotation(QWidget):
         self.h_spinbox.setMinimumSize(50, 20)
 
         self.v_slider = QSlider(Qt.Horizontal)
-        self.v_slider.sliderMoved.connect(self.v_slider_changed)
+        self.v_slider.valueChanged.connect(self.v_slider_changed)
         self.v_slider.setValue(0)
         self.v_slider.setRange(-self.n_steps, self.n_steps)
 
@@ -163,7 +163,8 @@ class SliceRotation(QWidget):
 
     def h_spinbox_changed(self):
         val = int(self.h_spinbox.value() / self.prec)
-        self.h_slider.setValue(val)
+        if self.h_slider.value() != val:
+            self.h_slider.setValue(val)
         self.sig_slice_rotated.emit(np.deg2rad([self.h_spinbox.value(), self.v_spinbox.value()]))
 
     def v_slider_changed(self):
@@ -172,7 +173,8 @@ class SliceRotation(QWidget):
 
     def v_spinbox_changed(self):
         val = int(self.v_spinbox.value() / self.prec)
-        self.v_slider.setValue(val)
+        if self.v_slider.value() != val:
+            self.v_slider.setValue(val)
         self.sig_slice_rotated.emit(np.deg2rad([self.h_spinbox.value(), self.v_spinbox.value()]))
 
 
@@ -380,7 +382,7 @@ class AtlasView(QObject):
         self.atlas_op_slider.setValue(100)
         self.atlas_op_slider.setMinimum(0)
         self.atlas_op_slider.setMaximum(100)
-        self.atlas_op_slider.sliderMoved.connect(self.change_opacity_spinbox_value)
+        self.atlas_op_slider.valueChanged.connect(self.change_opacity_spinbox_value)
         # self.atlas_op_slider.valueChanged.connect(self.sig_rescale_slider)
 
         self.atlas_op_spinbox = QDoubleSpinBox()
@@ -726,7 +728,8 @@ class AtlasView(QObject):
 
     def opacity_changed(self):
         val = self.atlas_op_spinbox.value()
-        self.atlas_op_slider.setValue(int(val * 100))
+        if self.atlas_op_slider.value() != int(val * 100):
+            self.atlas_op_slider.setValue(int(val * 100))
         self.cimg.label_img.setOpts(opacity=val)
         self.simg.label_img.setOpts(opacity=val)
         self.himg.label_img.setOpts(opacity=val)

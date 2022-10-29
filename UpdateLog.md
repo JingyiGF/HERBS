@@ -17,3 +17,8 @@ The probe will be shown in both Coronal and Sagittal 2D atlas view.
 
 - By clicking **info button**, the information window of the current activated object will pop up. 
 The previous way to read the information by double clicking the object is no longer supported. 
+
+
+### 29th Oct. 2022
+Minor update!
+Fix the atlas rotation slider value changed issue.
