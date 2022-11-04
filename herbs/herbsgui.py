@@ -104,7 +104,7 @@ class HERBS(QMainWindow, FORM_Main):
         self.channel_size = 20
         self.channel_number_in_banks = (384, 384, 192)
 
-        self.np_onside = None
+        self.np_onside = 2
         self.atlas_rect = None
         self.histo_rect = None
         self.small_atlas_rect = None
@@ -1515,7 +1515,6 @@ class HERBS(QMainWindow, FORM_Main):
         for da_key in toolbar_wrap_action_keys:
             self.toolbar_wrap_action_dict[da_key].setVisible(False)
 
-        self.np_onside = int(self.tool_box.bound_pnts_num.text())
 
     # ------------------------------------------------------------------
     #              ToolBar checkable btn clicked
@@ -2318,7 +2317,18 @@ class HERBS(QMainWindow, FORM_Main):
                         self.working_img_text[i].setVisible(False)
 
     def number_of_side_points_changed(self):
-        self.np_onside = int(self.tool_box.bound_pnts_num.text())
+        input_txt = self.tool_box.bound_pnts_num.text()
+        if input_txt == '':
+            msg = 'Number of boundary points can not be empty. Automatically set it to previous valid value. '
+            self.print_message(msg, self.reminder_color)
+            self.tool_box.bound_pnts_num.setText(str(self.np_onside))
+            return
+        if input_txt == '0' or input_txt == '1':
+            msg = 'Number of boundary points can not be less than 2. Automatically set it to previous valid value. '
+            self.print_message(msg, self.reminder_color)
+            self.tool_box.bound_pnts_num.setText(str(self.np_onside))
+            return
+        self.np_onside = int(input_txt)
         if self.atlas_view.atlas_data is not None or self.atlas_view.slice_image_data is not None:
             self.atlas_tri_onside_data = num_side_pnt_changed(self.np_onside, self.atlas_corner_points,
                                                               self.atlas_side_lines)
@@ -3007,10 +3017,13 @@ class HERBS(QMainWindow, FORM_Main):
         elif self.tool_box.checkable_btn_dict['triang_btn'].isChecked():
             if self.a2h_transferred or self.h2a_transferred:
                 return
+            if self.np_onside is None:
+                self.print_message('Please set valid number of boundary points!', self.error_message_color)
+                return
             self.histo_tri_inside_data.append([int(x), int(y)])
             self.histo_tri_data = self.histo_tri_onside_data + self.histo_tri_inside_data
             self.image_view.img_stacks.image_dict['tri_pnts'].setData(pos=np.asarray(self.histo_tri_data))
-            self.working_img_text.append(pg.TextItem(str(len(self.histo_tri_data) - (self.np_onside - 1) * 4)))
+            self.working_img_text.append(pg.TextItem(str(len(self.histo_tri_inside_data))))
             self.working_img_text[-1].setColor(self.triangle_color)
             self.image_view.img_stacks.vb.addItem(self.working_img_text[-1])
             self.working_img_text[-1].setPos(x, y)
@@ -3524,6 +3537,10 @@ class HERBS(QMainWindow, FORM_Main):
         # ------------------------- triangle
         elif self.tool_box.checkable_btn_dict['triang_btn'].isChecked():
             if self.a2h_transferred or self.h2a_transferred:
+                return
+            if self.np_onside is None:
+                print(self.np_onside)
+                self.print_message('Please set valid number of boundary points!', self.error_message_color)
                 return
             self.atlas_tri_inside_data.append([int(x), int(y)])
             self.atlas_tri_data = self.atlas_tri_onside_data + self.atlas_tri_inside_data

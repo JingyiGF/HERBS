@@ -1,7 +1,7 @@
 # Update Log
 
 ### 28th Oct. 2022
-Major update! 
+##### Major update! 
 support for displaying merged object in 2D atlas view. Only merged probe is finished implementation at the moment. 
 
 <p align="center">
@@ -20,5 +20,10 @@ The previous way to read the information by double clicking the object is no lon
 
 
 ### 29th Oct. 2022
-Minor update!
+##### Minor update!
 Fix the atlas rotation slider value changed issue.
+
+
+### 04th Nov. 2022
+##### Minor debug.
+Fix the valid values for the text input of on side points.
