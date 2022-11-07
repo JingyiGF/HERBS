@@ -365,13 +365,13 @@ class AllenDownloader(QDialog):
         self.label_local = "query.csv"
         self.data_local = "average_template_10.nrrd"
         self.segmentation_local = "annotation_10.nrrd"
-        # self.data_local = "average_template_25.nrrd"
-        # self.segmentation_local = "annotation_25.nrrd"
 
         self.saving_folder = None
 
         self.finish = [False, False, False]
         self.process_finished = False
+        self.downloading_atlas = False
+        self.downloading_meshes = False
 
         self.label_bar = QProgressBar()
         self.label_bar.setMinimumWidth(400)
@@ -396,6 +396,8 @@ class AllenDownloader(QDialog):
         self.download_mesh_btn = QPushButton()
         self.download_mesh_btn.setMinimumWidth(100)
         self.download_mesh_btn.setText("Download Meshes")
+        # self.download_mesh_btn.setEnabled(False)
+
 
         valid_input = QIntValidator(0, 99999)
 
@@ -462,16 +464,22 @@ class AllenDownloader(QDialog):
         self.b_input3.textChanged.connect(self.bregma_input3_changed)
 
     def bregma_input1_changed(self, text):
+        if self.downloading_atlas:
+            return
         if text == '':
             return
         self.bregma_coord[0] = int(text)
 
     def bregma_input2_changed(self, text):
+        if self.downloading_atlas:
+            return
         if text == '':
             return
         self.bregma_coord[1] = int(text)
 
     def bregma_input3_changed(self, text):
+        if self.downloading_atlas:
+            return
         if text == '':
             return
         self.bregma_coord[2] = int(text)
@@ -502,9 +510,11 @@ class AllenDownloader(QDialog):
 
         if self.saving_folder != '':
             self.download_btn.setVisible(False)
-            # target = os.path.join(self.saving_folder, 'atlas_labels.pkl')
-            # if not os.path.exists(target):
-            #     shutil.copyfile(join(dirname(__file__), "data/allen_mice_atlas_labels.pkl"), target)
+            self.process_info.setText('')
+            self.downloading_atlas = True
+            self.vs_rabnt1.setEnabled(False)
+            self.vs_rabnt2.setEnabled(False)
+            self.vs_rabnt3.setEnabled(False)
 
             target = os.path.join(self.saving_folder, self.label_local)
             if not os.path.exists(target):
@@ -516,16 +526,30 @@ class AllenDownloader(QDialog):
             time.sleep(0.1)
 
     def download_mesh_start(self):
-        if not self.finish[0] or not self.finish[1]:
+        if self.downloading_atlas:
+            self.process_info.setText('Please wait until the atlas finish downloading.')
             return
-        self.download_mesh_btn.setVisible(False)
+
+        self.process_info.setText('')
+
         if self.saving_folder is not None:
             saving_folder = self.saving_folder
         else:
             saving_folder = str(QFileDialog.getExistingDirectory(self, "Select Atlas Folder"))
 
         if saving_folder != '':
-            self.mesh_worker.set_data(self.saving_folder, self.segmentation_local)
+            exist_files = os.listdir(saving_folder)
+            if self.data_local not in exist_files:
+                self.process_info.setText('Atlas Data file is not in the selected folder. Please download atlas.')
+                return
+            if self.segmentation_local not in exist_files:
+                self.process_info.setText('Segmentation Data file is not in the selected folder.')
+                return
+
+            self.download_mesh_btn.setVisible(False)
+            self.downloading_meshes = True
+            self.download_btn.setEnabled(False)
+            self.mesh_worker.set_data(saving_folder, self.segmentation_local)
             self.mesh_worker.moveToThread(self.mesh_thread)
             self.mesh_thread.started.connect(self.mesh_worker.run)
             self.mesh_worker.finished.connect(self.mesh_thread.quit)
@@ -548,12 +572,16 @@ class AllenDownloader(QDialog):
         self.data_bar.setValue(value)
         if value == 100:
             self.finish[0] = True
+            if self.finish[0] and self.finish[1]:
+                self.downloading_atlas = False
             return
 
     def set_segmentation_bar_value(self, value):
         self.segmentation_bar.setValue(value)
         if value == 100:
             self.finish[1] = True
+            if self.finish[0] and self.finish[1]:
+                self.downloading_atlas = False
             return
 
     def report_progress(self, val):
@@ -566,15 +594,38 @@ class AllenDownloader(QDialog):
         self.mesh_bar.setValue(i)
         if i == 100:
             self.finish[2] = True
+            self.downloading_meshes = False
             return
 
     def process_start(self):
+        if self.downloading_atlas or self.downloading_meshes:
+            self.process_info.setText('Please wait until finishing downloading files.')
+            return
+        else:
+            self.process_info.setText('')
+
         if self.saving_folder is not None:
             saving_folder = self.saving_folder
         else:
             saving_folder = str(QFileDialog.getExistingDirectory(self, "Select Atlas Folder"))
 
         if saving_folder != '':
+            # check files
+            exist_files = os.listdir(saving_folder)
+            if self.data_local not in exist_files:
+                self.process_info.setText('Atlas Data file is not in the selected folder. Please download atlas.')
+                return
+            if self.segmentation_local not in exist_files:
+                self.process_info.setText('Segmentation Data file is not in the selected folder.')
+                return
+            if self.label_local not in exist_files:
+                target = os.path.join(self.saving_folder, self.label_local)
+                if not os.path.exists(target):
+                    shutil.copyfile(join(dirname(__file__), "data/query.csv"), target)
+            if not os.path.exists(os.path.join(saving_folder, 'downloaded_meshes')):
+                self.process_info.setText(
+                    'Could not find downloaded meshes in the selected folder. Please download meshes.')
+                return
             self.process_btn.setVisible(False)
             self.worker.set_data(saving_folder, self.data_local, self.segmentation_local, self.label_local,
                                  self.bregma_coord, self.voxel_size)
