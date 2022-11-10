@@ -1019,55 +1019,123 @@ def num_side_pnt_changed(num_pnt, corner_points, side_lines):
 
 
 def match_sides_points(rect_atlas, size_atlas, rect_image, size_image):
+    print(rect_atlas)
+    print(rect_image)
     x_factor = rect_atlas[2] / rect_image[2]
     y_factor = rect_atlas[3] / rect_image[3]
 
-    actual_left_dist_image = size_image[1] - (rect_image[0] + rect_image[2])
-    actual_bottom_dist_image = size_image[0] - (rect_image[1] + rect_image[3])
+    left_dist_image = rect_image[0]
+    top_dist_image = rect_image[1]
 
-    actual_left_dist_atlas = size_atlas[1] - (rect_atlas[0] + rect_atlas[2])
-    actual_bottom_dist_atlas = size_atlas[0] - (rect_atlas[1] + rect_atlas[3])
+    left_dist_atlas = rect_atlas[0]
+    top_dist_atlas = rect_atlas[1]
 
-    left_dist_atlas = rect_image[0] * x_factor
-    right_dist_atlas = actual_left_dist_image * x_factor
-
-    top_dist_atlas = rect_image[1] * y_factor
-    bottom_dist_atlas = actual_bottom_dist_image * y_factor
-
-    if left_dist_atlas <= rect_atlas[0]:
-        atlas_corner_x = int(rect_atlas[0] - left_dist_atlas)
-        image_corner_x = 0
+    if left_dist_atlas < left_dist_image * x_factor:
+        # shrink image
+        image_tl_corner_x = left_dist_atlas / x_factor
+        atlas_tl_corner_x = 0
+    elif left_dist_atlas > left_dist_image * x_factor:
+        # shrink atlas
+        image_tl_corner_x = 0
+        atlas_tl_corner_x = left_dist_image * x_factor
     else:
-        atlas_corner_x = 0
-        left_dist_image = rect_atlas[0] / x_factor
-        image_corner_x = int(rect_image[0] - left_dist_image)
+        image_tl_corner_x = 0
+        atlas_tl_corner_x = 0
 
-    if right_dist_atlas <= actual_left_dist_atlas:
-        atlas_width = int(size_atlas[1] - atlas_corner_x - (actual_left_dist_atlas - right_dist_atlas))
-        image_width = size_image[1]
+    if top_dist_atlas < top_dist_image * y_factor:
+        image_tl_corner_y = top_dist_atlas / y_factor
+        atlas_tl_corner_y = 0
+    elif top_dist_atlas > top_dist_image * y_factor:
+        image_tl_corner_y = 0
+        atlas_tl_corner_y = top_dist_image * y_factor
     else:
-        atlas_width = size_atlas[1] - atlas_corner_x
-        right_dist_image = actual_left_dist_atlas / x_factor
-        image_width = int(size_image[1] - image_corner_x - (actual_left_dist_image - right_dist_image))
+        image_tl_corner_y = 0
+        atlas_tl_corner_y = 0
 
-    if top_dist_atlas <= rect_atlas[1]:
-        atlas_corner_y = int(rect_atlas[1] - top_dist_atlas)
-        image_corner_y = 0
+    right_dist_image = size_image[1] - (rect_image[0] + rect_image[2])
+    right_dist_atlas = size_atlas[1] - (rect_atlas[0] + rect_atlas[2])
+
+    bottom_dist_image = size_image[0] - (rect_image[1] + rect_image[3])
+    bottom_dist_atlas = size_atlas[0] - (rect_atlas[1] + rect_atlas[3])
+
+    if right_dist_atlas < right_dist_image * x_factor:
+        # shrink image
+        image_br_corner_x = rect_image[0] + rect_image[2] + right_dist_atlas / x_factor
+        atlas_br_corner_x = size_atlas[1]
+    elif right_dist_atlas > right_dist_image * x_factor:
+        # shrink atlas
+        image_br_corner_x = size_image[1]
+        atlas_br_corner_x = rect_atlas[0] + rect_atlas[2] + right_dist_image * x_factor
     else:
-        atlas_corner_y = 0
-        top_dist_image = rect_atlas[1] / y_factor
-        image_corner_y = int(rect_image[1] - top_dist_image)
+        image_br_corner_x = size_image[1]
+        atlas_br_corner_x = size_atlas[1]
 
-    if bottom_dist_atlas <= actual_bottom_dist_atlas:
-        atlas_height = int(size_atlas[0] - atlas_corner_y - (actual_bottom_dist_atlas - bottom_dist_atlas))
-        image_height = size_image[0]
+    if bottom_dist_atlas < bottom_dist_image * y_factor:
+        image_br_corner_y = rect_image[1] + rect_image[3] + bottom_dist_atlas / y_factor
+        atlas_br_corner_y = size_atlas[0]
+    elif bottom_dist_atlas > bottom_dist_image * y_factor:
+        image_br_corner_y = size_image[0]
+        atlas_br_corner_y = rect_atlas[1] + rect_atlas[3] + bottom_dist_image * y_factor
     else:
-        atlas_height = size_atlas[0] - atlas_corner_y
-        bottom_dist_image = actual_bottom_dist_atlas / y_factor
-        image_height = int(size_image[0] - image_corner_y - (actual_bottom_dist_image - bottom_dist_image))
+        image_br_corner_y = size_image[0]
+        atlas_br_corner_y = size_atlas[0]
 
-    atlas_rect = (atlas_corner_x, atlas_corner_y, atlas_width, atlas_height)
-    image_rect = (image_corner_x, image_corner_y, image_width, image_height)
+    atlas_width = atlas_br_corner_x - atlas_tl_corner_x
+    atlas_height = atlas_br_corner_y - atlas_tl_corner_y
+
+    image_width = image_br_corner_x - image_tl_corner_x
+    image_height = image_br_corner_y - image_tl_corner_y
+
+    atlas_rect = (int(atlas_tl_corner_x), int(atlas_tl_corner_y), int(atlas_width), int(atlas_height))
+    image_rect = (int(image_tl_corner_x), int(image_tl_corner_y), int(image_width), int(image_height))
+
+
+    # actual_left_dist_image = size_image[1] - (rect_image[0] + rect_image[2])
+    # actual_bottom_dist_image = size_image[0] - (rect_image[1] + rect_image[3])
+    #
+    # actual_left_dist_atlas = size_atlas[1] - (rect_atlas[0] + rect_atlas[2])
+    # actual_bottom_dist_atlas = size_atlas[0] - (rect_atlas[1] + rect_atlas[3])
+    #
+    # left_dist_atlas = rect_image[0] * x_factor
+    # right_dist_atlas = actual_left_dist_image * x_factor
+    #
+    # top_dist_atlas = rect_image[1] * y_factor
+    # bottom_dist_atlas = actual_bottom_dist_image * y_factor
+    #
+    # if left_dist_atlas <= rect_atlas[0]:
+    #     atlas_corner_x = int(rect_atlas[0] - left_dist_atlas)
+    #     image_corner_x = 0
+    # else:
+    #     atlas_corner_x = 0
+    #     left_dist_image = rect_atlas[0] / x_factor
+    #     image_corner_x = int(rect_image[0] - left_dist_image)
+    #
+    # if right_dist_atlas <= actual_left_dist_atlas:
+    #     atlas_width = int(size_atlas[1] - atlas_corner_x - (actual_left_dist_atlas - right_dist_atlas))
+    #     image_width = size_image[1]
+    # else:
+    #     atlas_width = size_atlas[1] - atlas_corner_x
+    #     right_dist_image = actual_left_dist_atlas / x_factor
+    #     image_width = int(size_image[1] - image_corner_x - (actual_left_dist_image - right_dist_image))
+    #
+    # if top_dist_atlas <= rect_atlas[1]:
+    #     atlas_corner_y = int(rect_atlas[1] - top_dist_atlas)
+    #     image_corner_y = 0
+    # else:
+    #     atlas_corner_y = 0
+    #     top_dist_image = rect_atlas[1] / y_factor
+    #     image_corner_y = int(rect_image[1] - top_dist_image)
+    #
+    # if bottom_dist_atlas <= actual_bottom_dist_atlas:
+    #     atlas_height = int(size_atlas[0] - atlas_corner_y - (actual_bottom_dist_atlas - bottom_dist_atlas))
+    #     image_height = size_image[0]
+    # else:
+    #     atlas_height = size_atlas[0] - atlas_corner_y
+    #     bottom_dist_image = actual_bottom_dist_atlas / y_factor
+    #     image_height = int(size_image[0] - image_corner_y - (actual_bottom_dist_image - bottom_dist_image))
+
+    # atlas_rect = (atlas_corner_x, atlas_corner_y, atlas_width, atlas_height)
+    # image_rect = (image_corner_x, image_corner_y, image_width, image_height)
 
     atlas_corners, atlas_lines = get_corner_line_from_rect(atlas_rect)
     image_corners, image_lines = get_corner_line_from_rect(image_rect)
@@ -1118,8 +1186,10 @@ def make_contour_img(lable_img):
 
 
 def get_tri_lines(rect, pnts):
+    print(rect)
     subdiv = cv2.Subdiv2D(rect)
     for p in pnts:
+        print(p)
         subdiv.insert((int(p[0]), int(p[1])))
     edge_list = subdiv.getEdgeList()
     lines_list = []
