@@ -348,6 +348,8 @@ class LayersControl(QWidget):
         print(self.layer_link)
         self.layer_opacity.append(100)
         self.layer_blend_mode.append('Plus')
+        self.sig_blend_mode_changed.emit((widget_link, 
+                                          self.layer_blend_mode[-1]))
         self.layer_color.append(color)
         # self.layer_data.append(data)
 
