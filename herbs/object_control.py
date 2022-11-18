@@ -727,6 +727,8 @@ class ObjectControl(QObject):
         self.obj_size = []  # size
         self.obj_opacity = []
         self.obj_comp_mode = []
+        self.obj_visibility = []
+        self.obj_merged = []
 
         self.probe_icon = QIcon('icons/sidebar/probe.svg')
         self.virus_icon = QIcon('icons/sidebar/virus.svg')
@@ -893,7 +895,18 @@ class ObjectControl(QObject):
     def delete_object_btn_clicked(self):
         if self.current_obj_index is None:
             return
-        self.delete_objects(self.current_obj_index)
+        if 'merged' in self.obj_type[self.current_obj_index]:
+            da_ind = []
+            current_obj_type = self.obj_type[self.current_obj_index].split(' ')[1]
+            for i in range(len(self.obj_name)):
+                if self.obj_name[self.current_obj_index] in self.obj_name[i]:
+                    da_ind.append(i)
+            self.delete_objects(da_ind)
+            other_obj = [ind for ind in range(len(self.obj_name)) if current_obj_type in self.obj_name[ind]]
+            if len(other_obj) < 1:
+                self.obj_merged.remove(current_obj_type)
+        else:
+            self.delete_objects(self.current_obj_index)
 
     def info_btn_clicked(self):
         if 'merged' in self.obj_type[self.current_obj_index]:
@@ -966,18 +979,39 @@ class ObjectControl(QObject):
             del self.obj_type[da_ind]
             del self.obj_data[da_ind]
             del self.obj_comp_mode[da_ind]
+            del self.obj_visibility[da_ind]
             del self.obj_opacity[da_ind]
             del self.obj_size[da_ind]
             self.sig_delete_object.emit(da_ind)
         if self.current_obj_index in del_ind:
             if self.obj_list:
-                self.obj_list[-1].set_checked(True)
-                self.current_obj_index = len(self.obj_list) - 1
+                self.current_obj_index = [i for i in range(len(self.obj_list)) if self.obj_visibility[i]][-1]
+                self.obj_list[self.current_obj_index].set_checked(True)
             else:
                 self.current_obj_index = None
         else:
             active_index = np.where(np.ravel(self.obj_id) == current_obj_id)[0][0]
             self.current_obj_index = active_index
+
+    # hide objects, e.g. after merging
+    def hide_objects(self, obj_type = 'probe piece'):
+        if obj_type not in ['probe piece', 'virus piece', 'contour piece', 'drawing piece', 'cells piece']:
+            return
+        n_obj = len(self.obj_id)
+        hide_ind = [ind for ind in range(n_obj) if self.obj_type[ind] == obj_type]
+        for da_ind in hide_ind:
+           self.obj_list[da_ind].hide()
+           self.obj_visibility[da_ind] = False
+        if self.current_obj_index in hide_ind:
+            self.current_obj_index = [i for i in range(len(self.obj_list)) if self.obj_visibility[i]][-1]
+            self.obj_list[self.current_obj_index].set_checked(True)
+
+    # show objects, e.g. after unmerging
+    def show_objects(self, show_index):
+        show_ind = np.ravel(show_index)
+        for da_ind in show_ind:
+           self.obj_list[da_ind].show()
+           self.obj_visibility[da_ind] = True
 
     #
     def get_object_icon(self, object_type):
@@ -1008,6 +1042,7 @@ class ObjectControl(QObject):
         self.obj_data.append(object_data)
         self.obj_name.append(object_name)
         self.obj_type.append(object_type)
+        self.obj_visibility.append(True)
         if 'merged' in object_type:
             new_layer = RegisteredObject(obj_id=self.obj_count, obj_name=object_name,
                                          obj_type=object_type, object_icon=object_icon)
@@ -1050,7 +1085,7 @@ class ObjectControl(QObject):
         self.layer_layout.addWidget(self.obj_list[-1])
         self.obj_count += 1
 
-    # merge object piece
+    # merge object pieces
     def merge_pieces(self, obj_type='probe piece'):
         if obj_type not in ['probe piece', 'virus piece', 'contour piece', 'drawing piece', 'cells piece']:
             return
@@ -1079,8 +1114,21 @@ class ObjectControl(QObject):
                     print(self.obj_data[da_piece_ind_in_obj_order[j]].T)
                     temp = np.hstack([temp, self.obj_data[da_piece_ind_in_obj_order[j]].T])
             data[i] = temp.T
-        self.delete_objects(cind)
         return data, object_names
+
+    # unmerge object pieces
+    def unmerge_pieces(self, obj_type='probe piece'):
+        if obj_type not in ['probe piece', 'virus piece', 'contour piece', 'drawing piece', 'cells piece']:
+            return False
+        n_obj = len(self.obj_id)
+        piece_type = obj_type.split(' ')[0]
+        cind = [ind for ind in range(n_obj) if self.obj_type[ind] == obj_type]
+        if len(cind) < 1:
+            return False
+        self.show_objects(cind)
+        cind = [ind for ind in range(n_obj) if self.obj_type[ind] == f'merged {piece_type}']
+        self.delete_objects(cind)
+        return True
 
     # get obj data
     def get_obj_data(self):
@@ -1090,6 +1138,7 @@ class ObjectControl(QObject):
                 'obj_size': self.obj_size,
                 'obj_opacity': self.obj_opacity,
                 'obj_comp_mode': self.obj_comp_mode,
+                'obj_visibility': self.obj_visibility,
                 'current_obj_index': self.current_obj_index}
         return data
 
@@ -1101,6 +1150,11 @@ class ObjectControl(QObject):
         self.obj_opacity = data['obj_opacity']
         self.obj_comp_mode = data['obj_comp_mode']
         self.current_obj_index = data['current_obj_index']
+
+        if 'obj_visibility' in data:
+            self.obj_visibility = data['obj_visibility']
+        else:
+            self.obj_visibility = [True] * len(self.obj_list)
 
         self.obj_list[-1].set_checked(False)
         self.obj_list[self.current_obj_index].set_checked(True)
@@ -1135,6 +1189,7 @@ class ObjectControl(QObject):
         self.obj_size = []
         self.obj_opacity = []
         self.obj_comp_mode = []
+        self.obj_visibility = []
         self.obj_count = 0
         self.current_obj_index = None
 
