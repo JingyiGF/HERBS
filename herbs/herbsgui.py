@@ -4314,8 +4314,11 @@ class HERBS(QMainWindow, FORM_Main):
             self.object_ctrl.hide_objects('virus piece')
             self.object_ctrl.obj_merged.append('virus')
         else:
-            self.object_ctrl.unmerge_pieces('virus piece')
-            self.object_ctrl.obj_merged.remove('virus')
+            unmerge_success = self.object_ctrl.unmerge_pieces('virus piece')
+            if not unmerge_success:
+                self.print_message('Unmerge of virus not possible. Probably due to old project version.', self.error_message_color)
+            else:
+                self.object_ctrl.obj_merged.remove('virus')
 
 
     # cell related functions
@@ -4337,8 +4340,11 @@ class HERBS(QMainWindow, FORM_Main):
             self.object_ctrl.hide_objects('cells piece')
             self.object_ctrl.obj_merged.append('cells')
         else:
-            self.object_ctrl.unmerge_pieces('cells piece')
-            self.object_ctrl.obj_merged.remove('cells')
+            unmerge_success = self.object_ctrl.unmerge_pieces('cells piece')
+            if not unmerge_success:
+                self.print_message('Unmerge of cells not possible. Probably due to old project version.', self.error_message_color)
+            else:
+                self.object_ctrl.obj_merged.remove('cells')
 
     # drawing related functions
     def merge_drawings(self):
@@ -4357,8 +4363,11 @@ class HERBS(QMainWindow, FORM_Main):
             self.object_ctrl.hide_objects('drawing piece')
             self.object_ctrl.obj_merged.append('drawing')
         else:
-            self.object_ctrl.unmerge_pieces('drawing piece')
-            self.object_ctrl.obj_merged.remove('drawing')
+            unmerge_success = self.object_ctrl.unmerge_pieces('drawing piece')
+            if not unmerge_success:
+                self.print_message('Unmerge of drawing not possible. Probably due to old project version.', self.error_message_color)
+            else:
+                self.object_ctrl.obj_merged.remove('drawing')
 
     # contour related functions
     def merge_contour(self):
@@ -4377,8 +4386,11 @@ class HERBS(QMainWindow, FORM_Main):
             self.object_ctrl.hide_objects('contour piece')
             self.object_ctrl.obj_merged.append('contour')
         else:
-            self.object_ctrl.unmerge_pieces('contour piece')
-            self.object_ctrl.obj_merged.remove('contour')
+            unmerge_success = self.object_ctrl.unmerge_pieces('contour piece')
+            if not unmerge_success:
+                self.print_message('Unmerge of contour not possible. Probably due to old project version.', self.error_message_color)
+            else:
+                self.object_ctrl.obj_merged.remove('contour')
 
     # common functions
     def obj_color_changed(self, ev):
