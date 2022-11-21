@@ -4094,13 +4094,13 @@ class HERBS(QMainWindow, FORM_Main):
                 self.working_img_data['cell_count'] = [0 for i in range(5)]
                 if self.a2h_transferred or not self.h2a_transferred:
                     for i in range(5):
-                        self.tool_box.self.cell_count_val_list[i].setText('0')
+                        self.tool_box.cell_count_val_list[i].setText('0')
 
             if da_link == 'atlas-cells':
                 for da_key in ['cell_count', 'cell_size', 'cell_symbol', 'cell_layer_index']:
                     self.working_atlas_data[da_key] = []
                 for i in range(5):
-                    self.tool_box.self.cell_count_val_list[i].setText('0')
+                    self.tool_box.cell_count_val_list[i].setText('0')
 
             if da_link == 'atlas-overlay':
                 self.remove_h2a_transferred_layers()
@@ -4317,88 +4317,134 @@ class HERBS(QMainWindow, FORM_Main):
 
     # probe related functions
     def merge_probes(self):
-        probe_piece_count = len([da_piece for da_piece in self.object_ctrl.obj_type if da_piece == 'probe piece'])
-        if probe_piece_count == 0:
-            return
-        data, obj_names = self.object_ctrl.merge_pieces('probe piece')
-        if len(data) == 1:
-            if len(data[0]) == 1:
-                self.print_message('Can not merge probe with only one point.', self.error_message_color)
+        if 'probe' not in self.object_ctrl.obj_merged:
+            probe_piece_count = len([da_piece for da_piece in self.object_ctrl.obj_type if da_piece == 'probe piece'])
+            if probe_piece_count == 0:
                 return
-        label_data = np.transpose(self.atlas_view.atlas_label, (1, 2, 0))[:, :, ::-1]
-        for i in range(len(data)):
-            info_dict, error_index = calculate_probe_info(data[i], label_data, self.atlas_view.label_info,
-                                                          self.atlas_view.vox_size_um, self.probe_type,
-                                                          self.atlas_view.origin_3d, self.site_face)
-            if error_index != 0:
-                msg = 'Error index: {}, please contact maintainers.'.format(error_index)
-                self.print_message(msg, self.error_message_color)
-                return
-
-            self.object_ctrl.add_object(obj_names[i], 'merged probe',
-                                        object_data=info_dict, object_mode=self.obj_display_mode)
-
-            self.add_3d_object(info_dict, 'merged probe')
+            data, obj_names = self.object_ctrl.merge_pieces('probe piece')
+            if len(data) == 1:
+                if len(data[0]) == 1:
+                        self.print_message('Can not merge probe with only one point.', self.error_message_color)
+                        return
+            label_data = np.transpose(self.atlas_view.atlas_label, (1, 2, 0))[:, :, ::-1]
+            for i in range(len(data)):
+                info_dict, error_index = calculate_probe_info(data[i], label_data, self.atlas_view.label_info,
+                                                              self.atlas_view.vox_size_um, self.probe_type,
+                                                              self.atlas_view.origin_3d, self.site_face)
+                if error_index != 0:
+                    msg = 'Error index: {}, please contact maintainers.'.format(error_index)
+                    self.print_message(msg, self.error_message_color)
+                    return
+    
+                self.object_ctrl.add_object(obj_names[i], 'merged probe',
+                                            object_data=info_dict, object_mode=self.obj_display_mode)
+    
+                self.add_3d_object(info_dict, 'merged probe')
+            self.object_ctrl.hide_objects('probe piece')
+            self.object_ctrl.obj_merged.append('probe')
+        else:
+            unmerge_success = self.object_ctrl.unmerge_pieces('probe piece')
+            if not unmerge_success:
+                self.print_message('Unmerge of probe not possible. Probably due to old project version.', self.error_message_color)
+            else:
+                self.object_ctrl.obj_merged.remove('probe')
 
 
     # virus related functions
     def merge_virus(self):
-        virus_piece_count = len([da_piece for da_piece in self.object_ctrl.obj_type if da_piece == 'virus piece'])
-        if virus_piece_count == 0:
-            return
-        data, obj_names = self.object_ctrl.merge_pieces('virus piece')
-        label_data = np.transpose(self.atlas_view.atlas_label, (1, 2, 0))[:, :, ::-1]
+        if 'virus' not in self.object_ctrl.obj_merged:
+            virus_piece_count = len([da_piece for da_piece in self.object_ctrl.obj_type if da_piece == 'virus piece'])
+            if virus_piece_count == 0:
+                return
+            data, obj_names = self.object_ctrl.merge_pieces('virus piece')
+            label_data = np.transpose(self.atlas_view.atlas_label, (1, 2, 0))[:, :, ::-1]
 
-        for i in range(len(data)):
-            info_dict = calculate_virus_info(data[i], label_data, self.atlas_view.label_info, self.atlas_view.origin_3d)
-            self.object_ctrl.add_object(obj_names[i], 'merged virus',
-                                        object_data=info_dict, object_mode=self.obj_display_mode)
+            for i in range(len(data)):
+                info_dict = calculate_virus_info(data[i], label_data, self.atlas_view.label_info, self.atlas_view.origin_3d)
+                self.object_ctrl.add_object(obj_names[i], 'merged virus',
+                                            object_data=info_dict, object_mode=self.obj_display_mode)
 
-            self.add_3d_object(info_dict, 'merged virus')
+                self.add_3d_object(info_dict, 'merged virus')
+            self.object_ctrl.hide_objects('virus piece')
+            self.object_ctrl.obj_merged.append('virus')
+        else:
+            unmerge_success = self.object_ctrl.unmerge_pieces('virus piece')
+            if not unmerge_success:
+                self.print_message('Unmerge of virus not possible. Probably due to old project version.', self.error_message_color)
+            else:
+                self.object_ctrl.obj_merged.remove('virus')
+
 
     # cell related functions
     def merge_cells(self):
-        cells_piece_count = len([da_piece for da_piece in self.object_ctrl.obj_type if da_piece == 'cells piece'])
-        if cells_piece_count == 0:
-            return
-        data, obj_names = self.object_ctrl.merge_pieces('cells piece')
-        label_data = np.transpose(self.atlas_view.atlas_label, (1, 2, 0))[:, :, ::-1]
+        if 'cells' not in self.object_ctrl.obj_merged:
+            cells_piece_count = len([da_piece for da_piece in self.object_ctrl.obj_type if da_piece == 'cells piece'])
+            if cells_piece_count == 0:
+                return
+            data, obj_names = self.object_ctrl.merge_pieces('cells piece')
+            label_data = np.transpose(self.atlas_view.atlas_label, (1, 2, 0))[:, :, ::-1]
 
-        for i in range(len(data)):
-            info_dict = calculate_cells_info(data[i], label_data, self.atlas_view.label_info,
-                                             self.atlas_view.origin_3d)
-            self.object_ctrl.add_object(obj_names[i], 'merged cells',
-                                        object_data=info_dict, object_mode=self.obj_display_mode)
+            for i in range(len(data)):
+                info_dict = calculate_cells_info(data[i], label_data, self.atlas_view.label_info,
+                                                self.atlas_view.origin_3d)
+                self.object_ctrl.add_object(obj_names[i], 'merged cells',
+                                            object_data=info_dict, object_mode=self.obj_display_mode)
 
-            self.add_3d_object(info_dict, 'merged cells')
+                self.add_3d_object(info_dict, 'merged cells')
+            self.object_ctrl.hide_objects('cells piece')
+            self.object_ctrl.obj_merged.append('cells')
+        else:
+            unmerge_success = self.object_ctrl.unmerge_pieces('cells piece')
+            if not unmerge_success:
+                self.print_message('Unmerge of cells not possible. Probably due to old project version.', self.error_message_color)
+            else:
+                self.object_ctrl.obj_merged.remove('cells')
 
     # drawing related functions
     def merge_drawings(self):
-        drawing_piece_count = len([da_piece for da_piece in self.object_ctrl.obj_type if da_piece == 'drawing piece'])
-        if drawing_piece_count == 0:
-            return
-        data, obj_names = self.object_ctrl.merge_pieces('drawing piece')
-        # label_data = np.transpose(self.atlas_view.atlas_label, (1, 2, 0))[:, :, ::-1]
+        if 'drawing' not in self.object_ctrl.obj_merged:
+            drawing_piece_count = len([da_piece for da_piece in self.object_ctrl.obj_type if da_piece == 'drawing piece'])
+            if drawing_piece_count == 0:
+                return
+            data, obj_names = self.object_ctrl.merge_pieces('drawing piece')
+            # label_data = np.transpose(self.atlas_view.atlas_label, (1, 2, 0))[:, :, ::-1]
 
-        for i in range(len(data)):
-            info_dict = {'object_type': 'drawing', 'data': data[i]}
-            self.object_ctrl.add_object(obj_names[i], 'merged drawing',
-                                        object_data=info_dict, object_mode=self.obj_display_mode)
-            self.add_3d_object(info_dict, 'merged drawing')
+            for i in range(len(data)):
+                info_dict = {'object_type': 'drawing', 'data': data[i]}
+                self.object_ctrl.add_object(obj_names[i], 'merged drawing',
+                                            object_data=info_dict, object_mode=self.obj_display_mode)
+                self.add_3d_object(info_dict, 'merged drawing')
+            self.object_ctrl.hide_objects('drawing piece')
+            self.object_ctrl.obj_merged.append('drawing')
+        else:
+            unmerge_success = self.object_ctrl.unmerge_pieces('drawing piece')
+            if not unmerge_success:
+                self.print_message('Unmerge of drawing not possible. Probably due to old project version.', self.error_message_color)
+            else:
+                self.object_ctrl.obj_merged.remove('drawing')
 
     # contour related functions
     def merge_contour(self):
-        contour_piece_count = len([da_piece for da_piece in self.object_ctrl.obj_type if da_piece == 'contour piece'])
-        if contour_piece_count == 0:
-            return
-        data, obj_names = self.object_ctrl.merge_pieces('contour piece')
+        if 'contour' not in self.object_ctrl.obj_merged:
+            contour_piece_count = len([da_piece for da_piece in self.object_ctrl.obj_type if da_piece == 'contour piece'])
+            if contour_piece_count == 0:
+                return
+            data, obj_names = self.object_ctrl.merge_pieces('contour piece')
 
-        for i in range(len(data)):
-            info_dict = {'object_type': 'contour', 'data': data[i]}
-            self.object_ctrl.add_object(obj_names[i], 'merged contour',
-                                        object_data=info_dict, object_mode=self.obj_display_mode)
+            for i in range(len(data)):
+                info_dict = {'object_type': 'contour', 'data': data[i]}
+                self.object_ctrl.add_object(obj_names[i], 'merged contour',
+                                            object_data=info_dict, object_mode=self.obj_display_mode)
 
-            self.add_3d_object(info_dict, 'merged contour')
+                self.add_3d_object(info_dict, 'merged contour')
+            self.object_ctrl.hide_objects('contour piece')
+            self.object_ctrl.obj_merged.append('contour')
+        else:
+            unmerge_success = self.object_ctrl.unmerge_pieces('contour piece')
+            if not unmerge_success:
+                self.print_message('Unmerge of contour not possible. Probably due to old project version.', self.error_message_color)
+            else:
+                self.object_ctrl.obj_merged.remove('contour')
 
     # common functions
     def obj_color_changed(self, ev):
@@ -5458,7 +5504,10 @@ class HERBS(QMainWindow, FORM_Main):
             for i in range(len(self.object_ctrl.obj_type)):
                 data_dict = self.object_ctrl.obj_data[i]
                 obj_type = self.object_ctrl.obj_type[i]
+                if not self.object_ctrl.obj_visibility[i]:
+                    self.object_ctrl.obj_list[i].hide()
                 if 'merged' in obj_type:
+                    self.object_ctrl.obj_merged.append(obj_type.split(' ')[1])
                     self.add_3d_object(data_dict, obj_type)
                 else:
                     self.object_3d_list.append([])
@@ -5556,8 +5605,9 @@ class HERBS(QMainWindow, FORM_Main):
 
             if self.object_3d_list:
                 for _ in range(len(self.object_3d_list)):
-                    self.view3d.removeItem(self.object_3d_list[-1])
-                    self.object_3d_list[-1].deleteLater()
+                    if not isinstance(self.object_3d_list[-1], list):
+                        self.view3d.removeItem(self.object_3d_list[-1])
+                        self.object_3d_list[-1].deleteLater()
                     self.object_3d_list.pop()
 
             if self.atlas_view.atlas_data is not None:
@@ -5565,14 +5615,12 @@ class HERBS(QMainWindow, FORM_Main):
 
             # if self.image_view.image_file is not None:
             #     self.delete_all
+            self.layer_ctrl.clear_all()
 
             self.load_project(p_dict)
 
         else:
             self.print_message('', self.normal_color)
-
-
-
 
     # status
     def print_message(self, msg, col):
