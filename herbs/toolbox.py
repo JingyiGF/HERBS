@@ -299,7 +299,7 @@ class ToolBox(QObject):
 
         self.linear_silicon_list = QPushButton()
         self.linear_silicon_list.setFocusPolicy(Qt.NoFocus)
-        self.linear_silicon_list.setIcon(QIcon('icons/toolbar/list2.svg'))
+        self.linear_silicon_list.setIcon(QIcon('icons/toolbar/list.svg'))
         self.linear_silicon_list.setIconSize(QSize(20, 20))
         self.linear_silicon_list.setVisible(False)
 
