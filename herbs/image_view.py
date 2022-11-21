@@ -314,6 +314,7 @@ class ImageView(QObject):
     def set_data_and_size(self, img_data):
         self.img_stacks.set_data(img_data)
         self.img_size = img_data.shape[:2]
+        print('image_view', self.img_size)
         rect = (0, 0, self.img_size[1], self.img_size[0])
         self.corner_points, self.side_lines = get_corner_line_from_rect(rect)
         self.img_stacks.image_dict['tri_pnts'].set_range(self.img_size[1], self.img_size[0])

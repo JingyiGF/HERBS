@@ -12,8 +12,9 @@ from PyQt5.QtCore import *
 from .image_stacks import SliceStack
 from .slice_stacks import SliceStacks
 from .label_tree import LabelTree
-from .uuuuuu import read_qss_file, get_corner_line_from_rect, get_slice_atlas_coord, make_contour_img, get_tilt_sign, \
+from .uuuuuu import read_qss_file, get_corner_line_from_rect, get_slice_atlas_coord, make_contour_img,  \
     rotate_base_points, rotation_x, rotation_y, rotation_z
+from .probe_utiles import get_tilt_sign
 
 
 class PageController(QWidget):
@@ -86,24 +87,32 @@ class PageController(QWidget):
         self.sig_page_changed.emit(val)
 
     def left_btn_clicked(self):
+        if self.max_val is None:
+            return
         val = self.page_slider.value() - 1
         if val < 0:
             val = 0
         self.set_val(val)
 
     def right_btn_clicked(self):
+        if self.max_val is None:
+            return
         val = self.page_slider.value() + 1
         if val > self.max_val:
             val = self.max_val
         self.set_val(val)
 
     def fast_left_btn_clicked(self):
+        if self.max_val is None:
+            return
         val = self.page_slider.value() - 10
         if val < 0:
             val = 0
         self.set_val(val)
 
     def fast_right_btn_clicked(self):
+        if self.max_val is None:
+            return
         val = self.page_slider.value() + 10
         if val > self.max_val:
             val = self.max_val
@@ -1066,7 +1075,6 @@ class AtlasView(QObject):
 
     def get_3d_pnts(self, processing_data, atlas_display):
         if atlas_display == 'coronal':
-            print('processing_data', processing_data)
             data = self.get_coronal_3d(processing_data)
         elif atlas_display == 'sagittal':
             data = self.get_sagital_3d(processing_data)
@@ -1078,7 +1086,7 @@ class AtlasView(QObject):
         points3_list = []
         base_loc = np.array([-375, -125, 125, 375]) / self.vox_size_um
         if atlas_display == 'coronal':
-            if site_face == 0:
+            if site_face in [0, 1]:
                 start_pnt, end_pnt = rotate_base_points(data, base_loc)
                 for i in range(4):
                     points2 = np.vstack([start_pnt[i], end_pnt[i]])
@@ -1091,7 +1099,7 @@ class AtlasView(QObject):
                     p3 = self.get_coronal_3d(points2, coronal_index)
                     points3_list.append(p3)
         elif atlas_display == 'sagittal':
-            if site_face == 0:
+            if site_face in [2, 3]:
                 start_pnt, end_pnt = rotate_base_points(data, base_loc)
                 for i in range(4):
                     points2 = np.vstack([start_pnt[i], end_pnt[i]])
@@ -1104,7 +1112,7 @@ class AtlasView(QObject):
                     p3 = self.get_sagital_3d(points2, sagital_index)
                     points3_list.append(p3)
         else:
-            if site_face == 0:
+            if site_face in [0, 1]:
                 start_pnt, end_pnt = rotate_base_points(data, base_loc)
                 for i in range(4):
                     points2 = np.vstack([start_pnt[i], end_pnt[i]])
@@ -1125,7 +1133,7 @@ class AtlasView(QObject):
     #
     def get_pre_coronal_np2_data(self, data, site_face):
         base_loc = np.array([-375, -125, 125, 375]) / self.vox_size_um
-        if site_face == 0:
+        if site_face in [0, 1]:
             start_pnt, end_pnt = rotate_base_points(data, base_loc)
             self.anchor_coronal_index = None
             for i in range(4):
@@ -1143,7 +1151,7 @@ class AtlasView(QObject):
     #
     def get_pre_sagital_np2_data(self, data, site_face):
         base_loc = np.array([-375, -125, 125, 375]) / self.vox_size_um
-        if site_face == 0:
+        if site_face in [2, 3]:
             start_pnt, end_pnt = rotate_base_points(data, base_loc)
             self.anchor_sagital_index = None
             for i in range(4):
@@ -1161,7 +1169,7 @@ class AtlasView(QObject):
     #
     def get_pre_horizontal_np2_data(self, data, site_face):
         base_loc = np.array([-375, -125, 125, 375]) / self.vox_size_um
-        if site_face == 0:
+        if site_face in [0, 1]:
             start_pnt, end_pnt = rotate_base_points(data, base_loc)
             self.anchor_horizontal_index = None
             for i in range(4):
@@ -1187,10 +1195,8 @@ class AtlasView(QObject):
                 self.working_atlas.image_dict['atlas-probe'].setData(pos=np.asarray(temp))
         elif len(data) == 2:
             if n_pre_trajectory == 1:
-                print('hahahahah')
                 self.working_atlas.image_dict['atlas-probe'].setData(pos=np.asarray(data))
             else:
-                print('sdfasd')
                 base_loc = np.array([-375, -125, 125, 375]) / self.vox_size_um
                 start_pnt, end_pnt = rotate_base_points(np.asarray(data), base_loc)
                 temp = np.vstack([start_pnt, end_pnt])

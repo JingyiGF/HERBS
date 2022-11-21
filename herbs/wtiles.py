@@ -1,5 +1,7 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+import numpy as np
 from .uuuuuu import read_qss_file
 
 dialog_style = '''
@@ -256,4 +258,296 @@ class LineEditEntered(QLineEdit):
 
         if event.key() == Qt.Key_Return or event.key() == Qt.Key_Enter:
             self.sig_return_pressed.emit()
+
+
+class IntLineEdit(QLineEdit):
+    sig_text_changed = pyqtSignal(object)
+    def __init__(self, w_id, text=None, parent=None):
+        QLineEdit.__init__(self)
+        self.id = w_id
+        if text is not None:
+            self.setText(text)
+        self.setValidator(QIntValidator())
+        self.textChanged.connect(self.editing_text)
+
+    def editing_text(self, text_val):
+        self.sig_text_changed.emit((self.id, text_val))
+
+
+class LinearSiliconInfoDialog(QDialog):
+    def __init__(self, pss):
+        super().__init__()
+
+        self.setWindowTitle('Linear Silicon Probe Geometry Setting Window')
+        self.setStyleSheet(dialog_style)
+
+        btn_box = QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+
+        self.button_box = QDialogButtonBox(btn_box)
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+
+        if pss is None:
+            self.probe_settings = {'probe_length': 0,
+                                   'probe_thickness': 0,
+                                   'tip_length': 0,
+                                   'site_height': 0,
+                                   'site_width': 0,
+                                   'per_max_sites': [0],
+                                   'sites_distance': [0],
+                                   'x_bias': [0],
+                                   'y_bias': [0]}
+        else:
+            self.probe_settings = pss
+
+        n_column = len(self.probe_settings['x_bias'])
+
+        fig_label = QLabel()
+        pixmap = QPixmap('icons/toolbar/linear_silicon.png')
+        fig_label.setPixmap(pixmap)
+        fig_label.setFixedHeight(300)
+
+        right_frame = QFrame()
+        self.right_layout = QGridLayout(right_frame)
+
+        probe_length_label = QLabel('A Probe Length (um): ')
+        self.probe_length_input = IntLineEdit(0, str(self.probe_settings['probe_length']))
+        self.probe_length_input.sig_text_changed.connect(self.probe_length_changed)
+
+        thickness_label = QLabel('Probe Thickness (um): ')
+        self.thickness_input = IntLineEdit(0, str(self.probe_settings['probe_thickness']))
+        self.thickness_input.sig_text_changed.connect(self.probe_thickness_changed)
+
+        tip_length_label = QLabel('D Tip Length (um): ')
+        self.tip_length_input = IntLineEdit(0, str(self.probe_settings['tip_length']))
+        self.tip_length_input.sig_text_changed.connect(self.tip_length_changed)
+
+        site_height_label = QLabel('C Site Height (um): ')
+        self.site_height_input = IntLineEdit(0, str(self.probe_settings['site_height']))
+        self.site_height_input.sig_text_changed.connect(self.site_height_changed)
+
+        site_width_label = QLabel('Site Width (um): ')
+        self.site_width_input = IntLineEdit(0, str(self.probe_settings['site_width']))
+        self.site_width_input.sig_text_changed.connect(self.site_width_changed)
+
+        n_column_label = QLabel('Number of columns: ')
+        self.n_column_spinbox = QSpinBox()
+        self.n_column_spinbox.setRange(1, 10)
+        self.n_column_spinbox.setValue(n_column)
+
+        row_names = [QLabel('Sites Distance (um): '), QLabel('Number of Sites: '),
+                     QLabel('X Bias (um): '), QLabel('Y Bias (um): ')]
+
+        self.sites_distance_wl = []
+        self.per_max_sites_wl = []
+        self.x_bias_wl = []
+        self.y_bias_wl = []
+        for i in range(n_column):
+            self.sites_distance_wl.append(IntLineEdit(i, str(self.probe_settings['sites_distance'][i])))
+            self.per_max_sites_wl.append(IntLineEdit(i, str(self.probe_settings['per_max_sites'][i])))
+            self.x_bias_wl.append(IntLineEdit(i, str(self.probe_settings['x_bias'][i])))
+            self.y_bias_wl.append(IntLineEdit(i, str(self.probe_settings['y_bias'][i])))
+            self.sites_distance_wl[-1].sig_text_changed.connect(self.sites_distance_changed)
+            self.per_max_sites_wl[-1].sig_text_changed.connect(self.per_max_sites_changed)
+            self.x_bias_wl[-1].sig_text_changed.connect(self.x_bias_changed)
+            self.y_bias_wl[-1].sig_text_changed.connect(self.y_bias_changed)
+
+        # connect
+        self.n_column_spinbox.valueChanged.connect(self.n_column_changed)
+
+        self.right_layout.addWidget(probe_length_label, 0, 0, 1, 1)
+        self.right_layout.addWidget(self.probe_length_input, 0, 1, 1, 1)
+        self.right_layout.addWidget(thickness_label, 1, 0, 1, 1)
+        self.right_layout.addWidget(self.thickness_input, 1, 1, 1, 1)
+        self.right_layout.addWidget(tip_length_label, 2, 0, 1, 1)
+        self.right_layout.addWidget(self.tip_length_input, 2, 1, 1, 1)
+        self.right_layout.addWidget(site_height_label, 3, 0, 1, 1)
+        self.right_layout.addWidget(self.site_height_input, 3, 1, 1, 1)
+        self.right_layout.addWidget(site_width_label, 4, 0, 1, 1)
+        self.right_layout.addWidget(self.site_width_input, 4, 1, 1, 1)
+
+        self.right_layout.addWidget(n_column_label, 5, 0, 1, 1)
+        self.right_layout.addWidget(self.n_column_spinbox, 5, 1, 1, 1)
+
+        for i in range(len(row_names)):
+            self.right_layout.addWidget(row_names[i], 6 + i, 0, 1, 1)
+
+        for j in range(n_column):
+            self.right_layout.addWidget(self.sites_distance_wl[j], 6, j + 1, 1, 1)
+            self.right_layout.addWidget(self.per_max_sites_wl[j], 7, j + 1, 1, 1)
+            self.right_layout.addWidget(self.x_bias_wl[j], 8, j + 1, 1, 1)
+            self.right_layout.addWidget(self.y_bias_wl[j], 9, j + 1, 1, 1)
+
+        out_frame = QFrame()
+        out_layout = QHBoxLayout(out_frame)
+        out_layout.addWidget(fig_label)
+        out_layout.addWidget(right_frame)
+
+        # add widget to layout
+        layout = QVBoxLayout()
+        layout.addWidget(out_frame)
+        layout.addSpacing(10)
+        layout.addWidget(self.button_box)
+        self.setLayout(layout)
+
+    def n_column_changed(self):
+        print('gjgjhgjhg')
+        n_column = self.n_column_spinbox.value()
+        exist_column = len(self.x_bias_wl)
+        if n_column == exist_column:
+            return
+
+        if n_column < exist_column:
+            del_index = np.arange(n_column, exist_column)[::-1]
+            for da_ind in del_index:
+                self.sites_distance_wl[da_ind].sig_text_changed.disconnect(self.sites_distance_changed)
+                self.per_max_sites_wl[da_ind].sig_text_changed.disconnect(self.per_max_sites_changed)
+                self.x_bias_wl[da_ind].sig_text_changed.disconnect(self.x_bias_changed)
+                self.y_bias_wl[da_ind].sig_text_changed.disconnect(self.y_bias_changed)
+
+                self.right_layout.removeWidget(self.sites_distance_wl[da_ind])
+                self.right_layout.removeWidget(self.per_max_sites_wl[da_ind])
+                self.right_layout.removeWidget(self.x_bias_wl[da_ind])
+                self.right_layout.removeWidget(self.y_bias_wl[da_ind])
+                self.sites_distance_wl[da_ind].deleteLater()
+                self.per_max_sites_wl[da_ind].deleteLater()
+                self.x_bias_wl[da_ind].deleteLater()
+                self.y_bias_wl[da_ind].deleteLater()
+                del self.sites_distance_wl[da_ind]
+                del self.per_max_sites_wl[da_ind]
+                del self.x_bias_wl[da_ind]
+                del self.y_bias_wl[da_ind]
+
+                del self.probe_settings['sites_distance'][da_ind]
+                del self.probe_settings['per_max_sites'][da_ind]
+                del self.probe_settings['x_bias'][da_ind]
+                del self.probe_settings['y_bias'][da_ind]
+        else:
+            for da_ind in range(exist_column, n_column):
+                self.sites_distance_wl.append(IntLineEdit(da_ind, str(0)))
+                self.per_max_sites_wl.append(IntLineEdit(da_ind, str(0)))
+                self.x_bias_wl.append(IntLineEdit(da_ind, str(0)))
+                self.y_bias_wl.append(IntLineEdit(da_ind, str(0)))
+
+                self.sites_distance_wl[-1].sig_text_changed.connect(self.sites_distance_changed)
+                self.per_max_sites_wl[-1].sig_text_changed.connect(self.per_max_sites_changed)
+                self.x_bias_wl[-1].sig_text_changed.connect(self.x_bias_changed)
+                self.y_bias_wl[-1].sig_text_changed.connect(self.y_bias_changed)
+
+                self.right_layout.addWidget(self.sites_distance_wl[-1], 6, da_ind + 1, 1, 1)
+                self.right_layout.addWidget(self.per_max_sites_wl[-1], 7, da_ind + 1, 1, 1)
+                self.right_layout.addWidget(self.x_bias_wl[-1], 8, da_ind + 1, 1, 1)
+                self.right_layout.addWidget(self.y_bias_wl[-1], 9, da_ind + 1, 1, 1)
+
+                self.probe_settings['sites_distance'].append(0)
+                self.probe_settings['per_max_sites'].append(0)
+                self.probe_settings['x_bias'].append(0)
+                self.probe_settings['y_bias'].append(0)
+
+    def probe_length_changed(self, obj):
+        text_val = obj[1]
+        if text_val == '':
+            self.button_box.setEnabled(False)
+        else:
+            self.probe_settings['probe_length'] = int(text_val)
+            if float(text_val) < 1e-4:
+                self.button_box.setEnabled(False)
+            else:
+                self.button_box.setEnabled(True)
+
+    def probe_thickness_changed(self, obj):
+        text_val = obj[1]
+        if text_val == '':
+            self.button_box.setEnabled(False)
+        else:
+            self.probe_settings['probe_thickness'] = int(text_val)
+            if float(text_val) < 0:
+                self.button_box.setEnabled(False)
+            else:
+                self.button_box.setEnabled(True)
+
+    def tip_length_changed(self, obj):
+        text_val = obj[1]
+        if text_val == '':
+            self.button_box.setEnabled(False)
+        else:
+            self.probe_settings['tip_length'] = int(text_val)
+            if float(text_val) < 0 or float(text_val) > self.probe_settings['probe_length'] :
+                self.button_box.setEnabled(False)
+            else:
+                self.button_box.setEnabled(True)
+
+    def site_width_changed(self, obj):
+        text_val = obj[1]
+        if text_val == '':
+            self.button_box.setEnabled(False)
+        else:
+            self.probe_settings['site_width'] = int(text_val)
+            if float(text_val) < 1e-4:
+                self.button_box.setEnabled(False)
+            else:
+                self.button_box.setEnabled(True)
+
+    def site_height_changed(self, obj):
+        text_val = obj[1]
+        if text_val == '':
+            self.button_box.setVisible(False)
+        else:
+            self.probe_settings['site_height'] = int(text_val)
+            if float(text_val) < 1e-4:
+                self.button_box.setEnabled(False)
+            else:
+                self.button_box.setEnabled(True)
+
+    #
+    def sites_distance_changed(self, obj):
+        w_id = obj[0]
+        text_val = obj[1]
+        if text_val == '':
+            self.button_box.setEnabled(False)
+        else:
+            self.probe_settings['sites_distance'][w_id] = int(text_val)
+            if float(text_val) < 1e-4:
+                self.button_box.setEnabled(False)
+            else:
+                self.button_box.setEnabled(True)
+
+    def per_max_sites_changed(self, obj):
+        w_id = obj[0]
+        text_val = obj[1]
+        if text_val == '':
+            self.button_box.setEnabled(False)
+        else:
+            self.probe_settings['per_max_sites'][w_id] = int(text_val)
+            if float(text_val) < 1e-4:
+                self.button_box.setEnabled(False)
+            else:
+                self.button_box.setEnabled(True)
+
+    def x_bias_changed(self, obj):
+        w_id = obj[0]
+        text_val = obj[1]
+        # text_val = self.x_bias_wl[index].text()
+        if text_val == '':
+            self.button_box.setEnabled(False)
+        else:
+            self.probe_settings['x_bias'][w_id] = int(text_val)
+            if float(text_val) < 0:
+                self.button_box.setEnabled(False)
+            else:
+                self.button_box.setEnabled(True)
+
+    def y_bias_changed(self, obj):
+        w_id = obj[0]
+        text_val = obj[1]
+        if text_val == '':
+            self.button_box.setEnabled(False)
+        else:
+            self.probe_settings['y_bias'][w_id] = int(text_val)
+            if float(text_val) < 0:
+                self.button_box.setEnabled(False)
+            else:
+                self.button_box.setEnabled(True)
+
+
 
