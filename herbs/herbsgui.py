@@ -4327,9 +4327,10 @@ class HERBS(QMainWindow, FORM_Main):
                         self.print_message('Can not merge probe with only one point.', self.error_message_color)
                         return
             label_data = np.transpose(self.atlas_view.atlas_label, (1, 2, 0))[:, :, ::-1]
+            probe_setting_data = self.probe_settings.get_settings()
             for i in range(len(data)):
                 info_dict, error_index = calculate_probe_info(data[i], label_data, self.atlas_view.label_info,
-                                                              self.atlas_view.vox_size_um, self.probe_type,
+                                                              self.atlas_view.vox_size_um, probe_setting_data,
                                                               self.atlas_view.origin_3d, self.site_face)
                 if error_index != 0:
                     msg = 'Error index: {}, please contact maintainers.'.format(error_index)
