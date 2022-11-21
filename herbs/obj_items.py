@@ -19,7 +19,7 @@ def create_plot_points_in_3d(data_dict):
 
 
 def create_probe_line_in_3d(data_dict):
-    pos = np.stack([data_dict['new_insertion_coords_3d'], data_dict['new_terminus_coords_3d']], axis=0)
+    pos = np.stack([data_dict['insertion_coords_3d'], data_dict['terminus_coords_3d']], axis=0)
     vis_color = get_object_vis_color(data_dict['vis_color'])
     probe_line = gl.GLLinePlotItem(pos=pos, color=vis_color, width=2, mode='line_strip')
     return probe_line
