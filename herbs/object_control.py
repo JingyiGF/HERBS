@@ -692,6 +692,7 @@ class ObjectControl(QObject):
         sigOpacityChanged = pyqtSignal(object)
         sigVisChanged = pyqtSignal(object)
         sigDeleteObject = pyqtSignal(object)
+        sigAddObject = pyqtSignal(object)
         sigColorChanged = pyqtSignal(object)
         sigSizeChanged = pyqtSignal(object)
         sigBlendModeChanged = pyqtSignal(object)
@@ -702,6 +703,7 @@ class ObjectControl(QObject):
         self.sig_opacity_changed = self._sigprox.sigOpacityChanged
         self.sig_visible_changed = self._sigprox.sigVisChanged
         self.sig_delete_object = self._sigprox.sigDeleteObject  # for delete obj 3d gl widgets
+        self.sig_add_object = self._sigprox.sigAddObject  # for add obj 3d gl widgets
         self.sig_color_changed = self._sigprox.sigColorChanged
         self.sig_size_changed = self._sigprox.sigSizeChanged
         self.sig_blend_mode_changed = self._sigprox.sigBlendModeChanged
@@ -840,6 +842,8 @@ class ObjectControl(QObject):
         self.info_btn.clicked.connect(self.info_btn_clicked)
 
         self.vis2d_btn = BottomButton('icons/toolbar/vis2d.svg')
+        self.unmerge_btn = BottomButton('icons/toolbar/unmerge.svg')
+        self.unmerge_btn.clicked.connect(self.unmerge_objects)
         self.compare_btn = BottomButton('icons/sidebar/compare.svg')
         self.merge_probe_btn = BottomButton('icons/sidebar/probe.svg')
         self.merge_drawing_btn = BottomButton('icons/toolbar/pencil.svg')
@@ -898,18 +902,7 @@ class ObjectControl(QObject):
     def delete_object_btn_clicked(self):
         if self.current_obj_index is None:
             return
-        if 'merged' in self.obj_type[self.current_obj_index]:
-            da_ind = []
-            current_obj_type = self.obj_type[self.current_obj_index].split(' ')[1]
-            for i in range(len(self.obj_name)):
-                if self.obj_name[self.current_obj_index] in self.obj_name[i]:
-                    da_ind.append(i)
-            self.delete_objects(da_ind)
-            other_obj = [ind for ind in range(len(self.obj_name)) if current_obj_type in self.obj_name[ind]]
-            if len(other_obj) < 1:
-                self.obj_merged.remove(current_obj_type)
-        else:
-            self.delete_objects(self.current_obj_index)
+        self.delete_objects(self.current_obj_index)
 
     def info_btn_clicked(self):
         if 'merged' in self.obj_type[self.current_obj_index]:
@@ -982,39 +975,18 @@ class ObjectControl(QObject):
             del self.obj_type[da_ind]
             del self.obj_data[da_ind]
             del self.obj_comp_mode[da_ind]
-            del self.obj_visibility[da_ind]
             del self.obj_opacity[da_ind]
             del self.obj_size[da_ind]
             self.sig_delete_object.emit(da_ind)
         if self.current_obj_index in del_ind:
             if self.obj_list:
-                self.current_obj_index = [i for i in range(len(self.obj_list)) if self.obj_visibility[i]][-1]
-                self.obj_list[self.current_obj_index].set_checked(True)
+                self.obj_list[-1].set_checked(True)
+                self.current_obj_index = len(self.obj_list) - 1
             else:
                 self.current_obj_index = None
         else:
             active_index = np.where(np.ravel(self.obj_id) == current_obj_id)[0][0]
             self.current_obj_index = active_index
-
-    # hide objects, e.g. after merging
-    def hide_objects(self, obj_type = 'probe piece'):
-        if obj_type not in ['probe piece', 'virus piece', 'contour piece', 'drawing piece', 'cells piece']:
-            return
-        n_obj = len(self.obj_id)
-        hide_ind = [ind for ind in range(n_obj) if self.obj_type[ind] == obj_type]
-        for da_ind in hide_ind:
-           self.obj_list[da_ind].hide()
-           self.obj_visibility[da_ind] = False
-        if self.current_obj_index in hide_ind:
-            self.current_obj_index = [i for i in range(len(self.obj_list)) if self.obj_visibility[i]][-1]
-            self.obj_list[self.current_obj_index].set_checked(True)
-
-    # show objects, e.g. after unmerging
-    def show_objects(self, show_index):
-        show_ind = np.ravel(show_index)
-        for da_ind in show_ind:
-           self.obj_list[da_ind].show()
-           self.obj_visibility[da_ind] = True
 
     #
     def get_object_icon(self, object_type):
@@ -1045,7 +1017,6 @@ class ObjectControl(QObject):
         self.obj_data.append(object_data)
         self.obj_name.append(object_name)
         self.obj_type.append(object_type)
-        self.obj_visibility.append(True)
         if 'merged' in object_type:
             new_layer = RegisteredObject(obj_id=self.obj_count, obj_name=object_name,
                                          obj_type=object_type, object_icon=object_icon)
@@ -1086,6 +1057,7 @@ class ObjectControl(QObject):
             self.current_obj_index = active_index
 
         self.layer_layout.addWidget(self.obj_list[-1])
+        self.sig_add_object.emit((object_data, object_type))
         self.obj_count += 1
 
     # merge object pieces
@@ -1094,54 +1066,57 @@ class ObjectControl(QObject):
             return
         n_obj = len(self.obj_id)
         cind = [ind for ind in range(n_obj) if self.obj_type[ind] == obj_type]
-        da_type_object_names = np.ravel(self.obj_name)[np.array(cind)]
-        n_pieces = len(da_type_object_names)
-        pieces_names = []
+        valid_pieces_names = np.ravel(self.obj_name)[np.array(cind)]
+        n_pieces = len(valid_pieces_names)
+        m_obj_names = []
         for i in range(n_pieces):
-            da_name = da_type_object_names[i]
+            da_name = valid_pieces_names[i]
             # da_name = da_name.replace(" ", "")
             da_name_split = da_name.split('-')
-            piece_name = da_name_split[0]
-            if piece_name[-1] == ' ':
-                piece_name = piece_name[:-1]
-            pieces_names.append(piece_name)
-        object_names = np.unique(pieces_names)
-        n_object = len(object_names)
-        data = [[] for i in range(n_object)]
+            m_obj_name = da_name_split[0]
+            if m_obj_name[-1] == ' ':
+                m_obj_name = m_obj_name[:-1]
+            m_obj_names.append(m_obj_name)
+        merging_object_names = np.unique(m_obj_names)
+        n_object = len(merging_object_names)
+        data = [[] for _ in range(n_object)]
+        pieces_names = [[] for _ in range(n_object)]
         for i in range(n_object):
-            da_piece_name = object_names[i]
-            da_piece_ind_in_obj_order = [cind[ind] for ind in range(n_pieces) if pieces_names[ind] == da_piece_name]
-            temp = self.obj_data[da_piece_ind_in_obj_order[0]].T
-            if len(da_piece_ind_in_obj_order) > 1:
-                for j in range(1, len(da_piece_ind_in_obj_order)):
-                    print(self.obj_data[da_piece_ind_in_obj_order[j]].T)
-                    temp = np.hstack([temp, self.obj_data[da_piece_ind_in_obj_order[j]].T])
-            data[i] = temp.T
-        return data, object_names
+            sub_inds = [cind[ind] for ind in range(n_pieces) if m_obj_names[ind] == merging_object_names[i]]
+            for j in range(len(sub_inds)):
+                data[i].append(self.obj_data[sub_inds[j]])
+                pieces_names[i].append(self.obj_name[sub_inds[j]])
+            # temp = self.obj_data[da_piece_ind_in_obj_order[0]].T
+            # if len(da_piece_ind_in_obj_order) > 1:
+            #     for j in range(1, len(da_piece_ind_in_obj_order)):
+            #         print(self.obj_data[da_piece_ind_in_obj_order[j]].T)
+            #         temp = np.hstack([temp, self.obj_data[da_piece_ind_in_obj_order[j]].T])
+            # data[i] = temp.T
+        self.delete_objects(cind)
+        return data, merging_object_names, pieces_names
 
     # unmerge object pieces
-    def unmerge_pieces(self, obj_type='probe piece'):
-        if obj_type not in ['probe piece', 'virus piece', 'contour piece', 'drawing piece', 'cells piece']:
-            return False
-        n_obj = len(self.obj_id)
-        piece_type = obj_type.split(' ')[0]
-        cind = [ind for ind in range(n_obj) if self.obj_type[ind] == obj_type]
-        if len(cind) < 1:
-            return False
-        self.show_objects(cind)
-        cind = [ind for ind in range(n_obj) if self.obj_type[ind] == f'merged {piece_type}']
-        self.delete_objects(cind)
-        return True
+    def unmerge_objects(self):
+        current_type = self.obj_type[self.current_obj_index]
+        if 'merged' not in current_type:
+            return
+        current_data = self.obj_data[self.current_obj_index]
+        m_obj_type = current_type.split(' ')[1]
+        data_list = current_data['data']
+        pieces_names = current_data['pieces_names']
+        self.delete_objects([self.current_obj_index])
+        for i in range(len(data_list)):
+            self.add_object(pieces_names[i], '{} piece'.format(m_obj_type), data_list[i], None)
+
 
     # get obj data
     def get_obj_data(self):
-        data = {'obj_name':  self.obj_name,
+        data = {'obj_name': self.obj_name,
                 'obj_type': self.obj_type,
                 'obj_data': self.obj_data,
                 'obj_size': self.obj_size,
                 'obj_opacity': self.obj_opacity,
                 'obj_comp_mode': self.obj_comp_mode,
-                'obj_visibility': self.obj_visibility,
                 'current_obj_index': self.current_obj_index}
         return data
 
@@ -1153,11 +1128,6 @@ class ObjectControl(QObject):
         self.obj_opacity = data['obj_opacity']
         self.obj_comp_mode = data['obj_comp_mode']
         self.current_obj_index = data['current_obj_index']
-
-        if 'obj_visibility' in data:
-            self.obj_visibility = data['obj_visibility']
-        else:
-            self.obj_visibility = [True] * len(self.obj_list)
 
         self.obj_list[-1].set_checked(False)
         self.obj_list[self.current_obj_index].set_checked(True)
@@ -1192,7 +1162,6 @@ class ObjectControl(QObject):
         self.obj_size = []
         self.obj_opacity = []
         self.obj_comp_mode = []
-        self.obj_visibility = []
         self.obj_count = 0
         self.current_obj_index = None
 

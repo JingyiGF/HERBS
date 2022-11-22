@@ -6,7 +6,10 @@ import cv2
 import pickle
 import colorsys
 import pyqtgraph as pg
+import pyqtgraph.opengl as gl
+import scipy.ndimage as ndi
 from scipy.interpolate import interp1d, splprep, splev
+
 
 
 def read_qss_file(qss_file_name):
@@ -125,22 +128,49 @@ def get_region_label_info(region_label, label_info):
     return region_count, label_names, label_acronym, label_color
 
 
-def calculate_virus_info(data, label_data, label_info, bregma):
+def calculate_virus_info(data_list, pieces_names, label_data, label_info, bregma):
+    data = data_list[0]
+    for i in range(1, len(data_list)):
+        data = np.vstack([data, data_list[i]])
+
     region_label = get_region_label(data, label_data, bregma)
     region_count, label_names, label_acronym, label_color = get_region_label_info(region_label, label_info)
 
-    res_dict = {'object_name': 'virus', 'data': data, 'label_name': label_names,
+    res_dict = {'object_name': 'virus', 'data': data_list, 'pieces_names': pieces_names, 'label_name': label_names,
                 'label_acronym': label_acronym, 'label_color': label_color}
 
     return res_dict
 
 
-def calculate_cells_info(data, label_data, label_info, bregma):
+def calculate_cells_info(data_list, pieces_names, label_data, label_info, bregma):
+    data = data_list[0]
+    for i in range(1, len(data_list)):
+        data = np.vstack([data, data_list[i]])
+
     region_label = get_region_label(data, label_data, bregma)
     region_count, label_names, label_acronym, label_color = get_region_label_info(region_label, label_info)
 
-    res_dict = {'object_name': 'cell', 'data': data, 'label_name': label_names,
+    res_dict = {'object_name': 'cell', 'pieces_names': pieces_names, 'data': data_list, 'label_name': label_names,
                 'label_acronym': label_acronym, 'label_color': label_color, 'region_count': region_count}
+    return res_dict
+
+
+def calculate_drawing_info(data_list, pieces_names, label_data, label_info, bregma):
+    data = data_list[0]
+    for i in range(1, len(data_list)):
+        data = np.vstack([data, data_list[i]])
+    print(data)
+    if 'area' in pieces_names[0]:
+        plot_mode = 'area'
+    else:
+        plot_mode = 'line'
+
+    region_label = get_region_label(data, label_data, bregma)
+    region_count, label_names, label_acronym, label_color = get_region_label_info(region_label, label_info)
+
+    res_dict = {'object_name': 'drawing', 'pieces_names': pieces_names, 'data': data_list, 'label_name': label_names,
+                'label_acronym': label_acronym, 'label_color': label_color, 'region_count': region_count,
+                'plot_mode': plot_mode}
     return res_dict
 
 
@@ -824,6 +854,8 @@ def interpolate_contour_points(points):
 def create_vis_img(size, point_data, color, vis_type='p', closed=False):
     if isinstance(point_data, list):
         point_data = np.asarray(point_data).astype(int)
+    else:
+        point_data = point_data.astype(int)
     img = np.zeros((size[0], size[1], 3), 'uint8')
     da_color = (int(color[0]), int(color[1]), int(color[2]))
     if vis_type == 'p':

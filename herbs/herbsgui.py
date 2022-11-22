@@ -44,7 +44,7 @@ from .uuuuuu import get_cell_count, num_side_pnt_changed, rotate, merge_channels
     create_vis_img, color_vis_img, get_tri_lines, match_sides_points, get_vertex_ind_in_triangle, \
     warp_triangle, warp_points, get_pnts_triangle_ind, make_label_rgb_img, get_corner_line_from_rect,  \
     delete_points_inside_eraser, get_bound_color,  \
-    calculate_cells_info, calculate_virus_info, calculate_contour_line, \
+    calculate_cells_info, calculate_virus_info, calculate_drawing_info, calculate_contour_line, \
     check_loading_pickle_file, check_bounding_contains, get_statusbar_style
 from .probe_utiles import line_fit_2d, line_fit, get_tilt_sign, calculate_probe_info, Probe
 from .czi_reader import CZIReader
@@ -63,7 +63,7 @@ from .object_control import *
 from .toolbox import ToolBox
 from .wtiles import LayerSettingDialog, SliceSettingDialog, LinearSiliconInfoDialog
 from .obj_items import get_object_vis_color, create_plot_points_in_3d, create_probe_line_in_3d, \
-    create_drawing_line_in_3d, create_contour_line_in_3d, render_volume, render_small_volume, make_3d_gl_widget
+    create_drawing_in_3d, create_contour_line_in_3d, render_volume, render_small_volume, make_3d_gl_widget
 
 
 script_dir = dirname(realpath(__file__))
@@ -253,6 +253,7 @@ class HERBS(QMainWindow, FORM_Main):
 
         self.object_ctrl = ObjectControl()
         self.object_ctrl.sig_delete_object.connect(self.gl_object_deleted)
+        self.object_ctrl.sig_add_object.connect(self.gl_object_added)
         self.object_ctrl.sig_color_changed.connect(self.obj_color_changed)
         self.object_ctrl.sig_visible_changed.connect(self.obj_vis_changed)
         self.object_ctrl.sig_size_changed.connect(self.obj_size_changed)
@@ -266,6 +267,7 @@ class HERBS(QMainWindow, FORM_Main):
         self.object_ctrl.merge_drawing_btn.clicked.connect(self.merge_drawings)
         self.object_ctrl.compare_btn.clicked.connect(self.compare_object)
         self.object_ctrl.vis2d_btn.clicked.connect(self.display_object_in_2d_atlas)
+
 
         self.image_view = ImageView()
         self.image_view.sig_image_changed.connect(self.update_histo_tri_onside_data)
@@ -1735,7 +1737,8 @@ class HERBS(QMainWindow, FORM_Main):
         object_btm_layout.setSpacing(5)
         object_btm_layout.setAlignment(Qt.AlignRight)
 
-        object_btm_layout.addSpacing(10)
+        # object_btm_layout.addSpacing(10)
+        object_btm_layout.addWidget(self.object_ctrl.unmerge_btn)
         object_btm_layout.addWidget(self.object_ctrl.vis2d_btn)
         object_btm_layout.addWidget(self.object_ctrl.info_btn)
         object_btm_layout.addStretch(1)
@@ -4164,6 +4167,17 @@ class HERBS(QMainWindow, FORM_Main):
         # display all linked object, for probe, all probe limited in some angle
 
         # for cell/virus, show only on the current page
+    # def unmerge_objects(self):
+    #     current_obj = self.object_ctrl.obj_type[self.object_ctrl.current_obj_index]
+    #     if 'merged' not in current_obj:
+    #         return
+    #     current_data = self.object_ctrl.obj_data[self.object_ctrl.current_obj_index]
+    #     data_list = current_data['data']
+    #     pieces_names = current_data['pieces_names']
+    #     #
+    #
+    #
+    #     pass
 
     def compare_object(self):
         if len(self.object_ctrl.linked_indexes) < 2:
@@ -4200,7 +4214,7 @@ class HERBS(QMainWindow, FORM_Main):
                                                 object_type='probe piece',
                                                 object_data=data_3d_list[i],
                                                 object_mode=self.obj_display_mode)
-                    self.object_3d_list.append([])
+                    # self.object_3d_list.append([])
             else:
                 data_2d = np.asarray(data_tobe_registered)
                 print('data2d', data_2d)
@@ -4210,7 +4224,7 @@ class HERBS(QMainWindow, FORM_Main):
                                             object_type='probe piece',
                                             object_data=data_3d,
                                             object_mode=self.obj_display_mode)
-                self.object_3d_list.append([])
+                # self.object_3d_list.append([])
 
             self.working_atlas_data['atlas-probe'].clear()
             self.working_img_data['img-probe'].clear()
@@ -4231,7 +4245,7 @@ class HERBS(QMainWindow, FORM_Main):
                                     object_type='virus piece',
                                     object_data=data,
                                     object_mode=self.obj_display_mode)
-        self.object_3d_list.append([])
+        # self.object_3d_list.append([])
         self.working_atlas_data['atlas-virus'] = []
 
     def make_contour_piece(self):
@@ -4250,7 +4264,7 @@ class HERBS(QMainWindow, FORM_Main):
                                     object_type='contour piece',
                                     object_data=data,
                                     object_mode=self.obj_display_mode)
-        self.object_3d_list.append([])
+        # self.object_3d_list.append([])
         self.working_atlas_data['atlas-contour'] = []
 
     def make_drawing_piece(self):
@@ -4261,12 +4275,22 @@ class HERBS(QMainWindow, FORM_Main):
         if not data_tobe_registered:
             return
         processing_data = np.asarray(data_tobe_registered)
+        if self.tool_box.is_closed:
+            if np.any(processing_data[0] != processing_data[-1]):
+                processing_data = np.vstack([processing_data, processing_data[0]])
+            temp_img = np.zeros(self.atlas_view.working_atlas.img.image.shape)
+            cv2.fillPoly(temp_img, pts=[processing_data.astype(int)], color=(255, 255, 255))
+            temp = np.where(temp_img != 0)
+            processing_data = np.stack([temp[1], temp[0]], axis=1)
+            object_name = 'area drawing - piece'
+        else:
+            object_name = 'line drawing - piece'
         data = self.atlas_view.get_3d_pnts(processing_data, self.atlas_display)
-        self.object_ctrl.add_object(object_name='drawing - piece',
+        self.object_ctrl.add_object(object_name=object_name,
                                     object_type='drawing piece',
                                     object_data=data,
                                     object_mode=self.obj_display_mode)
-        self.object_3d_list.append([])
+        # self.object_3d_list.append([])
         self.working_atlas_data['atlas-drawing'] = []
 
     def make_cell_piece(self):
@@ -4290,7 +4314,7 @@ class HERBS(QMainWindow, FORM_Main):
                                             object_type='cells piece',
                                             object_data=piece_data,
                                             object_mode=self.obj_display_mode)
-                self.object_3d_list.append([])
+                # self.object_3d_list.append([])
         self.working_atlas_data['atlas-cells'].clear()
         self.working_atlas_data['cell_size'].clear()
         self.working_atlas_data['cell_symbol'].clear()
@@ -4307,145 +4331,107 @@ class HERBS(QMainWindow, FORM_Main):
         self.make_contour_piece()
 
     def add_3d_object(self, data_dict, obj_type):
-        obj_3d = make_3d_gl_widget(data_dict, obj_type)
-        if self.display_mode_3d == 'dark':
-            obj_3d.setGLOptions('opaque')
+        if data_dict is None or 'piece' in obj_type:
+            self.object_3d_list.append([])
         else:
-            obj_3d.setGLOptions('additive')
-        self.object_3d_list.append(obj_3d)
-        self.view3d.addItem(self.object_3d_list[-1])
+            obj_3d = make_3d_gl_widget(data_dict, obj_type)
+            if self.display_mode_3d == 'dark':
+                obj_3d.setGLOptions('opaque')
+            else:
+                obj_3d.setGLOptions('additive')
+            self.object_3d_list.append(obj_3d)
+            self.view3d.addItem(self.object_3d_list[-1])
 
     # probe related functions
     def merge_probes(self):
-        if 'probe' not in self.object_ctrl.obj_merged:
-            probe_piece_count = len([da_piece for da_piece in self.object_ctrl.obj_type if da_piece == 'probe piece'])
-            if probe_piece_count == 0:
-                return
-            data, obj_names = self.object_ctrl.merge_pieces('probe piece')
-            if len(data) == 1:
-                if len(data[0]) == 1:
-                        self.print_message('Can not merge probe with only one point.', self.error_message_color)
-                        return
-            label_data = np.transpose(self.atlas_view.atlas_label, (1, 2, 0))[:, :, ::-1]
-            probe_setting_data = self.probe_settings.get_settings()
-            for i in range(len(data)):
-                info_dict, error_index = calculate_probe_info(data[i], label_data, self.atlas_view.label_info,
-                                                              self.atlas_view.vox_size_um, probe_setting_data,
-                                                              self.atlas_view.origin_3d, self.site_face)
-                if error_index != 0:
-                    msg = 'Error index: {}, please contact maintainers.'.format(error_index)
-                    self.print_message(msg, self.error_message_color)
-                    return
-    
-                self.object_ctrl.add_object(obj_names[i], 'merged probe',
-                                            object_data=info_dict, object_mode=self.obj_display_mode)
-    
-                self.add_3d_object(info_dict, 'merged probe')
-            self.object_ctrl.hide_objects('probe piece')
-            self.object_ctrl.obj_merged.append('probe')
-        else:
-            unmerge_success = self.object_ctrl.unmerge_pieces('probe piece')
-            if not unmerge_success:
-                self.print_message('Unmerge of probe not possible. Probably due to old project version.', self.error_message_color)
-            else:
-                self.object_ctrl.obj_merged.remove('probe')
+        probe_piece_count = len([da_piece for da_piece in self.object_ctrl.obj_type if da_piece == 'probe piece'])
+        if probe_piece_count == 0:
+            return
+        data, obj_names, pieces_names = self.object_ctrl.merge_pieces('probe piece')
 
+        label_data = np.transpose(self.atlas_view.atlas_label, (1, 2, 0))[:, :, ::-1]
+        probe_setting_data = self.probe_settings.get_settings()
+        for i in range(len(data)):
+            if len(data[i]) == 1:
+                if len(data[i][0]) == 1:
+                    self.print_message('Can not merge probe with only one point.', self.error_message_color)
+                    return
+            info_dict, error_index = calculate_probe_info(data[i], pieces_names[i],
+                                                          label_data, self.atlas_view.label_info,
+                                                          self.atlas_view.vox_size_um, probe_setting_data,
+                                                          self.atlas_view.origin_3d, self.site_face)
+            if error_index != 0:
+                msg = 'Error index: {}, please contact maintainers.'.format(error_index)
+                self.print_message(msg, self.error_message_color)
+                return
+
+            self.object_ctrl.add_object(obj_names[i], 'merged probe',
+                                        object_data=info_dict, object_mode=self.obj_display_mode)
+
+            # self.add_3d_object(info_dict, 'merged probe')
 
     # virus related functions
     def merge_virus(self):
-        if 'virus' not in self.object_ctrl.obj_merged:
-            virus_piece_count = len([da_piece for da_piece in self.object_ctrl.obj_type if da_piece == 'virus piece'])
-            if virus_piece_count == 0:
-                return
-            data, obj_names = self.object_ctrl.merge_pieces('virus piece')
-            label_data = np.transpose(self.atlas_view.atlas_label, (1, 2, 0))[:, :, ::-1]
+        virus_piece_count = len([da_piece for da_piece in self.object_ctrl.obj_type if da_piece == 'virus piece'])
+        if virus_piece_count == 0:
+            return
+        data, obj_names, pieces_names = self.object_ctrl.merge_pieces('virus piece')
+        label_data = np.transpose(self.atlas_view.atlas_label, (1, 2, 0))[:, :, ::-1]
 
-            for i in range(len(data)):
-                info_dict = calculate_virus_info(data[i], label_data, self.atlas_view.label_info, self.atlas_view.origin_3d)
-                self.object_ctrl.add_object(obj_names[i], 'merged virus',
-                                            object_data=info_dict, object_mode=self.obj_display_mode)
+        for i in range(len(data)):
+            info_dict = calculate_virus_info(data[i], pieces_names[i], label_data, self.atlas_view.label_info,
+                                             self.atlas_view.origin_3d)
+            self.object_ctrl.add_object(obj_names[i], 'merged virus',
+                                        object_data=info_dict, object_mode=self.obj_display_mode)
 
-                self.add_3d_object(info_dict, 'merged virus')
-            self.object_ctrl.hide_objects('virus piece')
-            self.object_ctrl.obj_merged.append('virus')
-        else:
-            unmerge_success = self.object_ctrl.unmerge_pieces('virus piece')
-            if not unmerge_success:
-                self.print_message('Unmerge of virus not possible. Probably due to old project version.', self.error_message_color)
-            else:
-                self.object_ctrl.obj_merged.remove('virus')
-
+            # self.add_3d_object(info_dict, 'merged virus')
 
     # cell related functions
     def merge_cells(self):
-        if 'cells' not in self.object_ctrl.obj_merged:
-            cells_piece_count = len([da_piece for da_piece in self.object_ctrl.obj_type if da_piece == 'cells piece'])
-            if cells_piece_count == 0:
-                return
-            data, obj_names = self.object_ctrl.merge_pieces('cells piece')
-            label_data = np.transpose(self.atlas_view.atlas_label, (1, 2, 0))[:, :, ::-1]
+        cells_piece_count = len([da_piece for da_piece in self.object_ctrl.obj_type if da_piece == 'cells piece'])
+        if cells_piece_count == 0:
+            return
+        data, obj_names, pieces_names = self.object_ctrl.merge_pieces('cells piece')
+        label_data = np.transpose(self.atlas_view.atlas_label, (1, 2, 0))[:, :, ::-1]
 
-            for i in range(len(data)):
-                info_dict = calculate_cells_info(data[i], label_data, self.atlas_view.label_info,
-                                                self.atlas_view.origin_3d)
-                self.object_ctrl.add_object(obj_names[i], 'merged cells',
-                                            object_data=info_dict, object_mode=self.obj_display_mode)
+        for i in range(len(data)):
+            info_dict = calculate_cells_info(data[i], pieces_names[i], label_data, self.atlas_view.label_info,
+                                             self.atlas_view.origin_3d)
+            self.object_ctrl.add_object(obj_names[i], 'merged cells',
+                                        object_data=info_dict, object_mode=self.obj_display_mode)
 
-                self.add_3d_object(info_dict, 'merged cells')
-            self.object_ctrl.hide_objects('cells piece')
-            self.object_ctrl.obj_merged.append('cells')
-        else:
-            unmerge_success = self.object_ctrl.unmerge_pieces('cells piece')
-            if not unmerge_success:
-                self.print_message('Unmerge of cells not possible. Probably due to old project version.', self.error_message_color)
-            else:
-                self.object_ctrl.obj_merged.remove('cells')
+            # self.add_3d_object(info_dict, 'merged cells')
 
     # drawing related functions
     def merge_drawings(self):
-        if 'drawing' not in self.object_ctrl.obj_merged:
-            drawing_piece_count = len([da_piece for da_piece in self.object_ctrl.obj_type if da_piece == 'drawing piece'])
-            if drawing_piece_count == 0:
-                return
-            data, obj_names = self.object_ctrl.merge_pieces('drawing piece')
-            # label_data = np.transpose(self.atlas_view.atlas_label, (1, 2, 0))[:, :, ::-1]
+        drawing_piece_count = len(
+            [da_piece for da_piece in self.object_ctrl.obj_type if da_piece == 'drawing piece'])
+        if drawing_piece_count == 0:
+            return
+        data, obj_names, pieces_names = self.object_ctrl.merge_pieces('drawing piece')
+        label_data = np.transpose(self.atlas_view.atlas_label, (1, 2, 0))[:, :, ::-1]
 
-            for i in range(len(data)):
-                info_dict = {'object_type': 'drawing', 'data': data[i]}
-                self.object_ctrl.add_object(obj_names[i], 'merged drawing',
-                                            object_data=info_dict, object_mode=self.obj_display_mode)
-                self.add_3d_object(info_dict, 'merged drawing')
-            self.object_ctrl.hide_objects('drawing piece')
-            self.object_ctrl.obj_merged.append('drawing')
-        else:
-            unmerge_success = self.object_ctrl.unmerge_pieces('drawing piece')
-            if not unmerge_success:
-                self.print_message('Unmerge of drawing not possible. Probably due to old project version.', self.error_message_color)
-            else:
-                self.object_ctrl.obj_merged.remove('drawing')
+        for i in range(len(data)):
+            info_dict = calculate_drawing_info(
+                data[i], pieces_names[i], label_data, self.atlas_view.label_info, self.atlas_view.origin_3d)
+            self.object_ctrl.add_object(
+                obj_names[i], 'merged drawing', object_data=info_dict, object_mode=self.obj_display_mode)
+            # self.add_3d_object(info_dict, 'merged drawing')
 
     # contour related functions
     def merge_contour(self):
-        if 'contour' not in self.object_ctrl.obj_merged:
-            contour_piece_count = len([da_piece for da_piece in self.object_ctrl.obj_type if da_piece == 'contour piece'])
-            if contour_piece_count == 0:
-                return
-            data, obj_names = self.object_ctrl.merge_pieces('contour piece')
+        contour_piece_count = len(
+            [da_piece for da_piece in self.object_ctrl.obj_type if da_piece == 'contour piece'])
+        if contour_piece_count == 0:
+            return
+        data, obj_names, pieces_names = self.object_ctrl.merge_pieces('contour piece')
 
-            for i in range(len(data)):
-                info_dict = {'object_type': 'contour', 'data': data[i]}
-                self.object_ctrl.add_object(obj_names[i], 'merged contour',
-                                            object_data=info_dict, object_mode=self.obj_display_mode)
+        for i in range(len(data)):
+            info_dict = {'object_type': 'contour', 'data': data[i]}
+            self.object_ctrl.add_object(obj_names[i], 'merged contour',
+                                        object_data=info_dict, object_mode=self.obj_display_mode)
 
-                self.add_3d_object(info_dict, 'merged contour')
-            self.object_ctrl.hide_objects('contour piece')
-            self.object_ctrl.obj_merged.append('contour')
-        else:
-            unmerge_success = self.object_ctrl.unmerge_pieces('contour piece')
-            if not unmerge_success:
-                self.print_message('Unmerge of contour not possible. Probably due to old project version.', self.error_message_color)
-            else:
-                self.object_ctrl.obj_merged.remove('contour')
+            # self.add_3d_object(info_dict, 'merged contour')
 
     # common functions
     def obj_color_changed(self, ev):
@@ -4473,6 +4459,20 @@ class HERBS(QMainWindow, FORM_Main):
             self.view3d.removeItem(self.object_3d_list[ind])
             self.object_3d_list[ind].deleteLater()
         del self.object_3d_list[ind]
+
+    def gl_object_added(self, obj):
+        data_dict = obj[0]
+        obj_type = obj[1]
+        if data_dict is None or 'piece' in obj_type:
+            self.object_3d_list.append([])
+        else:
+            obj_3d = make_3d_gl_widget(data_dict, obj_type)
+            if self.display_mode_3d == 'dark':
+                obj_3d.setGLOptions('opaque')
+            else:
+                obj_3d.setGLOptions('additive')
+            self.object_3d_list.append(obj_3d)
+            self.view3d.addItem(self.object_3d_list[-1])
 
     def obj_size_changed(self, ev):
         obj_type = ev[0]
@@ -4937,10 +4937,10 @@ class HERBS(QMainWindow, FORM_Main):
                 else:
                     self.object_ctrl.add_object(object_dict['name'], object_dict['type'],
                                                 object_dict['data'], self.obj_display_mode)
-                    if 'merged' in object_dict['type']:
-                        self.add_3d_object(object_dict['data'], 'merged probe')
-                    else:
-                        self.object_3d_list.append([])
+                    # if 'merged' in object_dict['type']:
+                    #     self.add_3d_object(object_dict['data'], 'merged probe')
+                    # else:
+                    #     self.object_3d_list.append([])
 
             if problem_obj_name:
                 msg = 'Objects {} not matching the atlas slice.'.format(','.join(problem_obj_name))

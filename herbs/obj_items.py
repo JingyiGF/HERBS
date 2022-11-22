@@ -12,7 +12,10 @@ def get_object_vis_color(color):
 
 
 def create_plot_points_in_3d(data_dict):
-    pnts = data_dict['data']
+    data_list = data_dict['data']
+    pnts = data_list[0]
+    for i in range(1, len(data_list)):
+        pnts = np.vstack([pnts, data_list[i]])
     vis_color = get_object_vis_color(data_dict['vis_color'])
     vis_points = gl.GLScatterPlotItem(pos=pnts, color=vis_color, size=3)
     return vis_points
@@ -25,21 +28,28 @@ def create_probe_line_in_3d(data_dict):
     return probe_line
 
 
-def create_drawing_line_in_3d(data_dict):
-    pos = np.asarray(data_dict['data'])
+def create_drawing_in_3d(data_dict):
+    data_list = data_dict['data']
+    pos = data_list[0]
+    for i in range(1, len(data_list)):
+        pos = np.vstack([pos, data_list[i]])
+
     vis_color = get_object_vis_color(data_dict['vis_color'])
-    if np.all(pos[0] == pos[-1]):
-        drawing_obj = gl.GLSurfacePlotItem(x=pos[:, 0], y=pos[:, 1], z=pos[:, 2], colors=vis_color)
+    if data_dict['plot_mode'] == 'area':
+        drawing_obj = gl.GLScatterPlotItem(pos=pos, color=vis_color, size=3, pxMode=True)
     else:
         drawing_obj = gl.GLLinePlotItem(pos=pos, color=vis_color, width=2, mode='line_strip')
     return drawing_obj
 
 
 def create_contour_line_in_3d(data_dict):
-    temp = data_dict['data'].tolist()
-    if temp[0] != temp[-1]:
-        temp.append(temp[0])
-    pos = np.asarray(temp)
+    data_list = data_dict['data']
+    pos = data_list[0]
+    for i in range(1, len(data_list)):
+        pos = np.vstack([pos, data_list[i]])
+    if np.any(pos[0] != pos[-1]):
+        pos = np.vstack([pos, pos[0]])
+
     vis_color = get_object_vis_color(data_dict['vis_color'])
     contour_obj = gl.GLLinePlotItem(pos=pos, color=vis_color, width=2, mode='line_strip')
     return contour_obj
@@ -55,7 +65,7 @@ def make_3d_gl_widget(data_dict, obj_type):
     elif obj_type == 'merged contour':
         obj_3d = create_contour_line_in_3d(data_dict)
     else:
-        obj_3d = create_drawing_line_in_3d(data_dict)
+        obj_3d = create_drawing_in_3d(data_dict)
     return obj_3d
 
 

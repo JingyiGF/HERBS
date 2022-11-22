@@ -556,7 +556,8 @@ def get_label_name(label_info, region_label):
     return label_names, label_acronym, label_color
 
 
-def calculate_probe_info(data, label_data, label_info, vxsize_um, probe_settings, bregma, site_face, step_length=0.05):
+def calculate_probe_info(data_list, pieces_names, label_data, label_info, vxsize_um, probe_settings,
+                         bregma, site_face, step_length=0.05):
     """
 
     :param data: 3d coordinates for all the points
@@ -568,7 +569,13 @@ def calculate_probe_info(data, label_data, label_info, vxsize_um, probe_settings
     :param bregma:
     :return:
     """
+
     data_dict = None
+    data = data_list[0]
+    for i in range(1, len(data_list)):
+        data = np.vstack([data, data_list[i]])
+    print('data', data)
+
     # start_pnt and end_pnt are coordinates related to the given Bregma
     probe_type = probe_settings['probe_type']
     probe_type_name = probe_settings['probe_type_name']
@@ -659,7 +666,7 @@ def calculate_probe_info(data, label_data, label_info, vxsize_um, probe_settings
         plot_sites_loc = None
 
     data_dict = {'object_name': 'probe', 'probe_type_name': probe_type_name,
-                 'data': data, 'ap_tilt': ap_tilt, 'ml_tilt': ml_tilt,
+                 'data': data_list, 'pieces_names': pieces_names, 'ap_tilt': ap_tilt, 'ml_tilt': ml_tilt,
                  'insertion_coords_3d': pc_sp, 'terminus_coords_3d': pc_ep,
                  'direction': direction, 'probe_length': probe_length_with_tip_um, 'dv': dv,
                  'ap_angle': ap_angle, 'ml_angle': ml_angle,
