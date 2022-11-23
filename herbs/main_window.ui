@@ -332,6 +332,25 @@ border-color: rgb(75, 78, 84);</string>
     <addaction name="separator"/>
     <addaction name="actionSwitch_Atlas"/>
    </widget>
+   <widget class="QMenu" name="menuObjects">
+    <property name="styleSheet">
+     <string notr="true">color: rgb(255, 255, 255);
+background-color: qlineargradient(spread:pad, x1:1, y1:1, x2:1, y2:0, stop:0 rgba(42, 49, 53, 255), stop:1 rgba(85, 85, 88, 255));
+selection-color: rgb(255, 255, 255);
+selection-background-color: rgb(63, 124, 234);
+border-color: rgb(75, 78, 84);</string>
+    </property>
+    <property name="title">
+     <string>Objects</string>
+    </property>
+    <addaction name="actionSave_Probe_Setting"/>
+    <addaction name="actionLoad_Probe_Setting"/>
+    <addaction name="separator"/>
+    <addaction name="actionMulti_Probe_Planning"/>
+    <addaction name="separator"/>
+    <addaction name="actionLoad_Points_Data"/>
+    <addaction name="action_Save_Loaded_Data"/>
+   </widget>
    <widget class="QMenu" name="menuView">
     <property name="styleSheet">
      <string notr="true">color: rgb(255, 255, 255);
@@ -359,7 +378,7 @@ border-color: rgb(75, 78, 84);</string>
     <addaction name="menu2_Windows"/>
     <addaction name="action4_Windows"/>
     <addaction name="separator"/>
-    <addaction name="actionMode_Dark"/>
+    <addaction name="action3D_Mode_Dark"/>
     <addaction name="actionPlanes_On"/>
     <addaction name="actionAxes_On"/>
     <addaction name="separator"/>
@@ -383,6 +402,7 @@ border-color: rgb(75, 78, 84);</string>
    <addaction name="menuEdit"/>
    <addaction name="menuImage"/>
    <addaction name="menuAtlas"/>
+   <addaction name="menuObjects"/>
    <addaction name="menuView"/>
    <addaction name="menuHelp"/>
   </widget>
@@ -504,44 +524,9 @@ selection-background-color: rgb(50, 50, 50);</string>
     <string>Register Slice Info ...</string>
    </property>
   </action>
-  <action name="actionAbout_HERBS">
-   <property name="text">
-    <string>About HERBS</string>
-   </property>
-  </action>
   <action name="actionSave_Slice">
    <property name="text">
     <string>Save Processed Slice ...</string>
-   </property>
-  </action>
-  <action name="actionCoronal_Window">
-   <property name="text">
-    <string>Coronal Window</string>
-   </property>
-  </action>
-  <action name="actionSagital_Window">
-   <property name="text">
-    <string>Sagital Window</string>
-   </property>
-  </action>
-  <action name="actionHorizontal_Window">
-   <property name="text">
-    <string>Horizontal Window</string>
-   </property>
-  </action>
-  <action name="action3D_Window">
-   <property name="text">
-    <string>3D Window</string>
-   </property>
-  </action>
-  <action name="actionImage_Window">
-   <property name="text">
-    <string>Image Window</string>
-   </property>
-  </action>
-  <action name="action4_Windows">
-   <property name="text">
-    <string>4 Windows</string>
    </property>
   </action>
   <action name="actionProcess_Image">
@@ -586,6 +571,9 @@ selection-background-color: rgb(50, 50, 50);</string>
    <property name="text">
     <string>Probes</string>
    </property>
+   <property name="toolTip">
+    <string>save all merged probes</string>
+   </property>
   </action>
   <action name="actionSave_Virus">
    <property name="text">
@@ -615,16 +603,6 @@ selection-background-color: rgb(50, 50, 50);</string>
   <action name="actionLoad_Objects">
    <property name="text">
     <string>Load Objects</string>
-   </property>
-  </action>
-  <action name="actionOverlay_Image_2">
-   <property name="text">
-    <string>Overlay Image</string>
-   </property>
-  </action>
-  <action name="actionMask_Image_2">
-   <property name="text">
-    <string>Mask Image</string>
    </property>
   </action>
   <action name="actionSave_Triangulation_Points">
@@ -687,16 +665,6 @@ selection-background-color: rgb(50, 50, 50);</string>
     <string>1 Counter Clockwise</string>
    </property>
   </action>
-  <action name="actionShow_Grids">
-   <property name="text">
-    <string>Show Grids</string>
-   </property>
-  </action>
-  <action name="actionHide_Grids">
-   <property name="text">
-    <string>Hide Grids</string>
-   </property>
-  </action>
   <action name="actionLoad_Image_Atlas">
    <property name="text">
     <string>Load Slice ...</string>
@@ -744,11 +712,6 @@ selection-background-color: rgb(50, 50, 50);</string>
     <string>Crop off the area not slected</string>
    </property>
   </action>
-  <action name="actionBlock_Volume_Atlas">
-   <property name="text">
-    <string>Block Volume Atlas</string>
-   </property>
-  </action>
   <action name="actionSwitch_Atlas">
    <property name="text">
     <string>Switch Atlas: Volume</string>
@@ -763,16 +726,6 @@ selection-background-color: rgb(50, 50, 50);</string>
    </property>
    <property name="toolTip">
     <string>Check to slecte the location of Bregma</string>
-   </property>
-  </action>
-  <action name="actionVolume_Histology">
-   <property name="text">
-    <string>Volume + Histology</string>
-   </property>
-  </action>
-  <action name="actionSlice_Histology">
-   <property name="text">
-    <string>Slice + Histology</string>
    </property>
   </action>
   <action name="actionCreate_Slice_Layer">
@@ -802,22 +755,57 @@ selection-background-color: rgb(50, 50, 50);</string>
   </action>
   <action name="actionDownload_Allen_Mice_Atlas">
    <property name="text">
-    <string>Download Allen Mice Atlas</string>
+    <string>Download Allen Mice Atlas ...</string>
    </property>
   </action>
-  <action name="actionMode_Dark">
+  <action name="actionAbout_HERBS">
+   <property name="text">
+    <string>About HERBS</string>
+   </property>
+  </action>
+  <action name="actionCoronal_Window">
+   <property name="text">
+    <string>Coronal Window</string>
+   </property>
+  </action>
+  <action name="actionSagital_Window">
+   <property name="text">
+    <string>Sagital Window</string>
+   </property>
+  </action>
+  <action name="actionHorizontal_Window">
+   <property name="text">
+    <string>Horizontal Window</string>
+   </property>
+  </action>
+  <action name="action3D_Window">
+   <property name="text">
+    <string>3D Window</string>
+   </property>
+  </action>
+  <action name="actionImage_Window">
+   <property name="text">
+    <string>Image Window</string>
+   </property>
+  </action>
+  <action name="action4_Windows">
+   <property name="text">
+    <string>4 Windows</string>
+   </property>
+  </action>
+  <action name="actionVolume_Histology">
+   <property name="text">
+    <string>Volume + Histology</string>
+   </property>
+  </action>
+  <action name="actionSlice_Histology">
+   <property name="text">
+    <string>Slice + Histology</string>
+   </property>
+  </action>
+  <action name="action3D_Mode_Dark">
    <property name="text">
     <string>3D Mode: Dark</string>
-   </property>
-  </action>
-  <action name="actionGrids_Off">
-   <property name="text">
-    <string>Grids: Off</string>
-   </property>
-  </action>
-  <action name="action2D_Mode_Dark">
-   <property name="text">
-    <string>2D Mode: Dark</string>
    </property>
   </action>
   <action name="actionPlanes_On">
@@ -828,6 +816,41 @@ selection-background-color: rgb(50, 50, 50);</string>
   <action name="actionAxes_On">
    <property name="text">
     <string>Axes: On</string>
+   </property>
+  </action>
+  <action name="action2D_Mode_Dark">
+   <property name="text">
+    <string>2D Mode: Dark</string>
+   </property>
+  </action>
+  <action name="actionGrids_Off">
+   <property name="text">
+    <string>Grids: Off</string>
+   </property>
+  </action>
+  <action name="actionSave_Probe_Setting">
+   <property name="text">
+    <string>Save Probe Setting ...</string>
+   </property>
+  </action>
+  <action name="actionLoad_Probe_Setting">
+   <property name="text">
+    <string>Load Probe Setting ...</string>
+   </property>
+  </action>
+  <action name="actionMulti_Probe_Planning">
+   <property name="text">
+    <string>Multi-Probe Planning</string>
+   </property>
+  </action>
+  <action name="actionLoad_Points_Data">
+   <property name="text">
+    <string>Load Points_Data ...</string>
+   </property>
+  </action>
+  <action name="action_Save_Loaded_Data">
+   <property name="text">
+    <string>&amp;Save Loaded Data</string>
    </property>
   </action>
  </widget>
