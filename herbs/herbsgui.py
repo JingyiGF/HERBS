@@ -5520,8 +5520,8 @@ class HERBS(QMainWindow, FORM_Main):
 
         # load object related
         object_data = p_dict['object_data']
-        self.object_3d_list = object_data['object_3d_list']
         if object_data is not None:
+            self.object_3d_list = object_data['object_3d_list']
             self.object_ctrl.set_obj_data(object_data)
 
         self.print_message('Project loaded successfully.', self.normal_color)

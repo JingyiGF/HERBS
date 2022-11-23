@@ -471,6 +471,7 @@ def get_traveling_label_mat(sp, shank_columns, rot_mat, bregma, label_data):
 def group_labels(fine_label_mat):
     n_row, n_column = fine_label_mat.shape
     group_mat = np.zeros(fine_label_mat.shape)
+    group_mat[:] = np.nan
     group_id = 0
     group_id_label = []
 
@@ -688,15 +689,9 @@ def calculate_probe_info(data_list, pieces_names, label_data, label_info, vxsize
 
     # get column center bottom points, bottom is the base of tip
     ct_ep = pc_sp + np.dot(rot_mat, base_end.T).T
-    print('pc_sp', pc_sp)
-    print('pc_ep', pc_ep)
-    print('ct_ep', ct_ep)
 
     # correct the base_start, minor correction
     base_start_new, ct_sp, error_index = correct_base_sp(base_start, pc_sp, rot_mat, direction, bregma, label_data)
-
-    print('base_start', base_start_new)
-    print('base_end', base_end)
 
     if error_index != 0:
         return data_dict, 16
@@ -704,9 +699,17 @@ def calculate_probe_info(data_list, pieces_names, label_data, label_info, vxsize
     shank_columns = get_shank_columns(base_start_new, base_end, step_length)
     fine_label_mat = get_traveling_label_mat(pc_sp, shank_columns, rot_mat, bregma, label_data)
     # fine_label_mat = get_traveling_label_mat(ct_sp, ct_ep, direction, bregma, label_data, step_length)
+
     group_mat, group_id_label = group_labels(fine_label_mat)
+    cind = np.where(np.isnan(group_mat))
+    print(cind)
+    print(group_id_label)
+    print(fine_label_mat[cind])
+
 
     gr_start, gr_end, region_length, region_text_loc = get_group_bounds(group_mat, step_length)
+    # print(gr_start)
+    # print(gr_end)
 
     region_length = np.ravel(region_length) * vxsize_um
 
