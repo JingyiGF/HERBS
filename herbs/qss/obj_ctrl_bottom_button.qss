@@ -21,3 +21,9 @@ QPushButton:hover {
     background-color: #383838;
     border: 1px solid #636363;
 }
+
+QToolTip {
+   background-color: black;
+   color: white;
+   border: black solid 1px
+  }
