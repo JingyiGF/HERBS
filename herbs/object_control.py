@@ -839,19 +839,37 @@ class ObjectControl(QObject):
 
         # bottom buttons
         self.info_btn = BottomButton('icons/sidebar/info.svg')
+        self.info_btn.setToolTip('open information window')
         self.info_btn.clicked.connect(self.info_btn_clicked)
 
         self.vis2d_btn = BottomButton('icons/toolbar/vis2d.svg')
+        self.vis2d_btn.setToolTip('find the corresponding 2D plane')
         self.unmerge_btn = BottomButton('icons/toolbar/unmerge.svg')
+        self.unmerge_btn.setToolTip('un-merge a merged object')
         self.unmerge_btn.clicked.connect(self.unmerge_objects)
         self.compare_btn = BottomButton('icons/sidebar/compare.svg')
+        self.compare_btn.setToolTip('compare multiple linked objects')
+
         self.merge_probe_btn = BottomButton('icons/sidebar/probe.svg')
+        self.merge_probe_btn.setToolTip('merge probes pieces')
+
         self.merge_drawing_btn = BottomButton('icons/toolbar/pencil.svg')
+        self.merge_drawing_btn.setToolTip('merge drawing pieces')
+
         self.merge_cell_btn = BottomButton('icons/toolbar/location.svg')
+        self.merge_cell_btn.setToolTip('merge cells pieces')
+
         self.merge_virus_btn = BottomButton('icons/sidebar/virus.svg')
+        self.merge_virus_btn.setToolTip('merge virus pieces')
+
         self.merge_contour_btn = BottomButton('icons/sidebar/contour.svg')
+        self.merge_contour_btn.setToolTip('merge contour pieces')
+
         self.add_object_btn = BottomButton('icons/sidebar/add.png')
+        self.add_object_btn.setToolTip('add a piece')
+
         self.delete_object_btn = BottomButton('icons/sidebar/trash.png')
+        self.delete_object_btn.setToolTip('delete an object')
         self.delete_object_btn.clicked.connect(self.delete_object_btn_clicked)
 
     def blend_mode_changed(self):
