@@ -288,6 +288,8 @@ def get_direction_rotation(direction):
         vec2[2] = 0
         ang_alpha = angle_between_2vectors(vec2, x_vec)
         ang_beta = angle_between_2vectors(direction, vec2)
+        print(ang_alpha)
+        print(ang_beta)
         rot_m = np.dot(rotation_z(ang_alpha), rotation_y(ang_beta))
     return rot_m
 
@@ -353,11 +355,6 @@ def get_sites_center_base(new_base_start, base_end, y_bias, sites_distance, per_
     n_column = len(y_bias)
     sites_center_base = []
 
-    print('base_end', base_end)
-    print('y_bias', y_bias)
-    print(new_base_start)
-    print(sites_distance)
-
     for i in range(n_column):
         valid_val = base_end[i, 0] - y_bias[i]
         center_base = np.arange(valid_val, new_base_start[i, 0], -sites_distance[i])
@@ -409,30 +406,66 @@ def get_sites(sp, base_columns, rot_mat, bregma, label_data):
     return sites_loc, sites_vox, sites_label
 
 
-def get_traveling_label_mat(ct_sp, ct_ep, direction, bregma, label_data, step_length):
-    column_fine_label = []
-    n_rows = []
-    n_column = len(ct_sp)
+def get_shank_columns(base_start, base_end, step_length):
+    n_column = len(base_start)
+    shank_columns = []
     for i in range(n_column):
-        column_length = np.sqrt(np.sum((ct_sp[i] - ct_ep[i]) ** 2))
-        step_dist = np.arange(0, column_length, step_length)
-        n_pnt = len(step_dist)
-        pnt_vec = np.zeros((n_pnt, 3))
-        for j in range(n_pnt):
-            pnt_vec[j] = ct_ep[i] - step_dist[j] * direction
-        pnt_vec = np.vstack([pnt_vec, ct_sp[i]])
-        n_rows.append(len(pnt_vec))
-        vox_vec = pnt_vec + bregma
-        vox_vec = vox_vec.astype(int)
-        column_label = label_data[vox_vec[:, 0], vox_vec[:, 1], vox_vec[:, 2]]
-        column_fine_label.append(column_label)
+        shank_center_base = np.arange(base_end[i, 0], base_start[i, 0], -step_length)
+        shank_column = np.repeat(np.array([base_start[i]]), len(shank_center_base), axis=0)
+        shank_column[:, 0] = shank_center_base + 0.
+        shank_columns.append(shank_column)
+    return shank_columns
+
+def get_traveling_label_mat(sp, shank_columns, rot_mat, bregma, label_data):
+    n_column = len(shank_columns)
+    n_rows = []
+    c_loc = []
+    c_vox = []
+    c_label = []
+    for i in range(n_column):
+        c_loc_temp = sp + np.dot(rot_mat, shank_columns[i].T).T
+        c_loc.append(c_loc_temp)
+
+        n_rows.append(len(c_loc_temp))
+        temp_vox = c_loc_temp + bregma
+        temp_vox = temp_vox.astype(int)
+        c_vox.append(temp_vox)
+
+        c_label_column = label_data[temp_vox[:, 0], temp_vox[:, 1], temp_vox[:, 2]]
+        c_label.append(c_label_column)
 
     n_row = np.max(n_rows)
     fine_label_mat = np.zeros((n_row, n_column))
     for i in range(n_column):
-        fine_label_mat[:n_rows[i], i] = column_fine_label[i]
+        fine_label_mat[:n_rows[i], i] = c_label[i]
 
     return fine_label_mat
+
+
+# def get_traveling_label_mat(ct_sp, ct_ep, direction, bregma, label_data, step_length):
+#     column_fine_label = []
+#     n_rows = []
+#     n_column = len(ct_sp)
+#     for i in range(n_column):
+#         column_length = np.sqrt(np.sum((ct_sp[i] - ct_ep[i]) ** 2))
+#         step_dist = np.arange(0, column_length, step_length)
+#         n_pnt = len(step_dist)
+#         pnt_vec = np.zeros((n_pnt, 3))
+#         for j in range(n_pnt):
+#             pnt_vec[j] = ct_ep[i] - step_dist[j] * direction
+#         pnt_vec = np.vstack([pnt_vec, ct_sp[i]])
+#         n_rows.append(len(pnt_vec))
+#         vox_vec = pnt_vec + bregma
+#         vox_vec = vox_vec.astype(int)
+#         column_label = label_data[vox_vec[:, 0], vox_vec[:, 1], vox_vec[:, 2]]
+#         column_fine_label.append(column_label)
+#
+#     n_row = np.max(n_rows)
+#     fine_label_mat = np.zeros((n_row, n_column))
+#     for i in range(n_column):
+#         fine_label_mat[:n_rows[i], i] = column_fine_label[i]
+#
+#     return fine_label_mat
 
 
 def group_labels(fine_label_mat):
@@ -556,8 +589,27 @@ def get_label_name(label_info, region_label):
     return label_names, label_acronym, label_color
 
 
+# def get_sites_label(label_info, sites_label):
+#     label_names = []
+#     label_acronym = []
+#     label_color = []
+#     for i in range(len(region_label)):
+#         if region_label[i] == 0:
+#             label_names.append(' ')
+#             label_acronym.append(' ')
+#             label_color.append((128, 128, 128))
+#         else:
+#             da_ind = np.where(np.ravel(label_info['index']) == region_label[i])[0][0]
+#             label_names.append(label_info['label'][da_ind])
+#             label_acronym.append(label_info['abbrev'][da_ind])
+#             label_color.append(label_info['color'][da_ind])
+#
+#     label_color = np.asarray(label_color)
+#     return label_names, label_acronym, label_color
+
+
 def calculate_probe_info(data_list, pieces_names, label_data, label_info, vxsize_um, probe_settings,
-                         bregma, site_face, step_length=0.05):
+                         bregma, site_face, step_length=0.01):
     """
 
     :param data: 3d coordinates for all the points
@@ -604,6 +656,8 @@ def calculate_probe_info(data_list, pieces_names, label_data, label_info, vxsize
 
     # get angels
     ap_angle, ml_angle = get_angles(direction)
+    print('ap_angle', ap_angle)
+    print(ml_angle)
 
     # correct probe center start point
     pc_sp, error_index = correct_start_pnt(label_data, pc_start_pnt, pc_start_vox, direction, bregma)
@@ -624,6 +678,7 @@ def calculate_probe_info(data_list, pieces_names, label_data, label_info, vxsize
     dv = (pc_sp[2] - pc_ep[2]) * vxsize_um
     ap_tilt, ml_tilt = get_tilt_info(pc_sp, pc_ep)
 
+
     # get rotation matrix
     rot_mat = get_direction_rotation(direction)
     # base start=pseudo enter, base end=pseudo terminus, assume the initial direction of probe is (1,0,0)
@@ -633,14 +688,22 @@ def calculate_probe_info(data_list, pieces_names, label_data, label_info, vxsize
 
     # get column center bottom points, bottom is the base of tip
     ct_ep = pc_sp + np.dot(rot_mat, base_end.T).T
+    print('pc_sp', pc_sp)
+    print('pc_ep', pc_ep)
+    print('ct_ep', ct_ep)
 
     # correct the base_start, minor correction
     base_start_new, ct_sp, error_index = correct_base_sp(base_start, pc_sp, rot_mat, direction, bregma, label_data)
 
+    print('base_start', base_start_new)
+    print('base_end', base_end)
+
     if error_index != 0:
         return data_dict, 16
 
-    fine_label_mat = get_traveling_label_mat(ct_sp, ct_ep, direction, bregma, label_data, step_length)
+    shank_columns = get_shank_columns(base_start_new, base_end, step_length)
+    fine_label_mat = get_traveling_label_mat(pc_sp, shank_columns, rot_mat, bregma, label_data)
+    # fine_label_mat = get_traveling_label_mat(ct_sp, ct_ep, direction, bregma, label_data, step_length)
     group_mat, group_id_label = group_labels(fine_label_mat)
 
     gr_start, gr_end, region_length, region_text_loc = get_group_bounds(group_mat, step_length)

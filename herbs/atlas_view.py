@@ -950,8 +950,8 @@ class AtlasView(QObject):
         ap_angle = -1 * ap_sign * display_data['ap_angle']
         ml_angle = ml_sign * display_data['ml_angle']
 
-        start_pnt = display_data['new_insertion_coords_3d'].copy()
-        end_pnt = display_data['new_terminus_coords_3d'].copy()
+        start_pnt = display_data['insertion_coords_3d'].copy()
+        end_pnt = display_data['terminus_coords_3d'].copy()
         # if ap_angle <= 30 and ap_angle >= -30:
         if ap_angle <= -1e-6 or ap_angle >= 1e-6:
             self.coronal_slice_rotated((0, np.radians(ap_angle)))

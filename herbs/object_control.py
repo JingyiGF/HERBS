@@ -421,7 +421,7 @@ class ProbeInfoWindow(QDialog):
             for j in range(len(sites_u_label)):
                 temp = np.where(group_region_label == sites_u_label[j])[0]
                 if len(temp) == 0:
-                    print('something went wrong, ')
+                    raise Exception('This is a numerical error, please contact maintainers.')
                 sites_u_color.append(group_region_color[temp[0]])
             sites_u_color = np.asarray(sites_u_color)
 
@@ -936,7 +936,6 @@ class ObjectControl(QObject):
     def obj_info_on_click(self):
         da_data = self.obj_data[self.current_obj_index]
         da_name = self.obj_name[self.current_obj_index]
-        print('da_data', da_data)
         if 'probe' in self.obj_type[self.current_obj_index]:
             self.info_window = ProbeInfoWindow(da_name, da_data)
         elif 'virus' in self.obj_type[self.current_obj_index]:
