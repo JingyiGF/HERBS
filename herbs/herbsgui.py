@@ -64,6 +64,7 @@ from .toolbox import ToolBox
 from .wtiles import LayerSettingDialog, SliceSettingDialog, LinearSiliconInfoDialog
 from .obj_items import get_object_vis_color, create_plot_points_in_3d, create_probe_line_in_3d, \
     create_drawing_in_3d, create_contour_line_in_3d, render_volume, render_small_volume, make_3d_gl_widget
+from .about_herbs import AboutHERBSWindow
 
 
 script_dir = dirname(realpath(__file__))
@@ -391,7 +392,7 @@ class HERBS(QMainWindow, FORM_Main):
         self.action4_Windows.triggered.connect(self.show_4_windows)
         self.actionSlice_Histology.triggered.connect(self.show_slice_and_histology)
 
-        self.actionMode_Dark.triggered.connect(self.switch_3d_display_mode)
+        self.action3D_Mode_Dark.triggered.connect(self.switch_3d_display_mode)
         self.actionPlanes_On.triggered.connect(self.show_3d_planes)
         self.actionAxes_On.triggered.connect(self.show_3d_axes)
         self.action2D_Mode_Dark.triggered.connect(self.switch_2d_display_mode)
@@ -412,6 +413,10 @@ class HERBS(QMainWindow, FORM_Main):
         self.actionHide.triggered.connect(self.hide_image)
 
         # about menu related
+        self.actionAbout_HERBS.triggered.connect(self.about_herbs_info)
+
+        # objects menu related
+
 
         self.init_tool_bar()
         self.init_side_bar()
@@ -3104,7 +3109,13 @@ class HERBS(QMainWindow, FORM_Main):
                 self.tool_box.update_single_cell_count_label(self.working_img_data['cell_count'], layer_ind)
 
                 self.image_view.img_stacks.image_dict['img-cells'].setData(
-                    pos=np.asarray(self.working_img_data['img-cells']), symbol=self.working_img_data['cell_symbol'])
+                    pos=np.asarray(self.working_img_data['img-cells']))
+                self.image_view.img_stacks.image_dict['img-cells'].setSymbol(
+                    symbol=self.working_img_data['cell_symbol'])
+
+                # print(self.image_view.img_stacks.image_dict['img-cells'].data)
+                # print(self.image_view.img_stacks.image_dict['img-cells'].)
+
 
                 cv2.circle(self.cell_img, (int(x), int(y)), radius=2, color=self.cell_color, thickness=-1)
                 res = cv2.resize(self.cell_img, self.image_view.tb_size, interpolation=cv2.INTER_AREA)
@@ -4162,22 +4173,9 @@ class HERBS(QMainWindow, FORM_Main):
 
             self.atlas_view.rotate_cs_plane_after_merging_probe(display_data)
 
-
-
         # display all linked object, for probe, all probe limited in some angle
 
         # for cell/virus, show only on the current page
-    # def unmerge_objects(self):
-    #     current_obj = self.object_ctrl.obj_type[self.object_ctrl.current_obj_index]
-    #     if 'merged' not in current_obj:
-    #         return
-    #     current_data = self.object_ctrl.obj_data[self.object_ctrl.current_obj_index]
-    #     data_list = current_data['data']
-    #     pieces_names = current_data['pieces_names']
-    #     #
-    #
-    #
-    #     pass
 
     def compare_object(self):
         if len(self.object_ctrl.linked_indexes) < 2:
@@ -4214,7 +4212,6 @@ class HERBS(QMainWindow, FORM_Main):
                                                 object_type='probe piece',
                                                 object_data=data_3d_list[i],
                                                 object_mode=self.obj_display_mode)
-                    # self.object_3d_list.append([])
             else:
                 data_2d = np.asarray(data_tobe_registered)
                 print('data2d', data_2d)
@@ -4224,7 +4221,6 @@ class HERBS(QMainWindow, FORM_Main):
                                             object_type='probe piece',
                                             object_data=data_3d,
                                             object_mode=self.obj_display_mode)
-                # self.object_3d_list.append([])
 
             self.working_atlas_data['atlas-probe'].clear()
             self.working_img_data['img-probe'].clear()
@@ -4245,7 +4241,7 @@ class HERBS(QMainWindow, FORM_Main):
                                     object_type='virus piece',
                                     object_data=data,
                                     object_mode=self.obj_display_mode)
-        # self.object_3d_list.append([])
+
         self.working_atlas_data['atlas-virus'] = []
 
     def make_contour_piece(self):
@@ -4264,7 +4260,7 @@ class HERBS(QMainWindow, FORM_Main):
                                     object_type='contour piece',
                                     object_data=data,
                                     object_mode=self.obj_display_mode)
-        # self.object_3d_list.append([])
+
         self.working_atlas_data['atlas-contour'] = []
 
     def make_drawing_piece(self):
@@ -4290,7 +4286,7 @@ class HERBS(QMainWindow, FORM_Main):
                                     object_type='drawing piece',
                                     object_data=data,
                                     object_mode=self.obj_display_mode)
-        # self.object_3d_list.append([])
+
         self.working_atlas_data['atlas-drawing'] = []
 
     def make_cell_piece(self):
@@ -4314,7 +4310,7 @@ class HERBS(QMainWindow, FORM_Main):
                                             object_type='cells piece',
                                             object_data=piece_data,
                                             object_mode=self.obj_display_mode)
-                # self.object_3d_list.append([])
+
         self.working_atlas_data['atlas-cells'].clear()
         self.working_atlas_data['cell_size'].clear()
         self.working_atlas_data['cell_symbol'].clear()
@@ -4368,8 +4364,6 @@ class HERBS(QMainWindow, FORM_Main):
             self.object_ctrl.add_object(obj_names[i], 'merged probe',
                                         object_data=info_dict, object_mode=self.obj_display_mode)
 
-            # self.add_3d_object(info_dict, 'merged probe')
-
     # virus related functions
     def merge_virus(self):
         virus_piece_count = len([da_piece for da_piece in self.object_ctrl.obj_type if da_piece == 'virus piece'])
@@ -4383,8 +4377,6 @@ class HERBS(QMainWindow, FORM_Main):
                                              self.atlas_view.origin_3d)
             self.object_ctrl.add_object(obj_names[i], 'merged virus',
                                         object_data=info_dict, object_mode=self.obj_display_mode)
-
-            # self.add_3d_object(info_dict, 'merged virus')
 
     # cell related functions
     def merge_cells(self):
@@ -4400,7 +4392,6 @@ class HERBS(QMainWindow, FORM_Main):
             self.object_ctrl.add_object(obj_names[i], 'merged cells',
                                         object_data=info_dict, object_mode=self.obj_display_mode)
 
-            # self.add_3d_object(info_dict, 'merged cells')
 
     # drawing related functions
     def merge_drawings(self):
@@ -4416,7 +4407,7 @@ class HERBS(QMainWindow, FORM_Main):
                 data[i], pieces_names[i], label_data, self.atlas_view.label_info, self.atlas_view.origin_3d)
             self.object_ctrl.add_object(
                 obj_names[i], 'merged drawing', object_data=info_dict, object_mode=self.obj_display_mode)
-            # self.add_3d_object(info_dict, 'merged drawing')
+
 
     # contour related functions
     def merge_contour(self):
@@ -4430,8 +4421,6 @@ class HERBS(QMainWindow, FORM_Main):
             info_dict = {'object_type': 'contour', 'data': data[i]}
             self.object_ctrl.add_object(obj_names[i], 'merged contour',
                                         object_data=info_dict, object_mode=self.obj_display_mode)
-
-            # self.add_3d_object(info_dict, 'merged contour')
 
     # common functions
     def obj_color_changed(self, ev):
@@ -4928,7 +4917,11 @@ class HERBS(QMainWindow, FORM_Main):
                     return
 
                 if 'merged' in object_dict['type']:
-                    max_val = np.max(object_dict['data']['data'], 0)
+                    data_list = object_dict['data']['data']
+                    data = data_list[0]
+                    for j in range(1, len(data_list)):
+                        data = np.vstck([data, data_list[j]])
+                    max_val = np.max(data, 0)
                 else:
                     max_val = np.max(object_dict['data'], 0)
 
@@ -4937,10 +4930,6 @@ class HERBS(QMainWindow, FORM_Main):
                 else:
                     self.object_ctrl.add_object(object_dict['name'], object_dict['type'],
                                                 object_dict['data'], self.obj_display_mode)
-                    # if 'merged' in object_dict['type']:
-                    #     self.add_3d_object(object_dict['data'], 'merged probe')
-                    # else:
-                    #     self.object_3d_list.append([])
 
             if problem_obj_name:
                 msg = 'Objects {} not matching the atlas slice.'.format(','.join(problem_obj_name))
@@ -5004,7 +4993,13 @@ class HERBS(QMainWindow, FORM_Main):
                 fdata = {'data': image_vis_data,
                          'vector': pnt_vec.tolist()}
             elif layer_link == 'img-cells':
+                temp_data = self.image_view.img_stacks.image_dict[layer_link].data
+                symbol_list = []
+                for i in range(len(temp_data)):
+                    symbol_list.append(temp_data[i][3])
+                print('symbol list', symbol_list)
                 fdata = {'data': image_vis_data,
+                         'symbol': symbol_list,
                          'cell_size': self.working_img_data['cell_size'],
                          'cell_symbol': self.working_img_data['cell_symbol'],
                          'cell_layer_index': self.working_img_data['cell_layer_index'],
@@ -5056,7 +5051,12 @@ class HERBS(QMainWindow, FORM_Main):
                 image_vis_data = self.atlas_view.working_atlas.image_dict[layer_link].getData()
                 image_vis_data = list(np.asarray(image_vis_data).T)
             if layer_link == 'atlas-cells':
+                temp_data = self.atlas_view.working_atlas.image_dict[layer_link].data
+                symbol_list = []
+                for i in range(len(temp_data)):
+                    symbol_list.append(temp_data[i][3])
                 fdata = {'data': image_vis_data,
+                         'symbol': symbol_list,
                          'cell_size': self.working_atlas_data['cell_size'],
                          'cell_symbol': self.working_atlas_data['cell_symbol'],
                          'cell_layer_index': self.working_atlas_data['cell_layer_index'],
@@ -5179,12 +5179,11 @@ class HERBS(QMainWindow, FORM_Main):
         else:
             return
 
-    def set_hist_layer_to_hist_view(self, layer_link, vis_data_2d):
+    def set_hist_layer_to_hist_view(self, layer_link, vis_data_2d, symbol):
         if layer_link == 'img-proces':
             self.image_view.set_data_and_size(vis_data_2d)
         elif layer_link == 'img-cells':
-            self.image_view.img_stacks.image_dict[layer_link].setData(
-                pos=np.asarray(vis_data_2d), symbol=self.working_img_data['cell_symbol'])
+            self.image_view.img_stacks.image_dict[layer_link].setData(pos=np.asarray(vis_data_2d), symbol=symbol)
         elif layer_link == 'img-probe':
             self.image_view.img_stacks.image_dict[layer_link].setData(pos=np.asarray(vis_data_2d))
         elif layer_link in ['img-overlay', 'img-mask', 'img-virus']:
@@ -5237,12 +5236,11 @@ class HERBS(QMainWindow, FORM_Main):
         else:
             return
 
-    def set_atlas_layer_to_atlas_view(self, layer_link, vis_data_2d):
+    def set_atlas_layer_to_atlas_view(self, layer_link, vis_data_2d, symbol):
         if layer_link == 'atlas-slice':
             self.atlas_view.set_slice_data(vis_data_2d)
         elif layer_link == 'atlas-cells':
-            self.atlas_view.working_atlas.image_dict[layer_link].setData(
-                pos=np.asarray(vis_data_2d), symbol=self.working_atlas_data['cell_symbol'])
+            self.atlas_view.working_atlas.image_dict[layer_link].setData(pos=np.asarray(vis_data_2d), symbol=symbol)
         elif layer_link in ['atlas-overlay', 'atlas-mask']:
             self.atlas_view.working_atlas.image_dict[layer_link].setImage(vis_data_2d)
         elif layer_link in ['atlas-drawing', 'atlas-contour']:
@@ -5272,13 +5270,21 @@ class HERBS(QMainWindow, FORM_Main):
                         self.print_message('Please load histological image first.', self.error_message_color)
                         return
                     self.set_hist_layer_data(layer_dict)
-                    self.set_hist_layer_to_hist_view(layer_dict['layer_link'], layer_dict['data'])
+                    if 'cells' in layer_dict['layer_link']:
+                        symbol = layer_dict['symbol']
+                    else:
+                        symbol = None
+                    self.set_hist_layer_to_hist_view(layer_dict['layer_link'], layer_dict['data'], symbol)
                 else:
                     if self.atlas_view.atlas_data is None and self.atlas_view.slice_image_data is None:
                         self.print_message('Please load atlas first.', self.error_message_color)
                         return
                     self.set_atlas_layer_data(layer_dict)
-                    self.set_atlas_layer_to_atlas_view(layer_dict['layer_link'], layer_dict['data'])
+                    if 'cells' in layer_dict['layer_link']:
+                        symbol = layer_dict['symbol']
+                    else:
+                        symbol = None
+                    self.set_atlas_layer_to_atlas_view(layer_dict['layer_link'], layer_dict['data'], symbol)
 
                 self.layer_ctrl.master_layers(layer_dict['thumbnail'], layer_type=layer_dict['layer_link'], color=layer_dict['color'])
                 # self.layer_ctrl.add_layer(layer_dict['layer_link'], layer_dict['color'])
@@ -5316,13 +5322,21 @@ class HERBS(QMainWindow, FORM_Main):
             if self.layer_ctrl.layer_link:
                 layer_data = self.layer_ctrl.get_layer_data()
                 all_2d_data = []
+                cells_symbol_atlas = None
+                cells_symbol_img = None
                 for single_layer_link in self.layer_ctrl.layer_link:
                     if 'atlas' in single_layer_link:
                         data_2d = self.get_atlas_single_layer_vis_data(single_layer_link)
+                        if 'cells' in single_layer_link:
+                            cells_symbol_atlas = data_2d['symbol']
                     else:
                         data_2d = self.get_hist_single_layer_vis_data(single_layer_link)
+                        if 'cells' in single_layer_link:
+                            cells_symbol_img = data_2d['symbol']
                     all_2d_data.append(data_2d['data'])
                 layer_data['2d_data'] = all_2d_data
+                layer_data['cells_symbol_atlas'] = cells_symbol_atlas
+                layer_data['cells_symbol_img'] = cells_symbol_img
             else:
                 layer_data = None
 
@@ -5492,35 +5506,23 @@ class HERBS(QMainWindow, FORM_Main):
                 self.atlas_view.working_atlas.image_dict[da_link].setPen(color=(self.layer_ctrl.layer_color[i]))
 
             if 'img' in da_link:
-                self.set_hist_layer_to_hist_view(da_link, layer_data['2d_data'][i])
+                if 'cells' in da_link:
+                    symbol = layer_data['cells_symbol_img']
+                else:
+                    symbol = None
+                self.set_hist_layer_to_hist_view(da_link, layer_data['2d_data'][i], symbol)
             else:
-                self.set_atlas_layer_to_atlas_view(da_link, layer_data['2d_data'][i])
+                if 'cells' in da_link:
+                    symbol = layer_data['cells_symbol_atlas']
+                else:
+                    symbol = None
+                self.set_atlas_layer_to_atlas_view(da_link, layer_data['2d_data'][i], symbol)
 
         # load object related
         object_data = p_dict['object_data']
         self.object_3d_list = object_data['object_3d_list']
         if object_data is not None:
             self.object_ctrl.set_obj_data(object_data)
-
-            for i in range(len(self.object_ctrl.obj_type)):
-                data_dict = self.object_ctrl.obj_data[i]
-                obj_type = self.object_ctrl.obj_type[i]
-                if not self.object_ctrl.obj_visibility[i]:
-                    self.object_ctrl.obj_list[i].hide()
-                if 'merged' in obj_type:
-                    self.object_ctrl.obj_merged.append(obj_type.split(' ')[1])
-                    self.add_3d_object(data_dict, obj_type)
-                else:
-                    self.object_3d_list.append([])
-                # if 'merged' in obj_type:
-                #     obj_3d = make_3d_gl_widget(data_dict, obj_type)
-                #     if self.display_mode_3d == 'dark':
-                #         obj_3d.setGLOptions('opaque')
-                #     else:
-                #         obj_3d.setGLOptions('additive')
-                #
-                #     self.object_3d_list[i] = obj_3d
-                #     self.view3d.addItem(self.object_3d_list[-1])
 
         self.print_message('Project loaded successfully.', self.normal_color)
 
@@ -5628,6 +5630,10 @@ class HERBS(QMainWindow, FORM_Main):
         self.statusbar.setStyleSheet(get_statusbar_style(col))
         self.statusbar.showMessage('  ' + msg)
 
+    # about herbs
+    def about_herbs_info(self):
+        dlg = AboutHERBSWindow()
+        dlg.exec()
 
 def main():
     app = QApplication(argv)
