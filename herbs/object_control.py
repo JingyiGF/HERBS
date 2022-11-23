@@ -732,7 +732,6 @@ class ObjectControl(QObject):
         self.obj_size = []  # size
         self.obj_opacity = []
         self.obj_comp_mode = []
-        self.obj_visibility = []
         self.obj_merged = []
 
         self.probe_icon = QIcon('icons/sidebar/probe.svg')

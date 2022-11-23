@@ -5505,8 +5505,6 @@ class HERBS(QMainWindow, FORM_Main):
             for i in range(len(self.object_ctrl.obj_type)):
                 data_dict = self.object_ctrl.obj_data[i]
                 obj_type = self.object_ctrl.obj_type[i]
-                if not self.object_ctrl.obj_visibility[i]:
-                    self.object_ctrl.obj_list[i].hide()
                 if 'merged' in obj_type:
                     self.object_ctrl.obj_merged.append(obj_type.split(' ')[1])
                     self.add_3d_object(data_dict, obj_type)
