@@ -185,7 +185,11 @@ class CellsInfoWindow(QDialog):
         label_style = 'QLabel {background-color: ' + color.name() + '; font-size: 20px}'
         self.label.setStyleSheet(label_style)
 
-        sec_group = QGroupBox('Total Count: {}'.format(len(data['data'])))
+        data_mat = data['data'][0]
+        for i in range(1, len(data['data'])):
+            data_mat = np.vstack([data_mat, data['data'][i]])
+
+        sec_group = QGroupBox('Total Count: {}'.format(len(data_mat)))
         slayout = QGridLayout(sec_group)
         lb1 = QLabel('Brain Region')
         lb2 = QLabel('Acronym')
@@ -932,6 +936,7 @@ class ObjectControl(QObject):
     def obj_info_on_click(self):
         da_data = self.obj_data[self.current_obj_index]
         da_name = self.obj_name[self.current_obj_index]
+        print('da_data', da_data)
         if 'probe' in self.obj_type[self.current_obj_index]:
             self.info_window = ProbeInfoWindow(da_name, da_data)
         elif 'virus' in self.obj_type[self.current_obj_index]:
