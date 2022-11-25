@@ -239,23 +239,31 @@ class VirusInfoWindow(QDialog):
         label_style = 'QLabel {background-color: ' + color.name() + '; font-size: 20px}'
         self.label.setStyleSheet(label_style)
 
-        sec_group = QGroupBox()
-        slayout = QGridLayout(sec_group)
-        lb1 = QLabel('Brain Region')
-        lb2 = QLabel('Acronym')
-        lb3 = QLabel('Color')
-        slayout.addWidget(lb1, 0, 0, 1, 1)
-        slayout.addWidget(lb2, 0, 1, 1, 1)
-        slayout.addWidget(lb3, 0, 2, 1, 1)
+        region_label = data['label_id']
+        region_name = data['label_name']
+        region_acronym = data['label_acronym']
+        virus_volume = data['virus_volume']
+        region_volume = data['region_volume']
+        region_color = data['label_color']
+        proportion = np.round(np.ravel(virus_volume) / np.ravel(region_volume) * 100, 2)
 
-        for i in range(len(data['label_name'])):
-            slayout.addWidget(QLabel(data['label_name'][i]), i + 1, 0, 1, 1)
-            slayout.addWidget(QLabel(data['label_acronym'][i]), i + 1, 1, 1, 1)
+        sec_group = QGroupBox()
+        sec_layout = QGridLayout(sec_group)
+        column_names = [QLabel('ID'), QLabel('Brain Region'), QLabel('Acronym'),
+                        QLabel('Volume (stk voxel)'), QLabel('Proportion (%)'), QLabel('Color')]
+        for i in range(len(column_names)):
+            sec_layout.addWidget(column_names[i], 0, i, 1, 1)
+
+        for i in range(len(region_label)):
             clb = QLabel()
-            da_color = QColor(data['label_color'][i][0], data['label_color'][i][1], data['label_color'][i][2],
-                              255).name()
+            da_color = QColor(region_color[i][0], region_color[i][1], region_color[i][2], 255).name()
             clb.setStyleSheet('QLabel {background-color: ' + da_color + '; width: 20px; height: 20px}')
-            slayout.addWidget(clb, i + 1, 2, 1, 1)
+
+            row_val = [QLabel(str(region_label[i])), QLabel(region_name[i]), QLabel(region_acronym[i]),
+                       QLabel(str(virus_volume[i])), QLabel(str(proportion[i])), clb]
+
+            for j in range(len(row_val)):
+                sec_layout.addWidget(row_val[j], i + 1, j, 1, 1)
 
         # ok button, used to close window
         ok_btn = QDialogButtonBox(QDialogButtonBox.Ok)

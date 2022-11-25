@@ -106,7 +106,7 @@ def get_region_label(data, label_data, bregma):
 
 
 def get_region_label_info(region_label, label_info):
-    unique_label = np.unique(region_label)
+    unique_label = np.sort(np.unique(region_label))
     label_names = []
     label_acronym = []
     label_color = []
@@ -125,19 +125,34 @@ def get_region_label_info(region_label, label_info):
 
         region_count.append(len(np.where(np.ravel(region_label) == unique_label[i])[0]))
 
-    return region_count, label_names, label_acronym, label_color
+    return region_count, label_names, label_acronym, label_color, unique_label
 
 
 def calculate_virus_info(data_list, pieces_names, label_data, label_info, bregma):
-    data = data_list[0]
+    temp_data = data_list[0]
     for i in range(1, len(data_list)):
-        data = np.vstack([data, data_list[i]])
+        temp_data = np.vstack([temp_data, data_list[i]])
+
+    data = temp_data.astype(int)
+
+    # data = np.array([vox_data[0]])
+    # for i in range(1, len(vox_data)):
+    #     if np.any(vox_data[i] != data[-1]):
+    #         data = np.vstack([data, vox_data[i]])
 
     region_label = get_region_label(data, label_data, bregma)
-    region_count, label_names, label_acronym, label_color = get_region_label_info(region_label, label_info)
+    unique_region = np.sort(np.unique(region_label))
+    region_volume = []
+    for c_region in unique_region:
+        region_volume.append(len(np.where(label_data == c_region)[0]))
 
-    res_dict = {'object_name': 'virus', 'data': data_list, 'pieces_names': pieces_names, 'label_name': label_names,
-                'label_acronym': label_acronym, 'label_color': label_color}
+    print(region_volume)
+    region_count, label_names, label_acronym, label_color, unique_label = get_region_label_info(region_label, label_info)
+    print(region_count)
+
+    res_dict = {'object_name': 'virus', 'data': data_list, 'pieces_names': pieces_names,
+                'label_id': unique_label, 'label_name': label_names, 'label_acronym': label_acronym,
+                'label_color': label_color, 'region_volume': region_volume, 'virus_volume': region_count}
 
     return res_dict
 
@@ -148,7 +163,7 @@ def calculate_cells_info(data_list, pieces_names, label_data, label_info, bregma
         data = np.vstack([data, data_list[i]])
 
     region_label = get_region_label(data, label_data, bregma)
-    region_count, label_names, label_acronym, label_color = get_region_label_info(region_label, label_info)
+    region_count, label_names, label_acronym, label_color, unique_label = get_region_label_info(region_label, label_info)
 
     res_dict = {'object_name': 'cell', 'pieces_names': pieces_names, 'data': data_list, 'label_name': label_names,
                 'label_acronym': label_acronym, 'label_color': label_color, 'region_count': region_count}
@@ -166,7 +181,7 @@ def calculate_drawing_info(data_list, pieces_names, label_data, label_info, breg
         plot_mode = 'line'
 
     region_label = get_region_label(data, label_data, bregma)
-    region_count, label_names, label_acronym, label_color = get_region_label_info(region_label, label_info)
+    region_count, label_names, label_acronym, label_color, unique_label = get_region_label_info(region_label, label_info)
 
     res_dict = {'object_name': 'drawing', 'pieces_names': pieces_names, 'data': data_list, 'label_name': label_names,
                 'label_acronym': label_acronym, 'label_color': label_color, 'region_count': region_count,
