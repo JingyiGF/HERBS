@@ -318,11 +318,11 @@ class LinearSiliconInfoDialog(QDialog):
         self.thickness_input = IntLineEdit(0, str(self.probe_settings['probe_thickness']))
         self.thickness_input.sig_text_changed.connect(self.probe_thickness_changed)
 
-        tip_length_label = QLabel('D Tip Length (um): ')
+        tip_length_label = QLabel('B Tip Length (um): ')
         self.tip_length_input = IntLineEdit(0, str(self.probe_settings['tip_length']))
         self.tip_length_input.sig_text_changed.connect(self.tip_length_changed)
 
-        site_height_label = QLabel('C Site Height (um): ')
+        site_height_label = QLabel('Site Height (um): ')
         self.site_height_input = IntLineEdit(0, str(self.probe_settings['site_height']))
         self.site_height_input.sig_text_changed.connect(self.site_height_changed)
 
@@ -335,8 +335,8 @@ class LinearSiliconInfoDialog(QDialog):
         self.n_column_spinbox.setRange(1, 10)
         self.n_column_spinbox.setValue(n_column)
 
-        row_names = [QLabel('Sites Distance (um): '), QLabel('Number of Sites: '),
-                     QLabel('X Bias (um): '), QLabel('Y Bias (um): ')]
+        row_names = [QLabel('Number of Sites: '), QLabel('C Sites Distance (um): '),
+                     QLabel('D X Bias (um): '), QLabel('E Y Bias (um): ')]
 
         self.sites_distance_wl = []
         self.per_max_sites_wl = []
@@ -373,8 +373,8 @@ class LinearSiliconInfoDialog(QDialog):
             self.right_layout.addWidget(row_names[i], 6 + i, 0, 1, 1)
 
         for j in range(n_column):
-            self.right_layout.addWidget(self.sites_distance_wl[j], 6, j + 1, 1, 1)
-            self.right_layout.addWidget(self.per_max_sites_wl[j], 7, j + 1, 1, 1)
+            self.right_layout.addWidget(self.per_max_sites_wl[j], 6, j + 1, 1, 1)
+            self.right_layout.addWidget(self.sites_distance_wl[j], 7, j + 1, 1, 1)
             self.right_layout.addWidget(self.x_bias_wl[j], 8, j + 1, 1, 1)
             self.right_layout.addWidget(self.y_bias_wl[j], 9, j + 1, 1, 1)
 
