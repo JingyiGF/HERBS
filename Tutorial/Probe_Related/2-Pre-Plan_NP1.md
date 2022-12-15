@@ -13,8 +13,8 @@ When BOTH atlas and histological images are loaded, the after-surgery mode is ON
 <p align="center">
 <img src="../../image/probe_related/pre_np1_1.jpg" width="20%">
 </p>
-2. Click the <b><span style="color:#272779">Probe Marker</span></b> tool button, 
-change the <b><span style="color:#272779">Probe Color</span></b> and <b><span style="color:#272779">Site Face</span></b> if needed, 
+2. Click the <b>Probe Marker</b> tool button, 
+change the <b>Probe Color</b> and <b>Site Face</b> if needed, 
 <p align="center">
 <img src="../../image/probe_related/probe_marker.jpg" width="80%">
 </p>
@@ -25,6 +25,4 @@ change the <b><span style="color:#272779">Probe Color</span></b> and <b><span st
 4. Add probe piece and merge probe. Please see the details in the corresponding tutorial.
 
 A video tutorial:
-<video width="100%" controls>
-  <source src="../../image/probe_related/pre_np1.mov" type="video/mp4">
-</video>
+See Turotial/Videos/pre_np1
