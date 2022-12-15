@@ -991,7 +991,7 @@ def get_angle_two_vector(vec1, vec2):
 
 
 def rotate_base_points(data, base_loc):
-    temp = np.stack([base_loc, np.array([0, 0, 0, 0])], axis=1)
+    temp = np.stack([base_loc, np.repeat(0, len(base_loc))], axis=1)
     vec1 = data[1] - data[0]
     vec2 = np.array([0, 1])
     ang = get_angle_two_vector(vec1, vec2)
@@ -1008,4 +1008,5 @@ def get_cell_count(cell_layer_index):
     for i in range(5):
         cell_count[i] = np.sum(cell_layer_index == i)
     return cell_count
+
 

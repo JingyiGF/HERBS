@@ -46,7 +46,8 @@ from .uuuuuu import get_cell_count, num_side_pnt_changed, rotate, merge_channels
     delete_points_inside_eraser, get_bound_color,  \
     calculate_cells_info, calculate_virus_info, calculate_drawing_info, calculate_contour_line, \
     check_loading_pickle_file, check_bounding_contains, get_statusbar_style
-from .probe_utiles import line_fit_2d, line_fit, get_tilt_sign, calculate_probe_info, Probe
+from .probe_utiles import line_fit_2d, Probe, MultiProbes, calculate_probe_info, \
+    get_pre_multi_shank_vis_base, get_center_lines
 from .czi_reader import CZIReader
 from .atlas_downloader import AtlasDownloader
 from .allen_downloader import AllenDownloader
@@ -61,7 +62,7 @@ from .image_view import ImageView
 from .layers_control import *
 from .object_control import *
 from .toolbox import ToolBox
-from .wtiles import LayerSettingDialog, SliceSettingDialog, LinearSiliconInfoDialog
+from .wtiles import LayerSettingDialog, SliceSettingDialog, LinearSiliconInfoDialog, MultiProbePlanningDialog
 from .obj_items import get_object_vis_color, create_plot_points_in_3d, create_probe_line_in_3d, \
     create_drawing_in_3d, create_contour_line_in_3d, render_volume, render_small_volume, make_3d_gl_widget
 from .about_herbs import AboutHERBSWindow
@@ -104,6 +105,9 @@ class HERBS(QMainWindow, FORM_Main):
         self.valid_probe_settings = True
         self.site_face = 0
         self.probe_type = 0
+        self.multi_shanks = False
+        self.multi_settings = MultiProbes()
+        self.valid_multi_settings = False
 
         self.np_onside = 2
         self.atlas_rect = None
@@ -125,7 +129,6 @@ class HERBS(QMainWindow, FORM_Main):
 
         self.drawing_allowed = False
 
-        self.n_pre_trajectory = 1
 
         self.working_img_data = {'img-overlay': None,
                                  'img-mask': None,
@@ -411,6 +414,13 @@ class HERBS(QMainWindow, FORM_Main):
         self.actionCut.triggered.connect(self.cut_image)
         self.actionHide.setCheckable(True)
         self.actionHide.triggered.connect(self.hide_image)
+
+        # objects menu related
+        # self.actionSave_Probe_Setting
+        # self.actionLoad_Probe_Setting
+        # self.actionLoad_Points_Data
+        # self.action_Save_Loaded_Data
+        self.actionMulti_Probe_Planning.triggered.connect(self.multi_probe_setting_called)
 
         # about menu related
         self.actionAbout_HERBS.triggered.connect(self.about_herbs_info)
@@ -790,7 +800,24 @@ class HERBS(QMainWindow, FORM_Main):
     #         w = item.widget()
     #         if w:
     #             w.deleteLater()
+
+    # ------------------------------------------------------------------
     #
+    #               Menubar - Objects related functions
+    #
+    # ------------------------------------------------------------------
+    def multi_probe_setting_called(self):
+        multi_settings = self.multi_settings.get_multi_settings()
+        multi_probe_info = MultiProbePlanningDialog(multi_settings, self.probe_settings.multi_shanks)
+        rsp = multi_probe_info.exec_()
+        if rsp == QDialog.Accepted:
+            self.multi_settings.set_multi_probes(multi_probe_info.multi_settings)
+            msg = self.multi_settings.check_multi_settings(self.probe_settings.multi_shanks)
+            if msg is not None:
+                self.print_message(msg, self.error_message_color)
+                return
+
+
 
     # ------------------------------------------------------------------
     #
@@ -820,7 +847,7 @@ class HERBS(QMainWindow, FORM_Main):
         self.atlas_view.working_cut_changed(self.atlas_display)
         self.reset_tri_points_atlas()
         self.working_atlas_data['atlas-mask'] = np.ones(self.atlas_view.slice_size).astype('uint8')
-        self.check_n_trajectory()
+        # self.check_n_trajectory()
 
     def clear_tri_inside(self):
         self.atlas_tri_inside_data.clear()  # renew tri_inside data to empty
@@ -1480,8 +1507,10 @@ class HERBS(QMainWindow, FORM_Main):
         # probe_related
         self.tool_box.probe_color_btn.sigColorChanged.connect(self.probe_color_changed)
         self.tool_box.probe_type_combo.currentIndexChanged.connect(self.probe_type_changed)
-        self.tool_box.site_face_combo.currentIndexChanged.connect(self.site_face_changed)
+        self.tool_box.pre_site_face_combo.currentIndexChanged.connect(self.site_face_changed)
+        self.tool_box.after_site_face_combo.currentIndexChanged.connect(self.site_face_changed)
         self.tool_box.linear_silicon_list.clicked.connect(self.set_linear_silicon)
+        self.tool_box.multi_prb_btn.clicked.connect(self.multi_shanks_btn_clicked)
         # eraser_related
         self.tool_box.eraser_color_btn.sigColorChanged.connect(self.change_eraser_color)
         # lasso related
@@ -1924,6 +1953,23 @@ class HERBS(QMainWindow, FORM_Main):
     #               ToolBar probe btn related
     #
     # ------------------------------------------------------------------
+    def multi_shanks_btn_clicked(self):
+        if self.tool_box.multi_prb_btn.isChecked():
+            self.multi_shanks = True
+            if self.probe_settings.multi_shanks is not None:
+                n_shanks = len(self.probe_settings.multi_shanks)
+                site_face = self.tool_box.pre_site_face_combo.currentText()
+                x_vals = np.ravel(self.probe_settings.multi_shanks)
+                y_vals = np.zeros(n_shanks)
+                multi_settings = {'x_vals': x_vals,
+                                  'y_vals': y_vals,
+                                  'faces': [site_face for _ in range(len(self.probe_settings.multi_shanks))]}
+                self.multi_settings.set_multi_probes(multi_settings)
+                self.valid_multi_settings = True
+        else:
+            self.multi_shanks = False
+
+
     def check_n_trajectory(self):
         if self.image_view.image_file is None:
             if self.probe_settings.probe_type == 1:
@@ -1946,12 +1992,12 @@ class HERBS(QMainWindow, FORM_Main):
         if index == 0:
             if self.probe_settings.probe_type == 2:
                 self.tool_box.linear_silicon_list.setVisible(False)
-            self.probe_settings.get_np1()
+            self.probe_settings.set_np1()
             self.valid_probe_settings = True
         elif index == 1:
             if self.probe_settings.probe_type == 2:
                 self.tool_box.linear_silicon_list.setVisible(False)
-            self.probe_settings.get_np2()
+            self.probe_settings.set_np2()
             self.valid_probe_settings = True
         elif index == 2:
             if self.probe_settings.probe_type != 2:
@@ -1961,14 +2007,15 @@ class HERBS(QMainWindow, FORM_Main):
         else:
             if self.probe_settings.probe_type == 2:
                 self.tool_box.linear_silicon_list.setVisible(False)
-            self.probe_settings.get_tetrode()
+            self.probe_settings.set_tetrode()
             self.valid_probe_settings = True
 
         self.probe_type = index
         self.atlas_view.pre_trajectory_changed()
-        self.check_n_trajectory()
+        # self.check_n_trajectory()
         self.atlas_view.working_atlas.image_dict['atlas-probe'].clear()
         self.working_atlas_data['atlas-probe'].clear()
+        self.multi_shanks_btn_clicked()
 
     def set_linear_silicon(self):
         temp_settings = self.probe_settings.get_settings()
@@ -2000,9 +2047,15 @@ class HERBS(QMainWindow, FORM_Main):
 
     def site_face_changed(self, site_index):
         self.site_face = site_index
-        self.check_n_trajectory()
+        if self.tool_box.pre_site_face_combo.isVisible():
+            site_face_text = self.tool_box.pre_site_face_combo.currentText()
+        else:
+            site_face_text = self.tool_box.after_site_face_combo.currentText()
+        self.probe_settings.probe_faces_changed(site_face_text)
+        # self.check_n_trajectory()
         self.atlas_view.pre_trajectory_changed()
         self.atlas_view.working_atlas.image_dict['atlas-probe'].clear()
+        self.multi_shanks_btn_clicked()
 
     def probe_color_changed(self, ev):
         probe_color = np.ravel(ev.color().getRgb())
@@ -2017,11 +2070,12 @@ class HERBS(QMainWindow, FORM_Main):
         self.atlas_view.himg.image_dict['atlas-probe'].setBrush(color=self.probe_color)
         self.atlas_view.simg.image_dict['atlas-probe'].setBrush(color=self.probe_color)
         self.atlas_view.slice_stack.image_dict['atlas-probe'].setBrush(color=self.probe_color)
-        for i in range(4):
-            self.atlas_view.cimg.pre_trajectory_list[i].setPen(pg.mkPen(color=self.probe_color, width=2))
-            self.atlas_view.simg.pre_trajectory_list[i].setPen(pg.mkPen(color=self.probe_color, width=2))
-            self.atlas_view.himg.pre_trajectory_list[i].setPen(pg.mkPen(color=self.probe_color, width=2))
-            self.atlas_view.slice_stack.pre_trajectory_list[i].setPen(pg.mkPen(color=self.probe_color, width=2))
+
+        self.atlas_view.cimg.pre_trajectory_color_changed(self.probe_color, 2)
+        self.atlas_view.simg.pre_trajectory_color_changed(self.probe_color, 2)
+        self.atlas_view.himg.pre_trajectory_color_changed(self.probe_color, 2)
+
+
 
     # ------------------------------------------------------------------
     #
@@ -3392,10 +3446,14 @@ class HERBS(QMainWindow, FORM_Main):
                 if len(self.working_atlas_data['atlas-probe']) == 1:
                     points2d = self.working_atlas_data['atlas-probe'].copy()
                     points2d.append([x, y])
-                    if self.probe_settings.probe_type == 1:
-                        self.atlas_view.get_pre_coronal_np2_data(np.asarray(points2d), self.site_face)
+                    if self.multi_shanks and self.valid_multi_settings:
+                        base_loc_1d = get_pre_multi_shank_vis_base(
+                            self.multi_settings.x_vals, self.multi_settings.y_vals, self.site_face, 'coronal')
                     else:
-                        self.atlas_view.cimg.pre_trajectory_list[0].setData(np.asarray(points2d))
+                        base_loc_1d = np.array([0])
+
+                    start_pnt, end_pnt = self.atlas_view.get_pre_vis_data(np.asarray(points2d), base_loc_1d)
+                    self.atlas_view.set_pre_vis_data(start_pnt, end_pnt)
 
         c_id = self.atlas_view.current_coronal_index
         s_id = self.atlas_view.current_sagital_index
@@ -3451,10 +3509,14 @@ class HERBS(QMainWindow, FORM_Main):
                 if len(self.working_atlas_data['atlas-probe']) == 1:
                     points2d = self.working_atlas_data['atlas-probe'].copy()
                     points2d.append([x, y])
-                    if self.probe_settings.probe_type == 1:
-                        self.atlas_view.get_pre_sagital_np2_data(np.asarray(points2d), self.site_face)
+                    if self.multi_shanks and self.valid_multi_settings:
+                        base_loc_1d = get_pre_multi_shank_vis_base(
+                            self.multi_settings.x_vals, self.multi_settings.y_vals, self.site_face, 'sagittal')
                     else:
-                        self.atlas_view.simg.pre_trajectory_list[0].setData(np.asarray(points2d))
+                        base_loc_1d = np.array([0])
+
+                    start_pnt, end_pnt = self.atlas_view.get_pre_vis_data(np.asarray(points2d), base_loc_1d)
+                    self.atlas_view.set_pre_vis_data(start_pnt, end_pnt)
 
         c_id = self.atlas_view.current_coronal_index
         s_id = self.atlas_view.current_sagital_index
@@ -3510,10 +3572,13 @@ class HERBS(QMainWindow, FORM_Main):
                 if len(self.working_atlas_data['atlas-probe']) == 1:
                     points2d = self.working_atlas_data['atlas-probe'].copy()
                     points2d.append([x, y])
-                    if self.probe_settings.probe_type == 1:
-                        self.atlas_view.get_pre_horizontal_np2_data(np.asarray(points2d), self.site_face)
+                    if self.multi_shanks and self.valid_multi_settings:
+                        base_loc_1d = get_pre_multi_shank_vis_base(
+                            self.multi_settings.x_vals, self.multi_settings.y_vals, self.site_face, 'horizontal')
                     else:
-                        self.atlas_view.himg.pre_trajectory_list[0].setData(np.asarray(points2d))
+                        base_loc_1d = np.array([0])
+                    start_pnt, end_pnt = self.atlas_view.get_pre_vis_data(np.asarray(points2d), base_loc_1d)
+                    self.atlas_view.set_pre_vis_data(start_pnt, end_pnt)
 
         c_id = self.atlas_view.current_coronal_index
         s_id = self.atlas_view.current_sagital_index
@@ -3671,16 +3736,22 @@ class HERBS(QMainWindow, FORM_Main):
                 self.working_atlas_data['atlas-probe'].clear()
                 self.atlas_view.working_atlas.image_dict['atlas-probe'].clear()
                 self.atlas_view.working_atlas.image_dict['atlas-trajectory'].clear()
-            print(self.working_atlas_data['atlas-probe'])
+                self.atlas_view.working_atlas.remove_pre_trajectories_vis_lines()
             if len(self.working_atlas_data['atlas-probe']) == 0:
+                self.atlas_view.working_atlas.image_dict['atlas-probe'].clear()
+                self.atlas_view.working_atlas.remove_pre_trajectories_vis_lines()
                 return
             if self.image_view.image_file is None:
+                points2d = self.working_atlas_data['atlas-probe'].copy()
                 if self.current_atlas == 'volume':
-                    self.atlas_view.draw_volume_pre_trajectory(
-                        self.working_atlas_data['atlas-probe'], self.n_pre_trajectory)
+                    if self.multi_shanks and self.valid_multi_settings:
+                        base_loc_1d = get_pre_multi_shank_vis_base(
+                            self.multi_settings.x_vals, self.multi_settings.y_vals, self.site_face, self.atlas_display)
+                    else:
+                        base_loc_1d = np.array([0])
+                    self.atlas_view.draw_pre_2d_vis_data(np.asarray(points2d), base_loc_1d)
                 else:
-                    self.atlas_view.working_atlas.image_dict['atlas-probe'].setData(
-                        pos=np.asarray(self.working_atlas_data['atlas-probe']))
+                    self.atlas_view.working_atlas.image_dict['atlas-probe'].setData(pos=np.asarray(points2d))
             else:
                 self.atlas_view.working_atlas.image_dict['atlas-probe'].setData(
                     pos=np.asarray(self.working_atlas_data['atlas-probe']))
@@ -4097,10 +4168,10 @@ class HERBS(QMainWindow, FORM_Main):
                     if 'drawing' in da_link:
                         self.atlas_view.working_atlas.image_dict[da_link].updateItems()
 
-            if da_link == 'atlas-probe':
-                for i in range(4):
-                    self.atlas_view.working_atlas.pre_trajectory_list[i].clear()
-                self.atlas_view.working_atlas.image_dict['atlas-trajectory'].clear()
+            # if da_link == 'atlas-probe':
+            #     for i in range(4):
+            #         self.atlas_view.working_atlas.pre_trajectory_list[i].clear()
+            #     self.atlas_view.working_atlas.image_dict['atlas-trajectory'].clear()
 
             if da_link == 'img-cells':
                 for da_key in ['cell_count', 'cell_size', 'cell_symbol', 'cell_layer_index']:
@@ -4191,35 +4262,54 @@ class HERBS(QMainWindow, FORM_Main):
         self.object_ctrl.compare_obj_called()
 
     def make_probe_piece(self):
+        if not self.valid_probe_settings:
+            msg = 'Not valid probe settings given. Please provide a valid setting.'
+            self.print_message(msg, self.error_message_color)
+            return
         if self.a2h_transferred:
             data_tobe_registered = self.working_img_data['img-probe']
         else:
             data_tobe_registered = self.working_atlas_data['atlas-probe']
+
         if data_tobe_registered:
-            if not self.valid_probe_settings:
-                msg = 'Not valid probe settings given. Please provide a valid setting.'
-                self.print_message(msg, self.error_message_color)
-                return
-            if self.image_view.image_file is None and self.probe_settings.probe_type == 1:  # pre
-                data_2d = np.asarray(data_tobe_registered)
-                if len(data_2d) == 1:
+            center_data_2d = np.asarray(data_tobe_registered)
+            center_data_3d = self.atlas_view.get_3d_data_from_2d_view(center_data_2d, self.atlas_display)
+            order_index = np.argsort(center_data_3d[:, 2])[::-1]
+            center_data_3d = center_data_3d[order_index, :]
+
+            if self.image_view.image_file is None:
+                if len(center_data_2d) != 2:
                     msg = 'Pre-plan probe requires two points.'
                     self.print_message(msg, self.error_message_color)
                     return
-                data_3d_list = self.atlas_view.get_pre_np2_data(data_2d, self.atlas_display, self.site_face)
-                for i in range(4):
+
+                if self.multi_shanks and self.valid_multi_settings:
+                    direction = center_data_3d[1] - center_data_3d[0]
+                    r_hat = direction / np.linalg.norm(direction)
+                    base_length = np.sqrt(np.sum((center_data_3d[1] - center_data_3d[0]) ** 2))
+                    n_hat = self.atlas_view.get_plane_norm_vector(self.atlas_display)
+                    u_hat = np.cross(n_hat, r_hat)
+                    line_data = get_center_lines(r_hat, n_hat, u_hat, self.multi_settings.x_vals,
+                                                 self.multi_settings.y_vals, base_length, self.site_face)
+                else:
+                    line_data = [center_data_3d]
+
+                for i in range(len(line_data)):
                     self.object_ctrl.add_object(object_name='probe {} - piece'.format(i),
                                                 object_type='probe piece',
-                                                object_data=data_3d_list[i],
+                                                object_data=line_data[i],
                                                 object_mode=self.obj_display_mode)
+
+                # data_3d_list = self.atlas_view.get_pre_np2_data(data_2d, self.atlas_display, self.site_face)
+                # for i in range(4):
+                #     self.object_ctrl.add_object(object_name='probe {} - piece'.format(i),
+                #                                 object_type='probe piece',
+                #                                 object_data=data_3d_list[i],
+                #                                 object_mode=self.obj_display_mode)
             else:
-                data_2d = np.asarray(data_tobe_registered)
-                print('data2d', data_2d)
-                data_3d = self.atlas_view.get_3d_pnts(data_2d, self.atlas_display)
-                print('data3d', data_3d)
                 self.object_ctrl.add_object(object_name='probe - piece',
                                             object_type='probe piece',
-                                            object_data=data_3d,
+                                            object_data=center_data_3d,
                                             object_mode=self.obj_display_mode)
 
             self.working_atlas_data['atlas-probe'].clear()
@@ -4236,7 +4326,7 @@ class HERBS(QMainWindow, FORM_Main):
             inds = np.where(self.working_img_data['img-virus'] != 0)
             processing_pnt = np.vstack([inds[0], inds[1]]).T
 
-        data = self.atlas_view.get_3d_pnts(processing_pnt, self.atlas_display)
+        data = self.atlas_view.get_3d_data_from_2d_view(processing_pnt, self.atlas_display)
         self.object_ctrl.add_object(object_name='virus - piece',
                                     object_type='virus piece',
                                     object_data=data,
@@ -4255,7 +4345,7 @@ class HERBS(QMainWindow, FORM_Main):
             inds = np.where(self.working_img_data['img-contour'] != 0)
             processing_pnt = np.vstack([inds[0], inds[1]]).T
 
-        data = self.atlas_view.get_3d_pnts(processing_pnt, self.atlas_display)
+        data = self.atlas_view.get_3d_data_from_2d_view(processing_pnt, self.atlas_display)
         self.object_ctrl.add_object(object_name='contour - piece',
                                     object_type='contour piece',
                                     object_data=data,
@@ -4281,7 +4371,7 @@ class HERBS(QMainWindow, FORM_Main):
             object_name = 'area drawing - piece'
         else:
             object_name = 'line drawing - piece'
-        data = self.atlas_view.get_3d_pnts(processing_data, self.atlas_display)
+        data = self.atlas_view.get_3d_data_from_2d_view(processing_data, self.atlas_display)
         self.object_ctrl.add_object(object_name=object_name,
                                     object_type='drawing piece',
                                     object_data=data,
@@ -4298,7 +4388,7 @@ class HERBS(QMainWindow, FORM_Main):
         if not data_tobe_registered:
             return
         processing_data = np.asarray(data_tobe_registered)
-        data = self.atlas_view.get_3d_pnts(processing_data, self.atlas_display)
+        data = self.atlas_view.get_3d_data_from_2d_view(processing_data, self.atlas_display)
         for i in range(5):
             if i == 0:
                 object_type = 'cells - piece'
@@ -4320,6 +4410,10 @@ class HERBS(QMainWindow, FORM_Main):
 
 
     def make_object_pieces(self):
+        if self.num_windows == 4:
+            msg = 'Can not make pieces with all slice windows turned on.'
+            self.print_message(msg, self.error_message_color)
+            return
         self.make_probe_piece()
         self.make_virus_piece()
         self.make_cell_piece()
@@ -4340,29 +4434,64 @@ class HERBS(QMainWindow, FORM_Main):
 
     # probe related functions
     def merge_probes(self):
+        if self.num_windows == 4:
+            msg = 'Can not merge probe pieces with all slice windows turned on.'
+            self.print_message(msg, self.error_message_color)
+            return
         probe_piece_count = len([da_piece for da_piece in self.object_ctrl.obj_type if da_piece == 'probe piece'])
         if probe_piece_count == 0:
             return
+
         data, obj_names, pieces_names = self.object_ctrl.merge_pieces('probe piece')
 
         label_data = np.transpose(self.atlas_view.atlas_label, (1, 2, 0))[:, :, ::-1]
         probe_setting_data = self.probe_settings.get_settings()
-        for i in range(len(data)):
-            if len(data[i]) == 1:
-                if len(data[i][0]) == 1:
-                    self.print_message('Can not merge probe with only one point.', self.error_message_color)
-                    return
-            info_dict, error_index = calculate_probe_info(data[i], pieces_names[i],
-                                                          label_data, self.atlas_view.label_info,
-                                                          self.atlas_view.vox_size_um, probe_setting_data,
-                                                          self.atlas_view.origin_3d, self.site_face)
-            if error_index != 0:
-                msg = 'Error index: {}, please contact maintainers.'.format(error_index)
-                self.print_message(msg, self.error_message_color)
-                return
 
-            self.object_ctrl.add_object(obj_names[i], 'merged probe',
-                                        object_data=info_dict, object_mode=self.obj_display_mode)
+        merge_sites = self.tool_box.merge_sites
+        if self.image_view.image_file is None:
+            # pre-surgery
+            for i in range(len(data)):
+                if len(data[i]) != 1:
+                    msg = 'For pre-surgery plan, the desired probe can be merged from only one piece.'
+                    self.print_message(msg, self.error_message_color)
+                    return
+                else:
+                    if len(data[i][0]) == 1:
+                        self.print_message('Can not merge probe with only one point.', self.error_message_color)
+                        return
+
+                n_hat = self.atlas_view.get_plane_norm_vector(self.atlas_display)
+
+                info_dict, error_index = calculate_probe_info(
+                    data[i], pieces_names[i], label_data, self.atlas_view.label_info, self.atlas_view.vox_size_um,
+                    probe_setting_data, merge_sites, self.atlas_view.origin_3d, self.site_face, n_hat, False)
+
+                if error_index != 0:
+                    msg = 'Error index: {}, please contact maintainers.'.format(error_index)
+                    self.print_message(msg, self.error_message_color)
+                    return
+
+                self.object_ctrl.add_object(obj_names[i], 'merged probe',
+                                            object_data=info_dict, object_mode=self.obj_display_mode)
+        else:
+            # after-surgery
+            for i in range(len(data)):
+                if len(data[i]) == 1:
+                    if len(data[i][0]) == 1:
+                        self.print_message('Can not merge probe with only one point.', self.error_message_color)
+                        return
+
+                info_dict, error_index = calculate_probe_info(
+                    data[i], pieces_names[i], label_data, self.atlas_view.label_info, self.atlas_view.vox_size_um,
+                    probe_setting_data, merge_sites, self.atlas_view.origin_3d, self.site_face, None, False)
+
+                if error_index != 0:
+                    msg = 'Error index: {}, please contact maintainers.'.format(error_index)
+                    self.print_message(msg, self.error_message_color)
+                    return
+
+                self.object_ctrl.add_object(obj_names[i], 'merged probe',
+                                            object_data=info_dict, object_mode=self.obj_display_mode)
 
     # virus related functions
     def merge_virus(self):
@@ -4496,6 +4625,9 @@ class HERBS(QMainWindow, FORM_Main):
             self.current_img_name = os.path.basename(os.path.realpath(image_file_path[0]))
             self.load_single_image_file(self.current_img_path, image_file_type)
             self.save_path = image_file_path[0]
+            self.project_method = 'pre plan'
+            self.tool_box.pre_site_face_combo.setVisible(False)
+            self.tool_box.after_site_face_combo.setVisible(True)
         else:
             if self.image_view.image_file is None:
                 self.statusbar.showMessage('No image file is selected.')

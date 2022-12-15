@@ -162,7 +162,7 @@ def pandas_to_str(label_name, label_ano, length, channels):
     return df.to_string(col_space=30, justify="justify")
 
 
-def correct_start_pnt(label_data, start_pnt, start_vox, direction, bregma):
+def correct_start_pnt(label_data, start_pnt, start_vox, direction, bregma, verbose=False):
     error_index = 0
     direction = direction / np.linalg.norm(direction)
     check_vec = label_data[int(start_vox[0]), int(start_vox[1]), :]
@@ -227,12 +227,15 @@ def correct_start_pnt(label_data, start_pnt, start_vox, direction, bregma):
             return new_sp, error_index
 
         new_sp = start_pnt - sign_flag * (stop_steps - 1) * direction if z_diff < 0 else new_sp
-        print('correct enter pnt with {} steps'.format(stop_steps))
+        if verbose:
+            print('correct enter pnt with {} steps'.format(stop_steps))
+            print('old sp', start_pnt)
+            print('new pc_sp', new_sp)
 
     return new_sp, error_index
 
 
-def correct_end_point(sp, ep, direction, vox_size, tip_length, max_probe_length):
+def correct_end_point(sp, ep, direction, vox_size, tip_length, max_probe_length, verbose=False):
     probe_length_with_tip = np.sqrt(np.sum((sp - ep) ** 2)) * vox_size  # in um
     probe_length_without_tip = probe_length_with_tip - tip_length  # in um
     if max_probe_length is not None:
@@ -244,12 +247,17 @@ def correct_end_point(sp, ep, direction, vox_size, tip_length, max_probe_length)
             new_ep = ep
     else:
         new_ep = ep
+    if verbose:
+        print('old pc_ep', ep)
+        print('corrected pc_ep', new_ep)
+        print('old probe length with tip', probe_length_with_tip)
+        print('corrected probe length with tip', probe_length_with_tip)
     return new_ep, probe_length_with_tip, probe_length_without_tip
 
 
 def check_parallel_to_z(direction):
     is_parallel = False
-    if abs(direction[2] + 1) < 1e-6:
+    if abs(abs(direction[2]) - 1) < 1e-6:
         is_parallel = True
     return is_parallel
 
@@ -278,197 +286,8 @@ def get_probe_info(probe_type):
     return tip_length, channel_size, channel_number_in_banks
 
 
-def get_direction_rotation(direction):
-    # rotation matrix
-    if check_parallel_to_z(direction):
-        rot_m = np.dot(rotation_z(np.radians(90)), rotation_y(np.radians(90)))
-    else:
-        x_vec = np.array([1, 0, 0])
-        vec2 = direction.copy()
-        vec2[2] = 0
-        ang_alpha = angle_between_2vectors(vec2, x_vec)
-        ang_beta = angle_between_2vectors(direction, vec2)
-        print(ang_alpha)
-        print(ang_beta)
-        rot_m = np.dot(rotation_z(ang_alpha), rotation_y(ang_beta))
-    return rot_m
 
-
-def get_base_start(site_face, x_bias, base_thickness):
-    zero_vec = np.zeros(len(x_bias))
-
-    if site_face == 0:
-        base_loc = x_bias.copy()
-        base_start = np.vstack([zero_vec, base_loc, zero_vec]).T
-        base_start[:, 2] = base_start[:, 2] + base_thickness
-    elif site_face == 1:
-        base_loc = x_bias[::-1]
-        base_start = np.vstack([zero_vec, base_loc, zero_vec]).T
-        base_start[:, 2] = base_start[:, 2] - base_thickness
-    elif site_face == 2:
-        base_loc = x_bias[::-1]
-        base_start = np.vstack([zero_vec, zero_vec, base_loc]).T
-        base_start[:, 1] = base_start[:, 1] + base_thickness
-    else:
-        base_loc = x_bias.copy()
-        base_start = np.vstack([zero_vec, zero_vec, base_loc]).T
-        base_start[:, 1] = base_start[:, 1] - base_thickness
-
-    return base_start
-
-
-def correct_base_sp(base_start, sp, rot_mat, direction, bregma, label_data):
-    n_base = len(base_start)
-    ct_sp = sp + np.dot(rot_mat, base_start.T).T
-    ct_start_vox = ct_sp + bregma
-    start_vox = ct_start_vox.astype(int)
-    ct_sp_new = np.zeros((n_base, 3))
-    error_index_vec = np.zeros(n_base)
-    for i in range(n_base):
-        ct_sp_new[i], error_index_vec[i] = correct_start_pnt(label_data, ct_sp[i], start_vox[i], direction, bregma)
-
-    if not np.all(error_index_vec == 0):
-        base_start_new = None
-        error_index = 1
-    else:
-        rotate_base_start = ct_sp_new - sp
-        base_start_new = np.dot(rot_mat.T, rotate_base_start.T).T
-        error_index = 0
-
-    return base_start_new, ct_sp_new, error_index
-
-
-def get_length_without_bias(probe_length_without_tip, y_bias, vxsize_um):
-    y_bias = np.ravel(y_bias)
-    n_column = len(y_bias)
-    sp_to_bottom_site_center = (np.repeat(probe_length_without_tip, n_column) - y_bias) / vxsize_um
-    return sp_to_bottom_site_center
-
-
-def get_base_end(base_start, probe_length_without_tip_um, vox_size):
-    base_end = base_start.copy()
-    base_end[:, 0] = probe_length_without_tip_um / vox_size
-    return base_end
-
-
-def get_sites_center_base(new_base_start, base_end, y_bias, sites_distance, per_max_sites):
-    n_column = len(y_bias)
-    sites_center_base = []
-
-    for i in range(n_column):
-        valid_val = base_end[i, 0] - y_bias[i]
-        center_base = np.arange(valid_val, new_base_start[i, 0], -sites_distance[i])
-        if len(center_base) > per_max_sites[i]:
-            sites_center_base.append(center_base[:per_max_sites[i]])
-        else:
-            sites_center_base.append(center_base)
-
-    return sites_center_base
-
-
-def get_plot_sites_loc(sites_center_base, base_end):
-    n_column = len(sites_center_base)
-    plot_sites_loc = []
-
-    for i in range(n_column):
-        temp = base_end[i, 0] - sites_center_base[i]
-        plot_sites_loc.append(temp)
-    return plot_sites_loc
-
-
-def get_base_columns(base_start, sites_center_base):
-    n_column = len(base_start)
-    base_columns = []
-    for i in range(n_column):
-        base_column = np.repeat(np.array([base_start[i]]), len(sites_center_base[i]), axis=0)
-        base_column[:, 0] = sites_center_base[i] + 0.
-        base_columns.append(base_column)
-    return base_columns
-
-
-def get_sites(sp, base_columns, rot_mat, bregma, label_data):
-    n_column = len(base_columns)
-    # sites location
-    sites_loc = []
-    sites_vox = []
-    sites_label = []
-    for i in range(n_column):
-        sites_loc_temp = sp + np.dot(rot_mat, base_columns[i].T).T
-        sites_loc.append(sites_loc_temp)
-
-        site_vox = sites_loc_temp + bregma
-        site_vox = site_vox.astype(int)
-        sites_vox.append(site_vox)
-
-        sites_label_column = label_data[site_vox[:, 0], site_vox[:, 1], site_vox[:, 2]]
-        sites_label.append(sites_label_column)
-
-    return sites_loc, sites_vox, sites_label
-
-
-def get_shank_columns(base_start, base_end, step_length):
-    n_column = len(base_start)
-    shank_columns = []
-    for i in range(n_column):
-        shank_center_base = np.arange(base_end[i, 0], base_start[i, 0], -step_length)
-        shank_column = np.repeat(np.array([base_start[i]]), len(shank_center_base), axis=0)
-        shank_column[:, 0] = shank_center_base + 0.
-        shank_columns.append(shank_column)
-    return shank_columns
-
-def get_traveling_label_mat(sp, shank_columns, rot_mat, bregma, label_data):
-    n_column = len(shank_columns)
-    n_rows = []
-    c_loc = []
-    c_vox = []
-    c_label = []
-    for i in range(n_column):
-        c_loc_temp = sp + np.dot(rot_mat, shank_columns[i].T).T
-        c_loc.append(c_loc_temp)
-
-        n_rows.append(len(c_loc_temp))
-        temp_vox = c_loc_temp + bregma
-        temp_vox = temp_vox.astype(int)
-        c_vox.append(temp_vox)
-
-        c_label_column = label_data[temp_vox[:, 0], temp_vox[:, 1], temp_vox[:, 2]]
-        c_label.append(c_label_column)
-
-    n_row = np.max(n_rows)
-    fine_label_mat = np.zeros((n_row, n_column))
-    for i in range(n_column):
-        fine_label_mat[:n_rows[i], i] = c_label[i]
-
-    return fine_label_mat
-
-
-# def get_traveling_label_mat(ct_sp, ct_ep, direction, bregma, label_data, step_length):
-#     column_fine_label = []
-#     n_rows = []
-#     n_column = len(ct_sp)
-#     for i in range(n_column):
-#         column_length = np.sqrt(np.sum((ct_sp[i] - ct_ep[i]) ** 2))
-#         step_dist = np.arange(0, column_length, step_length)
-#         n_pnt = len(step_dist)
-#         pnt_vec = np.zeros((n_pnt, 3))
-#         for j in range(n_pnt):
-#             pnt_vec[j] = ct_ep[i] - step_dist[j] * direction
-#         pnt_vec = np.vstack([pnt_vec, ct_sp[i]])
-#         n_rows.append(len(pnt_vec))
-#         vox_vec = pnt_vec + bregma
-#         vox_vec = vox_vec.astype(int)
-#         column_label = label_data[vox_vec[:, 0], vox_vec[:, 1], vox_vec[:, 2]]
-#         column_fine_label.append(column_label)
-#
-#     n_row = np.max(n_rows)
-#     fine_label_mat = np.zeros((n_row, n_column))
-#     for i in range(n_column):
-#         fine_label_mat[:n_rows[i], i] = column_fine_label[i]
-#
-#     return fine_label_mat
-
-
-def group_labels(fine_label_mat):
+def group_labels(fine_label_mat, verbose=False):
     n_row, n_column = fine_label_mat.shape
     group_mat = np.zeros(fine_label_mat.shape)
     group_mat[:] = np.nan
@@ -498,34 +317,92 @@ def group_labels(fine_label_mat):
             group_id += 1
         previous_row = fine_label_mat[base_level]
 
+    if verbose:
+        print('group mat nan index', np.where(np.isnan(group_mat)))
+        print('group id label', group_id_label)
+        print('group_mat')
+        indexs = np.arange(0, len(group_mat), 20)
+        for i in range(len(indexs) - 1):
+            print(group_mat[indexs[i]:indexs[i + 1]])
+        print(group_mat[indexs[-1]:len(group_mat)])
+        print(len(group_mat))
+
     return group_mat, group_id_label
 
 
-def get_group_bounds(group_mat, step_length):
-    n_groups = len(np.unique(group_mat))
-    n_row, n_column = group_mat.shape
+def get_column_grouped_info(group_column, column_bound):
+    diff_labels = np.where(np.diff(group_column) != 0)[0]
+    if len(diff_labels) != 0:
+        change_index = np.append(np.array([0]), diff_labels + 1)
+        group_id = group_column[change_index]
+        start_loc = column_bound[change_index]
+        end_loc = column_bound[np.append(change_index[1:], np.array([len(group_column)]))]
+    else:
+        group_id = group_column[0]
+        start_loc = column_bound[0]
+        end_loc = column_bound[-1]
 
-    gr_start = np.zeros((n_groups, n_column))
-    gr_start[:] = np.nan
-    gr_end = np.zeros((n_groups, n_column))
-    gr_end[:] = np.nan
+    group_column_length = np.abs(end_loc - start_loc)
 
-    region_length = []
-    region_text_loc = []
-    for i in range(n_groups):
-        rl = 0
-        for j in range(n_column):
-            valid_ind = np.where(group_mat[:, j] == i)[0]
-            stk = len(valid_ind)
-            if stk == 0:
-                continue
-            gr_start[i, j] = valid_ind[0] * step_length
-            gr_end[i, j] = (valid_ind[0] + stk) * step_length
-            rl += stk
-        region_length.append(rl * step_length / n_column)
-        region_text_loc.append(np.nanmin(gr_start[i]) + 0.5 * (np.nanmax(gr_end[i]) - np.nanmin(gr_start[i])))
+    return group_id, start_loc, end_loc, group_column_length
 
-    return gr_start, gr_end, region_length, region_text_loc
+
+def get_vis_data(group_mat, column_loc, sites_loc, sites_line_count, vox_size):
+    n_column = len(column_loc)
+
+    p_bounds = np.array([0])
+    p_bounds = np.append(p_bounds, column_loc[0][:-1, 0] + np.diff(column_loc[0][:, 0]) * 0.5)
+    p_bounds = np.append(p_bounds, column_loc[0][-1, 0])
+
+    vis_data = []
+    column_group_length = []
+    column_n_sites = []
+    for i in range(n_column):
+        sites_column = sites_loc[i][:, 0]
+        # print(sites_column)
+        if sites_line_count is None:
+            line_counts = np.ones(len(sites_column))
+        else:
+            line_counts = np.ravel(sites_line_count)
+        group_column = group_mat[:, i]
+        group_id, start_loc, end_loc, gc_length = get_column_grouped_info(group_column, p_bounds)
+        n_sites_group = []
+        for j in range(len(group_id)):
+            valid_sites_lines = np.logical_and(sites_column < end_loc[j], sites_column >= start_loc[j])
+            n_sites_group.append(np.sum(valid_sites_lines * line_counts))
+        # print('n_sites_group', n_sites_group)
+        vis_column = {'group_id': group_id,
+                      'start_loc': start_loc / vox_size,
+                      'end_loc': end_loc / vox_size,
+                      'sites': sites_column / vox_size}
+        column_group_length.append(gc_length)
+        column_n_sites.append(np.ravel(n_sites_group))
+        vis_data.append(vis_column)
+    # print(vis_data)
+    n_column = len(vis_data)
+    unique_groups = np.unique(group_mat)
+    group_length = []
+    group_n_sites = []
+    for group_ind in unique_groups:
+        temp = []
+        temp_sites = []
+        for i in range(n_column):
+            valid_ind = np.where(vis_data[i]['group_id'] == group_ind)[0]
+            if len(valid_ind) != 0:
+                valid_length = np.sum(column_group_length[i][valid_ind])
+                valid_sites = np.sum(column_n_sites[i][valid_ind])
+                temp.append(valid_length)
+                temp_sites.append(valid_sites)
+        group_length.append(np.sum(temp) / n_column)
+        group_n_sites.append(np.sum(temp_sites))
+
+    text_loc = []
+    for group_ind in unique_groups:
+        inds = np.where(group_mat == group_ind)[0]
+        low_level = np.min(inds)
+        high_level = np.max(inds)
+        text_loc.append((p_bounds[low_level] + 0.7 * (p_bounds[high_level + 1] - p_bounds[low_level])) / vox_size)
+    return vis_data, group_length, group_n_sites, text_loc
 
 
 def get_n_sites_in_region(gr_start, gr_end, plot_sites_column):
@@ -542,33 +419,6 @@ def get_n_sites_in_region(gr_start, gr_end, plot_sites_column):
         region_site_num.append(n_sites)
 
     return region_site_num
-
-
-# def get_traveling_info(sp, ep, probe_length, direction, bregma, label_data):
-#     if probe_length is None:
-#         probe_length = np.sqrt(np.sum((sp - ep) ** 2))
-#     step_dist = np.arange(0, probe_length, 0.5)
-#     n_pnt = len(step_dist)
-#     pnt_vec = np.zeros((n_pnt, 3))
-#     for i in range(n_pnt):
-#         pnt_vec[i] = ep - step_dist[i] * direction
-#     pnt_vec = np.vstack([pnt_vec, sp])
-#
-#     vox_vec = pnt_vec + bregma
-#
-#     label_vec = label_data[vox_vec[:, 0], vox_vec[:, 1], vox_vec[:, 2]]
-#
-#     dist_vec = []
-#     region_vec = [label_vec[0]]
-#     region_start_pnt_vec = [pnt_vec[0]]
-#     for i in range(1, len(label_vec)):
-#         if label_vec[i] != region_vec[-1]:
-#             dists = np.sqrt(np.sum((pnt_vec[i] - region_start_pnt_vec[-1]) ** 2))
-#             dist_vec.append(dists)
-#             region_vec.append(label_vec[i])
-#             region_start_pnt_vec.append(pnt_vec[i])
-#
-#     return region_vec, dist_vec
 
 
 def get_label_name(label_info, region_label):
@@ -590,27 +440,139 @@ def get_label_name(label_info, region_label):
     return label_names, label_acronym, label_color
 
 
-# def get_sites_label(label_info, sites_label):
-#     label_names = []
-#     label_acronym = []
-#     label_color = []
-#     for i in range(len(region_label)):
-#         if region_label[i] == 0:
-#             label_names.append(' ')
-#             label_acronym.append(' ')
-#             label_color.append((128, 128, 128))
-#         else:
-#             da_ind = np.where(np.ravel(label_info['index']) == region_label[i])[0][0]
-#             label_names.append(label_info['label'][da_ind])
-#             label_acronym.append(label_info['abbrev'][da_ind])
-#             label_color.append(label_info['color'][da_ind])
-#
-#     label_color = np.asarray(label_color)
-#     return label_names, label_acronym, label_color
+def get_sites_loc_related_to_base_center(probe_settings, probe_length_without_tip_um):
+    probe_type_name = probe_settings['probe_type_name']
+    probe_thickness_um = probe_settings['probe_thickness']
+    per_max_sites = probe_settings['per_max_sites']
+    sites_distance_um = probe_settings['sites_distance']
+    x_bias_um = probe_settings['x_bias']
+    y_bias_um = probe_settings['y_bias']
+
+    if probe_type_name == 'Tetrode':
+        sites_loc = [np.array([[0, 0, 0]]) for _ in range(4)]
+    else:
+        sites_loc = []  # inverse r-vals, u-vals, n-vals
+        n_val = 0.5 * probe_thickness_um
+        for i in range(len(x_bias_um)):
+            possible_n_sites = int((probe_length_without_tip_um - y_bias_um[i]) / sites_distance_um[i])
+            if possible_n_sites <= per_max_sites[i]:
+                r_vals = np.arange(possible_n_sites) * sites_distance_um[i] + y_bias_um[i]
+            else:
+                r_vals = np.arange(per_max_sites[i]) * sites_distance_um[i] + y_bias_um[i]
+            num_sites = len(r_vals)
+            u_vals = np.repeat(x_bias_um[i], num_sites)
+            n_vals = np.repeat(n_val, num_sites)
+            temp = np.stack([r_vals, u_vals, n_vals], axis=1)
+            sites_loc.append(temp)
+    return sites_loc
+
+
+def merge_sites_into_line(sites_loc):
+    y_vec = []
+    for i in range(len(sites_loc)):
+        y_vec.append(sites_loc[i][:, 0])
+    y_vec = np.concatenate(y_vec)
+    y_vals = np.unique(y_vec)
+    sites_loc_line = []
+    sites_count = []
+    temp = []
+    for i in range(len(y_vals)):
+        n = len(np.where(y_vec == y_vals[i])[0])
+        temp.append(np.array([y_vals[i], 0, 0]))
+        sites_count.append(n)
+    temp = np.asarray(temp)
+    sites_loc_line.append(temp)
+
+    return sites_loc_line, sites_count
+
+
+def get_pnt_from_loc(sct, loc, n_vec, u_vec, r_vec, bregma, vox_size):
+    pnt = []
+    pnt_vox = []
+    for i in range(len(loc)):
+        temp = [sct * vox_size + r_vec * loc[i][ind, 0] + u_vec * loc[i][ind, 1] + n_vec * loc[i][ind, 2]
+                for ind in range(len(loc[i]))]
+        temp = np.asarray(temp)
+        temp = temp / vox_size
+        pnt.append(temp)
+        vox_temp = temp + bregma
+        vox_temp = vox_temp.astype(int)
+        pnt_vox.append(vox_temp)
+
+    return pnt, pnt_vox
+
+
+def get_column_loc(sites_loc_to_base, probe_length_without_tip_um, vxsize_um, verbose=False):
+    sites_r_vals = []
+    for i in range(len(sites_loc_to_base)):
+        sites_r_vals.append(sites_loc_to_base[i][:, 0])
+    sites_r_vals = np.concatenate(sites_r_vals)
+    uni_sites_r_vals = np.unique(sites_r_vals)
+
+    if len(uni_sites_r_vals) > 1:
+        if uni_sites_r_vals[0] == 0:
+            vis_r_vals = np.arange(uni_sites_r_vals[0], uni_sites_r_vals[1], vxsize_um)
+            for i in range(1, len(uni_sites_r_vals) - 1):
+                vis_r_vals = np.append(vis_r_vals, np.arange(uni_sites_r_vals[i], uni_sites_r_vals[i + 1], vxsize_um))
+        else:
+            vis_r_vals = np.arange(0, uni_sites_r_vals[0], vxsize_um)
+            for i in range(len(uni_sites_r_vals) - 1):
+                vis_r_vals = np.append(vis_r_vals, np.arange(uni_sites_r_vals[i], uni_sites_r_vals[i + 1], vxsize_um))
+
+        if uni_sites_r_vals[-1] != probe_length_without_tip_um:
+            vis_r_vals = np.append(vis_r_vals, np.arange(uni_sites_r_vals[-1], probe_length_without_tip_um, vxsize_um))
+        vis_r_vals = np.append(vis_r_vals, probe_length_without_tip_um)
+    else:
+        vis_r_vals = np.arange(0, probe_length_without_tip_um, vxsize_um)
+
+    column_loc = []
+    for i in range(len(sites_loc_to_base)):
+        temp = np.zeros((len(vis_r_vals), 3))
+        temp[:, 0] = vis_r_vals
+        temp[:, 1] = sites_loc_to_base[i][0, 1]
+        temp[:, 2] = sites_loc_to_base[i][0, 2]
+        column_loc.append(temp)
+
+    if verbose:
+        print('uni_sites_r_vals')
+        print(uni_sites_r_vals)
+
+        print('vis_r_vals')
+        print(vis_r_vals)
+
+        print('column_loc')
+        print(column_loc)
+
+    return column_loc
+
+
+def get_loc_related_to_start(loc_to_base, probe_length_without_tip_um):
+    loc_to_start = []  # inverse r-vals, u-vals, n-vals
+    for i in range(len(loc_to_base)):
+        temp_loc = loc_to_base[i].copy()
+        temp_loc[:, 0] = probe_length_without_tip_um - temp_loc[:, 0]
+        loc_to_start.append(temp_loc)
+    return loc_to_start
+
+
+def get_fine_label_matrix(column_vox, label_data, verbose=False):
+    fine_label_mat = []
+    for i in range(len(column_vox)):
+        fine_label_mat.append(label_data[column_vox[i][:, 0], column_vox[i][:, 1], column_vox[i][:, 2]])
+    fine_label_mat = np.asarray(fine_label_mat).T
+
+    if verbose:
+        # print out fine label matrix
+        indexs = np.arange(0, len(fine_label_mat), 20)
+        for i in range(len(indexs) - 1):
+            print(fine_label_mat[indexs[i]:indexs[i + 1]])
+        print(fine_label_mat[indexs[-1]:len(fine_label_mat)])
+
+    return fine_label_mat
 
 
 def calculate_probe_info(data_list, pieces_names, label_data, label_info, vxsize_um, probe_settings,
-                         bregma, site_face, step_length=0.01):
+                         merge_sites, bregma, site_face, n_hat, pre_plan):
     """
 
     :param data: 3d coordinates for all the points
@@ -630,23 +592,9 @@ def calculate_probe_info(data_list, pieces_names, label_data, label_info, vxsize
     print('data', data)
 
     # start_pnt and end_pnt are coordinates related to the given Bregma
-    probe_type = probe_settings['probe_type']
     probe_type_name = probe_settings['probe_type_name']
     probe_max_length_um = probe_settings['probe_length']
     tip_length_um = probe_settings['tip_length']
-    site_height_um = probe_settings['site_height']
-    probe_thickness_um = probe_settings['probe_thickness']
-    per_max_sites = probe_settings['per_max_sites']
-    sites_distance_um = probe_settings['sites_distance']
-    x_bias_um = probe_settings['x_bias']
-    y_bias_um = probe_settings['y_bias']
-
-    n_column = len(x_bias_um)
-
-    base_thickness = 0.5 * probe_thickness_um / vxsize_um
-    sites_distance = np.ravel(sites_distance_um) / vxsize_um
-    x_bias = np.ravel(x_bias_um) / vxsize_um
-    y_bias = np.ravel(y_bias_um) / vxsize_um
 
     # get direction and probe center start and end (pc - probe center)
     pc_start_pnt, pc_end_pnt, avg, direction = line_fit(data)
@@ -655,18 +603,20 @@ def calculate_probe_info(data_list, pieces_names, label_data, label_info, vxsize
     pc_start_vox = pc_start_pnt + bregma
     pc_end_vox = pc_end_pnt + bregma
 
+    print('direction', direction)
+
     # get angels
     ap_angle, ml_angle = get_angles(direction)
     print('ap_angle', ap_angle)
     print(ml_angle)
 
     # correct probe center start point
-    pc_sp, error_index = correct_start_pnt(label_data, pc_start_pnt, pc_start_vox, direction, bregma)
+    pc_sp, error_index = correct_start_pnt(label_data, pc_start_pnt, pc_start_vox, direction, bregma, verbose=True)
     if error_index != 0:
         return data_dict, 15
 
     pc_ep, probe_length_with_tip_um, probe_length_without_tip_um = correct_end_point(
-        pc_sp, pc_end_pnt, direction, vxsize_um, tip_length_um, probe_max_length_um)
+        pc_sp, pc_end_pnt, direction, vxsize_um, tip_length_um, probe_max_length_um, verbose=True)
 
     pv_sp = pc_sp + bregma
     pv_sp = pv_sp.astype(int)
@@ -679,57 +629,68 @@ def calculate_probe_info(data_list, pieces_names, label_data, label_info, vxsize
     dv = (pc_sp[2] - pc_ep[2]) * vxsize_um
     ap_tilt, ml_tilt = get_tilt_info(pc_sp, pc_ep)
 
+    if pre_plan:
+        r_hat = direction.copy()
+        u_hat = np.cross(n_hat, r_hat)
 
-    # get rotation matrix
-    rot_mat = get_direction_rotation(direction)
-    # base start=pseudo enter, base end=pseudo terminus, assume the initial direction of probe is (1,0,0)
-    base_start = get_base_start(site_face, x_bias, base_thickness)
+        n_vec, u_vec = get_vector_according_to_site_face(n_hat, u_hat, site_face)
+    else:
+        r_hat, u_vec, n_vec = calculate_vector_according_to_site_face(direction, site_face)
 
-    base_end = get_base_end(base_start, probe_length_without_tip_um, vxsize_um)
+    # sites location, list of  [(n_sites, 3),...], in um
+    sites_loc_to_base_temp = get_sites_loc_related_to_base_center(probe_settings, probe_length_without_tip_um)
+    # print('sites_loc_to_base')
+    # print(sites_loc_to_base)
 
-    # get column center bottom points, bottom is the base of tip
-    ct_ep = pc_sp + np.dot(rot_mat, base_end.T).T
+    if merge_sites or probe_type_name == 'Tetrode':
+        sites_loc_to_base, sites_line_count = merge_sites_into_line(sites_loc_to_base_temp)
+    else:
+        sites_loc_to_base = sites_loc_to_base_temp.copy()
+        sites_line_count = None
 
-    # correct the base_start, minor correction
-    base_start_new, ct_sp, error_index = correct_base_sp(base_start, pc_sp, rot_mat, direction, bregma, label_data)
+    # column location list of [(n_locs, 3), ...], in um
+    column_loc_to_base = get_column_loc(sites_loc_to_base, probe_length_without_tip_um, vxsize_um, verbose=False)
 
-    if error_index != 0:
-        return data_dict, 16
+    # column location relative to the start, from bottom to top, in um
+    column_loc = get_loc_related_to_start(column_loc_to_base, probe_length_without_tip_um)
+    # print('column_loc')
+    # print(column_loc)
 
-    shank_columns = get_shank_columns(base_start_new, base_end, step_length)
-    fine_label_mat = get_traveling_label_mat(pc_sp, shank_columns, rot_mat, bregma, label_data)
-    # fine_label_mat = get_traveling_label_mat(ct_sp, ct_ep, direction, bregma, label_data, step_length)
+    # column points (related to bregma) and column vox
+    column_pnt, column_vox = get_pnt_from_loc(pc_sp, column_loc, n_vec, u_vec, r_hat, bregma, vxsize_um)
+    # print('column_pnt')
+    # print(column_pnt)
+    # print('column_vox')
+    # print(column_vox)
 
+    fine_label_mat = get_fine_label_matrix(column_vox, label_data, verbose=False)
     group_mat, group_id_label = group_labels(fine_label_mat)
-    cind = np.where(np.isnan(group_mat))
-    print(cind)
-    print(group_id_label)
-    print(fine_label_mat[cind])
-
-
-    gr_start, gr_end, region_length, region_text_loc = get_group_bounds(group_mat, step_length)
-    # print(gr_start)
-    # print(gr_end)
-
-    region_length = np.ravel(region_length) * vxsize_um
-
     label_names, label_acronym, label_color = get_label_name(label_info, group_id_label)
 
     if probe_type_name != 'Tetrode':
-        # get sites information
-        sites_x = get_sites_center_base(base_start_new, base_end, y_bias, sites_distance, per_max_sites)
-        columns_loc_base = get_base_columns(base_start, sites_x)
-        sites_loc, sites_vox, sites_label = get_sites(pc_sp, columns_loc_base, rot_mat, bregma, label_data)
-        region_site_num = get_n_sites_in_region(gr_start, gr_end, sites_x)
-        plot_sites_loc = get_plot_sites_loc(sites_x, base_end)
+        # sites loc related to the start, in um
+        sites_loc = get_loc_related_to_start(sites_loc_to_base, probe_length_without_tip_um)
+        # print(sites_loc)
 
+        sites_pnt, sites_vox = get_pnt_from_loc(pc_sp, sites_loc, n_vec, u_vec, r_hat, bregma, vxsize_um)
+        # print(sites_pnt)
+        # print('sites_vox')
+        # print(sites_vox)
     else:
-        sites_loc = np.repeat(np.array([pc_ep]), 4, axis=0)
-        sites_vox = sites_loc + bregma
-        sites_vox = sites_vox.astype(int)
-        sites_label = label_data[sites_vox[:, 0], sites_vox[:, 1], sites_vox[:, 2]]
-        region_site_num = None
-        plot_sites_loc = None
+        sites_pnt = [np.array([pc_ep])]
+        sites_vox_temp = sites_pnt[0] + bregma
+        sites_vox = [sites_vox_temp.astype(int)]
+
+
+    sites_label = []
+    for i in range(len(sites_vox)):
+        sites_label.append(label_data[sites_vox[i][:, 0], sites_vox[i][:, 1], sites_vox[i][:, 2]])
+
+    # print('sites_label')
+    # print(sites_label)
+
+    vis_data, region_length, region_site_num, region_text_loc = get_vis_data(
+        group_mat, column_loc_to_base, sites_loc_to_base, sites_line_count, vxsize_um)
 
     data_dict = {'object_name': 'probe', 'probe_type_name': probe_type_name,
                  'data': data_list, 'pieces_names': pieces_names, 'ap_tilt': ap_tilt, 'ml_tilt': ml_tilt,
@@ -738,12 +699,279 @@ def calculate_probe_info(data_list, pieces_names, label_data, label_info, vxsize
                  'ap_angle': ap_angle, 'ml_angle': ml_angle,
                  'insertion_coords': enter_coords, 'insertion_vox': pv_sp,
                  'terminus_coords': end_coords, 'terminus_vox': pv_ep,
-                 'sites_label': sites_label, 'sites_loc_b': sites_loc, 'sites_vox': sites_vox,
-                 'region_label': group_id_label, 'region_length': region_length,
-                 'region_sites': region_site_num, 'text_loc': region_text_loc,
+                 'sites_label': sites_label, 'sites_loc_b': sites_pnt, 'sites_vox': sites_vox,
+                 'region_label': group_id_label,
+                 'region_length': region_length, 'region_sites': region_site_num, 'text_loc': region_text_loc,
                  'label_name': label_names, 'label_acronym': label_acronym, 'label_color': label_color,
-                 'group_region_start': gr_start, 'group_region_end': gr_end, 'sites_columns': plot_sites_loc}
+                 'vis_data': vis_data}
     return data_dict, error_index
+
+
+# def calculate_after_probe_info(data_list, pieces_names, label_data, label_info, vxsize_um, probe_settings,
+#                                merge_sites, bregma, site_face, n_hat):
+#     data_dict = None
+#     data = data_list[0]
+#     for i in range(1, len(data_list)):
+#         data = np.vstack([data, data_list[i]])
+#     print('data', data)
+#
+#     # start_pnt and end_pnt are coordinates related to the given Bregma
+#     probe_type_name = probe_settings['probe_type_name']
+#     probe_max_length_um = probe_settings['probe_length']
+#     tip_length_um = probe_settings['tip_length']
+#
+#     # get direction and probe center start and end (pc - probe center)
+#     pc_start_pnt, pc_end_pnt, avg, direction = line_fit(data)
+#     direction = pc_end_pnt - pc_start_pnt
+#     direction = direction / np.linalg.norm(direction)
+#     pc_start_vox = pc_start_pnt + bregma
+#     pc_end_vox = pc_end_pnt + bregma
+#
+#     print('direction', direction)
+#
+#     # get angels
+#     ap_angle, ml_angle = get_angles(direction)
+#     print('ap_angle', ap_angle)
+#     print(ml_angle)
+#
+#     # correct probe center start point
+#     pc_sp, error_index = correct_start_pnt(label_data, pc_start_pnt, pc_start_vox, direction, bregma, verbose=True)
+#     if error_index != 0:
+#         return data_dict, 15
+#
+#     pc_ep, probe_length_with_tip_um, probe_length_without_tip_um = correct_end_point(
+#         pc_sp, pc_end_pnt, direction, vxsize_um, tip_length_um, probe_max_length_um, verbose=True)
+#
+#     pv_sp = pc_sp + bregma
+#     pv_sp = pv_sp.astype(int)
+#     pv_ep = pc_ep + bregma
+#     pv_ep = pv_ep.astype(int)
+#
+#     enter_coords = pc_sp * vxsize_um
+#     end_coords = pc_ep * vxsize_um
+#
+#     dv = (pc_sp[2] - pc_ep[2]) * vxsize_um
+#     ap_tilt, ml_tilt = get_tilt_info(pc_sp, pc_ep)
+#
+#     r_hat, u_vec, n_vec = calculate_vector_according_to_site_face(direction, site_face)
+#
+#     # sites location, list of  [(n_sites, 3),...], in um
+#     sites_loc_to_base_temp = get_sites_loc_related_to_base_center(probe_settings, probe_length_without_tip_um)
+#     # print('sites_loc_to_base')
+#     # print(sites_loc_to_base)
+#
+#     if merge_sites or probe_type_name == 'Tetrode':
+#         sites_loc_to_base, sites_line_count = merge_sites_into_line(sites_loc_to_base_temp)
+#     else:
+#         sites_loc_to_base = sites_loc_to_base_temp.copy()
+#         sites_line_count = None
+#
+#     # column location list of [(n_locs, 3), ...], in um
+#     column_loc_to_base = get_column_loc(sites_loc_to_base, probe_length_without_tip_um, vxsize_um, verbose=False)
+#
+#     # column location relative to the start, from bottom to top, in um
+#     column_loc = get_loc_related_to_start(column_loc_to_base, probe_length_without_tip_um)
+#     # print('column_loc')
+#     # print(column_loc)
+#
+#     # column points (related to bregma) and column vox
+#     column_pnt, column_vox = get_pnt_from_loc(pc_sp, column_loc, n_vec, u_vec, r_hat, bregma, vxsize_um)
+#     # print('column_pnt')
+#     # print(column_pnt)
+#     # print('column_vox')
+#     # print(column_vox)
+#
+#     fine_label_mat = get_fine_label_matrix(column_vox, label_data, verbose=False)
+#     group_mat, group_id_label = group_labels(fine_label_mat)
+#     label_names, label_acronym, label_color = get_label_name(label_info, group_id_label)
+#
+#     if probe_type_name != 'Tetrode':
+#         # sites loc related to the start, in um
+#         sites_loc = get_loc_related_to_start(sites_loc_to_base, probe_length_without_tip_um)
+#         # print(sites_loc)
+#
+#         sites_pnt, sites_vox = get_pnt_from_loc(pc_sp, sites_loc, n_vec, u_vec, r_hat, bregma, vxsize_um)
+#         # print(sites_pnt)
+#         # print('sites_vox')
+#         # print(sites_vox)
+#         sites_label = []
+#         for i in range(len(sites_vox)):
+#             sites_label.append(label_data[sites_vox[i][:, 0], sites_vox[i][:, 1], sites_vox[i][:, 2]])
+#
+#         # print('sites_label')
+#         # print(sites_label)
+#
+#     else:
+#         sites_pnt = np.repeat(np.array([pc_ep]), 4, axis=0)
+#         sites_vox = sites_pnt + bregma
+#         sites_vox = sites_vox.astype(int)
+#         sites_label = label_data[sites_vox[:, 0], sites_vox[:, 1], sites_vox[:, 2]]
+#
+#     vis_data, region_length, region_site_num, region_text_loc = get_vis_data(
+#         group_mat, column_loc_to_base, sites_loc_to_base, vxsize_um)
+#
+#     data_dict = {'object_name': 'probe', 'probe_type_name': probe_type_name,
+#                  'data': data_list, 'pieces_names': pieces_names, 'ap_tilt': ap_tilt, 'ml_tilt': ml_tilt,
+#                  'insertion_coords_3d': pc_sp, 'terminus_coords_3d': pc_ep,
+#                  'direction': direction, 'probe_length': probe_length_with_tip_um, 'dv': dv,
+#                  'ap_angle': ap_angle, 'ml_angle': ml_angle,
+#                  'insertion_coords': enter_coords, 'insertion_vox': pv_sp,
+#                  'terminus_coords': end_coords, 'terminus_vox': pv_ep,
+#                  'sites_label': sites_label, 'sites_loc_b': sites_pnt, 'sites_vox': sites_vox,
+#                  'region_label': group_id_label,
+#                  'region_length': region_length, 'region_sites': region_site_num, 'text_loc': region_text_loc,
+#                  'label_name': label_names, 'label_acronym': label_acronym, 'label_color': label_color,
+#                  'vis_data': vis_data}
+#     return data_dict, error_index
+
+
+def get_pre_multi_shank_vis_base(x_vals, y_vals, site_face, atlas_display):
+    x_vals = np.ravel(x_vals)
+    y_vals = np.ravel(y_vals)
+    if site_face in [0, 1]:
+        valid_ind = np.where(y_vals == 0)[0]
+        if len(valid_ind) != 0:
+            base_loc = x_vals[valid_ind]
+        else:
+            base_loc = np.array([0])
+    else:
+        valid_ind = np.where(x_vals == 0)[0]
+        if len(valid_ind) != 0:
+            base_loc = y_vals[valid_ind]
+        else:
+            base_loc = np.array([0])
+    return base_loc
+
+
+def get_vector_according_to_site_face(n_hat, u_hat, site_face):
+    # for pre-plan - 2d plan
+    if site_face == 0:
+        # site face out, facing to you
+        n_vec = n_hat.copy()
+        u_vec = u_hat.copy()
+    elif site_face == 1:
+        # site face in, facing away from you
+        n_vec = - n_hat
+        u_vec = - u_hat
+    elif site_face == 2:
+        # site face left, facing to you left-hand side
+        n_vec = - u_hat
+        u_vec = n_hat.copy()
+    elif site_face == 3:
+        # site face right, facing to you right-hand side
+        n_vec = u_hat.copy()
+        u_vec = - n_hat
+    else:
+        raise ValueError('no such site face, stupid!!!!!!')
+
+    print('n_vec', n_vec)
+    print('u_vec', u_vec)
+
+    return n_vec, u_vec
+
+
+def calculate_vector_according_to_site_face(direction, site_face):
+    # for after surgery
+    r_hat = direction.copy()
+    if check_parallel_to_z(direction):
+        if site_face == 0:
+            n_hat = np.array([0, 1, 0])
+            u_hat = np.cross(n_hat, r_hat)
+        elif site_face == 1:
+            n_hat = np.array([0, -1, 0])
+            u_hat = np.cross(n_hat, r_hat)
+        elif site_face == 2:
+            n_hat = np.array([-1, 0, 0])
+            u_hat = np.cross(n_hat, r_hat)
+        elif site_face == 3:
+            n_hat = np.array([1, 0, 0])
+            u_hat = np.cross(n_hat, r_hat)
+        else:
+            n_hat = None
+            u_hat = None
+            print('Site face can only be 0-Up, 1-Down, 2-Left, 3-Right.')
+    else:
+        if site_face == 0:
+            t_hat = np.array([-r_hat[1], r_hat[0], 0])
+            u_hat = t_hat / np.linalg.norm(t_hat)
+            n_hat = np.cross(r_hat, u_hat)
+        elif site_face == 1:
+            t_hat = np.array([r_hat[1], r_hat[0], 0])
+            u_hat = t_hat / np.linalg.norm(t_hat)
+            n_hat = np.cross(r_hat, u_hat)
+        elif site_face == 2:
+            t_hat = np.array([-r_hat[1], r_hat[0], 0])
+            n_hat = t_hat / np.linalg.norm(t_hat)
+            u_hat = np.cross(n_hat, r_hat)
+        elif site_face == 3:
+            t_hat = np.array([r_hat[1], r_hat[0], 0])
+            n_hat = t_hat / np.linalg.norm(t_hat)
+            u_hat = np.cross(n_hat, r_hat)
+        else:
+            n_hat = None
+            u_hat = None
+            print('Site face can only be 0-Up, 1-Down, 2-Left, 3-Right.')
+        # print('t_hat', t_hat)
+        # print(n_hat)
+        # print(u_hat)
+    return r_hat, u_hat, n_hat
+
+
+def get_center_lines(r_hat, n_hat, u_hat, x_vals, y_vals, length, site_face):
+
+    n_vec, u_vec = get_vector_according_to_site_face(n_hat, u_hat, site_face)
+
+    print(x_vals)
+    print(y_vals)
+
+    line_data = []
+    for i in range(len(x_vals)):
+        s_val = u_vec * x_vals[i] + n_vec * y_vals[i]
+        print('s_val', s_val)
+        temp = [s_val, s_val + r_hat * length]
+        print(temp)
+        line_data.append(np.asarray(temp))
+
+    return line_data
+
+
+
+
+
+
+
+
+def get_pre_ms_vis_base(multi_shanks, site_face, atlas_display):
+    if multi_shanks is None:
+        base_loc = np.array([0])
+    else:
+        if atlas_display == 'sagittal':
+            if site_face not in [0, 1]:
+                base_loc = np.ravel(multi_shanks)
+            else:
+                base_loc = np.array([0])
+        else:
+            if site_face in [0, 1]:
+                base_loc = np.ravel(multi_shanks)
+            else:
+                base_loc = np.array([0])
+    return base_loc
+
+
+def get_pre_mp_vis_base(base_loc, atlas_display):
+    if atlas_display == 'sagittal':
+        valid_ind = np.where(base_loc[:, 1] == 0)[0]
+        if len(valid_ind) == 0:
+            vis_base = np.array([0])
+        else:
+            vis_base = base_loc[valid_ind, 1]
+    else:
+        valid_ind = np.where(base_loc[:, 0] == 0)[0]
+        if len(valid_ind) == 0:
+            vis_base = np.array([0])
+        else:
+            vis_base = base_loc[valid_ind, 0]
+    return vis_base
 
 
 class Probe(object):
@@ -762,9 +990,19 @@ class Probe(object):
         self.y_bias = None
         self.probe_type_name = None
         self.probe_thickness = None
-        self.get_np1()
+        self.multi_shanks = None
+        self.exist_probes = None
+        self.faces = None
 
-    def get_np2(self):
+        self.set_np1()
+
+    def extend_exist_probes(self, prb):
+        pass
+
+    def get_exist_probes(self):
+        self.exist_probes = {'NP1.0': None, 'NP2.0': None, 'Tetrode': None}
+
+    def set_np2(self):
         self.probe_type = 1
         self.probe_type_name = 'NP2.0'
         self.probe_thickness = 24
@@ -777,8 +1015,10 @@ class Probe(object):
         self.sites_distance = [15, 15]
         self.y_bias = [7.5, 7.5]
         self.site_number_in_banks = (384, 384, 192)
+        self.multi_shanks = [-375, -125, 125, 375]
+        self.faces = 'Front'
 
-    def get_np1(self):
+    def set_np1(self):
         self.probe_type = 0
         self.probe_type_name = 'NP1.0'
         self.probe_thickness = 24
@@ -791,20 +1031,24 @@ class Probe(object):
         self.sites_distance = [40, 40, 40, 40]
         self.y_bias = [30, 10, 30, 10]
         self.site_number_in_banks = (384, 384, 192)
+        self.multi_shanks = None
+        self.faces = 'Front'
 
-    def get_tetrode(self):
+    def set_tetrode(self):
         self.probe_type = 3
         self.probe_type_name = 'Tetrode'
-        self.probe_thickness = None
+        self.probe_thickness = 0
         self.probe_length = None
         self.tip_length = 0
         self.site_width = None
         self.site_height = None
-        self.x_bias = None
+        self.x_bias = 0
         self.per_max_sites = 4
-        self.sites_distance = None
+        self.sites_distance = 0
         self.y_bias = 0
         self.site_number_in_banks = None
+        self.multi_shanks = None
+        self.faces = None
 
     def set_linear_silicon(self, pss):
         self.probe_type = 2
@@ -820,6 +1064,8 @@ class Probe(object):
         self.x_bias = pss['x_bias']
         self.y_bias = pss['y_bias']
         self.site_number_in_banks = None
+        self.multi_shanks = None
+        self.faces = 'Front'
 
 
     def get_settings(self):
@@ -834,5 +1080,144 @@ class Probe(object):
                 'sites_distance': self.sites_distance,
                 'x_bias': self.x_bias,
                 'y_bias': self.y_bias,
-                'site_number_in_banks': self.site_number_in_banks}
+                'site_number_in_banks': self.site_number_in_banks,
+                'multi_shanks': self.multi_shanks}
         return data
+
+    def probe_faces_changed(self, face_direction):
+        self.faces = face_direction
+
+    def get_multi_shank_3d_base(self):
+        if self.multi_shanks is None:
+            return
+        if self.faces in ['Front', 'Back']:
+            points3 = np.zeros((len(self.multi_shanks), 3))
+            points3[:, 1] = self.multi_shanks
+        else:
+            points3 = np.zeros((len(self.multi_shanks), 3))
+            points3[:, 2] = self.multi_shanks
+        return points3
+
+
+class MultiProbes(object):
+    def __init__(self):
+        self.x_vals = None
+        self.y_vals = None
+        self.faces = None
+
+    def set_multi_probes(self, multi_settings):
+        self.x_vals = multi_settings['x_vals']
+        self.y_vals = multi_settings['y_vals']
+        self.faces = multi_settings['faces']
+
+    def get_multi_settings(self):
+        if self.x_vals is None:
+            multi_settings = None
+        else:
+            multi_settings = {'x_vals': self.x_vals,
+                              'y_vals': self.y_vals,
+                              'faces': self.faces}
+        return multi_settings
+
+    def check_multi_settings(self, multi_shank):
+        x_unique = np.unique(self.x_vals)
+        if multi_shank is None:
+            for x_val in x_unique:
+                v_ind = np.where(np.ravel(self.x_vals) == x_val)[0]
+                if len(v_ind) > 1:
+                    if len(np.unique(np.ravel(self.y_vals)[v_ind])) != len(v_ind):
+                        msg = 'There are at least 2 probes located at the same coordinates.'
+                        return msg
+        else:
+            if multi_shank['faces'][0] in ['Top', 'Bottom']:
+                if np.any(np.ravel(multi_shank['faces']) not in ['Top', 'Bottom']):
+                    msg = 'Multi-shank probes must placed either all vertically or all horizontally.'
+                    return msg
+            else:
+                if np.any(np.ravel(multi_shank['faces']) in ['Top', 'Bottom']):
+                    msg = 'Multi-shank probes must placed either all vertically or all horizontally.'
+                    return msg
+
+            for x_val in x_unique:
+                v_ind = np.where(np.ravel(self.x_vals) == x_val)[0]
+                if len(v_ind) > 1:
+                    if np.all(np.ravel(self.faces)[v_ind] not in ['Top', 'Bottom']):
+                        d_val = []
+                        y_vals = np.ravel(self.y_vals)[v_ind]
+                        for i in range(len(y_vals)):
+                            c_val = y_vals - y_vals[i]
+                            c_val = c_val.tolist()
+                            del c_val[i]
+                            d_val.append(c_val)
+                        d_val = np.ravel(d_val)
+
+                        if np.any(d_val) < (multi_shank[-1] - multi_shank[0]):
+                            msg = 'There are at least 2 probes located too close to each other.'
+                            return msg
+            y_unique = np.unique(self.y_vals)
+            for y_val in y_unique:
+                v_ind = np.where(np.ravel(self.y_vals) == y_val)[0]
+                if len(v_ind) > 1:
+                    if np.all(np.ravel(self.faces)[v_ind] in ['Top', 'Bottom']):
+                        d_val = []
+                        x_vals = np.ravel(self.x_vals)[v_ind]
+                        for i in range(len(x_vals)):
+                            c_val = x_vals - x_vals[i]
+                            c_val = c_val.tolist()
+                            del c_val[i]
+                            d_val.append(c_val)
+                        d_val = np.ravel(d_val)
+
+                        if np.any(d_val) < (multi_shank[-1] - multi_shank[0]):
+                            msg = 'There are at least 2 probes located too close to each other.'
+                            return msg
+        return
+
+    def get_base_loc_3d(self, multi_shank):
+        if multi_shank is None:
+            points3 = np.zeros((len(self.x_vals), 3))
+            points3[:, 1] = self.x_vals
+            points3[:, 2] = self.y_vals
+        else:
+            n_shank = len(multi_shank)
+            points3 = []
+            if self.faces[0] in ['Top', 'Bottom']:
+                for i in range(len(self.x_vals)):
+                    p3 = np.zeros((n_shank, 3))
+                    p3[:, 1] = multi_shank + self.x_vals[i]
+                    p3[:, 2] = self.y_vals[i]
+                    points3.append(p3)
+            else:
+                for i in range(len(self.x_vals)):
+                    p3 = np.zeros((n_shank, 3))
+                    p3[:, 1] = self.x_vals[i]
+                    p3[:, 2] = multi_shank + self.y_vals[i]
+                    points3.append(p3)
+            points3 = np.concatenate(points3)
+        return points3
+
+    def get_base_loc_2d(self, multi_shank):
+        if multi_shank is None:
+            points2 = np.zeros((len(self.x_vals), 2))
+            points2[:, 0] = self.x_vals
+            points2[:, 1] = self.y_vals
+        else:
+            n_shank = len(multi_shank)
+            points2 = []
+            if self.faces[0] in ['Top', 'Bottom']:
+                for i in range(len(self.x_vals)):
+                    p2 = np.zeros((n_shank, 2))
+                    p2[:, 0] = multi_shank + self.x_vals[i]
+                    p2[:, 1] = self.y_vals[i]
+                    points2.append(p2)
+            else:
+                for i in range(len(self.x_vals)):
+                    p2 = np.zeros((n_shank, 2))
+                    p2[:, 0] = self.x_vals[i]
+                    p2[:, 1] = multi_shank + self.y_vals[i]
+                    points2.append(p2)
+            points2 = np.concatenate(points2)
+        return points2
+
+
+

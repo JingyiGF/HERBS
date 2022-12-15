@@ -427,6 +427,7 @@ class AtlasLoader(object):
                 self.segmentation_data = segment['data']
 
                 data_shape = self.segmentation_data.shape
+                print(data_shape)
 
                 self.unique_label = segment['unique_label']
                 self.success = True

@@ -50,22 +50,36 @@ class CompareWindow(QDialog):
         self.setWindowTitle("Compare Information Window")
 
         n_object = len(obj_names)
-        all_label_names = obj_data[0]['label_name'].copy()
-        all_label_acronym = obj_data[0]['label_acronym'].copy()
-        all_label_color = obj_data[0]['label_color'].copy()
-        all_label_channels = obj_data[0]['region_channels'].tolist()
+        print(n_object)
+        print(obj_data)
+        all_label_names = []
+        all_label_acronym = []
+        all_label_color = []
+        all_label_channels = []
+        for i in range(n_object):
+            all_label_names.append(obj_data[i]['label_name'])
+            all_label_acronym.append(obj_data[i]['label_acronym'])
+            all_label_color.append(obj_data[i]['label_color'])
+            all_label_channels.append(obj_data[i]['region_sites'])
+        all_label_names = np.concatenate(all_label_names)
+        all_label_acronym = np.concatenate(all_label_acronym)
+        all_label_color = np.concatenate(all_label_color)
+        all_label_channels = np.concatenate(all_label_channels)
 
-        for i in range(1, n_object):
-            check_label = obj_data[i]['label_name']
-            for j in range(len(check_label)):
-                if check_label[j] in all_label_names:
-                    da_ind = np.where(np.ravel(all_label_names) == check_label[j])[0][0]
-                    all_label_channels[da_ind] = all_label_channels[da_ind] + obj_data[i]['region_channels'][j]
-                else:
-                    all_label_names.append(check_label[j])
-                    all_label_acronym.append(obj_data[i]['label_acronym'][j])
-                    all_label_color.append(obj_data[i]['label_color'][j])
-                    all_label_channels.append(obj_data[i]['region_channels'][j])
+        print(all_label_names)
+        print(all_label_acronym )
+        print(all_label_color)
+        print(all_label_channels)
+
+        unique_label_names = np.unique(all_label_names)
+        unique_label_acronym = []
+        unique_label_color = []
+        unique_label_channels = []
+        for i in range(len(unique_label_names)):
+            c_ind = np.where(all_label_names == unique_label_names[i])[0]
+            unique_label_acronym.append(all_label_acronym[c_ind[0]])
+            unique_label_color.append(all_label_color[c_ind[0]])
+            unique_label_channels.append(np.sum(all_label_channels[c_ind]))
 
         layout = QVBoxLayout()
         full_name = obj_names[0]
@@ -89,14 +103,14 @@ class CompareWindow(QDialog):
         slayout.addWidget(lb3, 0, 2, 1, 1)
         slayout.addWidget(lb4, 0, 3, 1, 1)
 
-        channels = np.ravel(all_label_channels).astype(int)
+        channels = np.ravel(unique_label_channels).astype(int)
 
-        for i in range(len(all_label_names)):
-            slayout.addWidget(QLabel(all_label_names[i]), i + 1, 0, 1, 1)
-            slayout.addWidget(QLabel(all_label_acronym[i]), i + 1, 1, 1, 1)
+        for i in range(len(unique_label_names)):
+            slayout.addWidget(QLabel(unique_label_names[i]), i + 1, 0, 1, 1)
+            slayout.addWidget(QLabel(unique_label_acronym[i]), i + 1, 1, 1, 1)
             slayout.addWidget(QLabel(str(channels[i])), i + 1, 2, 1, 1)
             clb = QLabel()
-            da_color = QColor(all_label_color[i][0], all_label_color[i][1], all_label_color[i][2], 255).name()
+            da_color = QColor(unique_label_color[i][0], unique_label_color[i][1], unique_label_color[i][2], 255).name()
             clb.setStyleSheet('QLabel {background-color: ' + da_color + '; width: 20px; height: 20px}')
             slayout.addWidget(clb, i + 1, 3, 1, 1)
 
@@ -114,43 +128,49 @@ class CompareWindow(QDialog):
 
         view_layout.addWidget(w)
 
-        resize_factor = 5
-        max_num_channel = 0
-        for i in range(n_object):
-            da_sum = np.sum(obj_data[i]['block_count'][0])
-            if da_sum > max_num_channel:
-                max_num_channel = da_sum
+        for k in range(n_object):
+            vis_data = obj_data[k]['vis_data']
+            n_column = len(vis_data)
 
-        for i in range(n_object):
-            count1 = obj_data[i]['block_count'][0]
-            plot_data1 = np.cumsum(count1)
-            plot_data1 = plot_data1 / max_num_channel * resize_factor
-            plot_colors1 = np.asarray(obj_data[i]['merged_color'][0])
+            plot_center_x_val = k * 10 + 0.5 * n_column
 
-            count2 = obj_data[i]['block_count'][1]
-            plot_data2 = np.cumsum(count2)
-            plot_data2 = plot_data2 / max_num_channel * resize_factor
-            plot_colors2 = np.asarray(obj_data[i]['merged_color'][1])
-
+            probe_type_name = obj_data[k]['probe_type_name']
             # draw tips
-            da_tip_loc = np.array([[i - 0.3, 0], [i, - 0.7], [i + 0.3, 0]])
-            tips = pg.PlotDataItem(da_tip_loc, connect='all', fillLevel=0, fillBrush=pg.mkBrush(color=(128, 128, 128)))
-            view.addItem(tips)
+            if probe_type_name != 'Tetrode':
+                da_tip_loc = np.array([[0, 0], [0.5 * n_column, - 2 * n_column], [n_column, 0]])
+                da_tip_loc = da_tip_loc + np.array([plot_center_x_val, 0])
+                tips = pg.PlotDataItem(da_tip_loc, connect='all', fillLevel=0,
+                                       fillBrush=pg.mkBrush(color=(128, 128, 128)))
+                view.addItem(tips)
 
-            # create bar chart
-            bg_list1 = []
-            for j in np.arange(len(plot_data1))[::-1]:
-                bg = pg.BarGraphItem(x=[i - 0.15], height=plot_data1[j], width=0.3,
-                                     brush=QColor(plot_colors1[j][0], plot_colors1[j][1], plot_colors1[j][2], 255))
-                bg_list1.append(bg)
-                view.addItem(bg_list1[-1])
+            # draw area
+            region_label = obj_data[k]['region_label']
 
-            bg_list2 = []
-            for j in np.arange(len(plot_data2))[::-1]:
-                bg = pg.BarGraphItem(x=[i + 0.15], height=plot_data2[j], width=0.3,
-                                     brush=QColor(plot_colors2[j][0], plot_colors2[j][1], plot_colors2[j][2], 255))
-                bg_list2.append(bg)
-                view.addItem(bg_list2[-1])
+            group_color = obj_data[k]['label_color']
+            sites_label = obj_data[k]['sites_label']
+            for i in range(n_column):
+                group_id = vis_data[i]['group_id'].astype(int)
+                start_loc = vis_data[i]['start_loc']
+                end_loc = vis_data[i]['end_loc']
+                sites_loc_column = vis_data[i]['sites']
+
+                for j in range(len(group_id)):
+                    area_data = np.array([[i, end_loc[j]], [i + 1, end_loc[j]]])
+                    area_data = area_data + np.array([plot_center_x_val, 0])
+                    da_item = pg.PlotDataItem(area_data, fillLevel=start_loc[j],
+                                              fillBrush=group_color[group_id[j]], pen=None)
+                    view.addItem(da_item)
+
+                sites_color = []
+                for j in range(len(sites_label[i])):
+                    color_ind = np.where(region_label == sites_label[i][j])[0][0]
+                    sites_color.append(group_color[color_ind])
+
+                pnt_data = np.stack([np.repeat(i + 0.5, len(sites_loc_column)), sites_loc_column], axis=1)
+                pnt_data = pnt_data + np.array([plot_center_x_val, 0])
+                da_item = pg.ScatterPlotItem(pos=pnt_data, pen=(128, 128, 128, 128), brush=sites_color,
+                                             symbol='s', size=3, hoverSize=8)
+                view.addItem(da_item)
 
         channel_info_frame = QFrame()
         channel_info_layout = QHBoxLayout(channel_info_frame)
@@ -349,7 +369,7 @@ class ProbeInfoWindow(QDialog):
         coords_info_layout.addWidget(terminus_vox, 3, 3, 1, 1)
 
         # group info container
-        region_sites = np.ravel(data['region_sites']).astype(str)[::-1]
+        region_sites_num = np.ravel(data['region_sites']).astype(str)[::-1]
         region_label = np.ravel(data['region_label']).astype(int).astype(str)[::-1]
         region_color = np.asarray(data['label_color'])[::-1, :]
         region_length = np.round(data['region_length'], 3).astype(str)[::-1]
@@ -371,7 +391,7 @@ class ProbeInfoWindow(QDialog):
             clb.setStyleSheet('QLabel {background-color: ' + da_color + '; width: 20px; height: 20px}')
 
             row_val = [QLabel(region_label[i]), QLabel(region_name[i]), QLabel(region_acronym[i]),
-                       QLabel(region_sites[i]), QLabel(region_length[i]), clb]
+                       QLabel(region_sites_num[i]), QLabel(region_length[i]), clb]
 
             for j in range(len(row_val)):
                 sec_layout.addWidget(row_val[j], i + 1, j, 1, 1)
@@ -391,65 +411,50 @@ class ProbeInfoWindow(QDialog):
         # view.invertY(True)
 
         # load plot data
-        group_region_start = data['group_region_start']
-        group_region_end = data['group_region_end']
-        group_region_label = data['region_label']
-        group_region_color = data['label_color']
-        group_region_sites = data['region_sites']
-        group_region_length = data['region_length']
-        group_text_loc = data['text_loc']
-        sites_columns = data['sites_columns']
-        sites_label = data['sites_label']
+        vis_data = data['vis_data']
+        n_column = len(vis_data)
 
-        group_region_length = [0] + group_region_length
-
-
-        n_row, n_column = group_region_start.shape
-
+        probe_type_name = data['probe_type_name']
         # draw tips
-        da_tip_loc = np.array([[0, 0], [0.5 * n_column, - 2 * n_column], [n_column, 0]])
-        tips = pg.PlotDataItem(da_tip_loc, connect='all', fillLevel=0, fillBrush=pg.mkBrush(color=(128, 128, 128)))
-        view.addItem(tips)
+        if probe_type_name != 'Tetrode':
+            da_tip_loc = np.array([[0, 0], [0.5 * n_column, - 2 * n_column], [n_column, 0]])
+            tips = pg.PlotDataItem(da_tip_loc, connect='all', fillLevel=0, fillBrush=pg.mkBrush(color=(128, 128, 128)))
+            view.addItem(tips)
 
         # draw area
+        region_label = data['region_label']
+        region_sites = data['region_sites']
+        region_text_loc = data['text_loc']
+
+        group_color = data['label_color']
+        sites_label = data['sites_label']
         for i in range(n_column):
-            for j in range(n_row):
-                if np.isnan(group_region_start[j, i]):
-                    continue
-                area_data = np.array([[i, group_region_end[j, i]], [i + 1, group_region_end[j, i]]])
-                da_item = pg.PlotDataItem(area_data, fillLevel=group_region_start[j, i],
-                                          fillBrush=group_region_color[j], pen=None)
+            group_id = vis_data[i]['group_id'].astype(int)
+            start_loc = vis_data[i]['start_loc']
+            end_loc = vis_data[i]['end_loc']
+            sites_loc_column = vis_data[i]['sites']
+
+            for j in range(len(group_id)):
+                area_data = np.array([[i, end_loc[j]], [i + 1, end_loc[j]]])
+                da_item = pg.PlotDataItem(area_data, fillLevel=start_loc[j],
+                                          fillBrush=group_color[group_id[j]], pen=None)
                 view.addItem(da_item)
 
-        # draw sites
-        for i in range(n_column):
-            pnt_data = np.stack([np.repeat(i + 0.5, len(sites_columns[i])), sites_columns[i]], axis=1)
-            sites_u_label = np.unique(sites_label[i])
-            sites_u_color = []
-            for j in range(len(sites_u_label)):
-                temp = np.where(group_region_label == sites_u_label[j])[0]
-                if len(temp) == 0:
-                    raise Exception('This is a numerical error, please contact maintainers.')
-                sites_u_color.append(group_region_color[temp[0]])
-            sites_u_color = np.asarray(sites_u_color)
+            sites_color = []
+            for j in range(len(sites_label[i])):
+                color_ind = np.where(region_label == sites_label[i][j])[0][0]
+                sites_color.append(group_color[color_ind])
 
-            sites_label_index = np.zeros(len(sites_label[i]), 'i')
-            for j in range(len(sites_u_label)):
-                sites_label_index[sites_label[i] == sites_u_label[j]] = j
-
-            sites_color = sites_u_color[sites_label_index]
-
+            pnt_data = np.stack([np.repeat(i + 0.5, len(sites_loc_column)), sites_loc_column], axis=1)
             da_item = pg.ScatterPlotItem(pos=pnt_data, pen=(128, 128, 128, 128), brush=sites_color,
                                          symbol='s', size=3, hoverSize=8)
             view.addItem(da_item)
 
         # draw text
-        for i in range(len(group_region_label)):
-            region_text = pg.TextItem(str(group_region_sites[i]))
-            region_text.setPos(n_column + 0.5, group_text_loc[i])
+        for i in range(len(region_label)):
+            region_text = pg.TextItem(str(region_sites[i]))
+            region_text.setPos(n_column + 0.5, region_text_loc[i])
             view.addItem(region_text)
-
-
 
         view_layout.addWidget(w)
 

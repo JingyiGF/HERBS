@@ -274,6 +274,17 @@ class IntLineEdit(QLineEdit):
         self.sig_text_changed.emit((self.id, text_val))
 
 
+class FaceCombo(QComboBox):
+    sig_text_changed = pyqtSignal(object)
+    def __init__(self, w_id, parent=None):
+        QComboBox.__init__(self)
+        self.id = w_id
+        self.currentTextChanged.connect(self.text_changed)
+
+    def text_changed(self, text):
+        self.sig_text_changed.emit((self.id, text))
+
+
 class LinearSiliconInfoDialog(QDialog):
     def __init__(self, pss):
         super().__init__()
@@ -446,7 +457,7 @@ class LinearSiliconInfoDialog(QDialog):
 
     def probe_length_changed(self, obj):
         text_val = obj[1]
-        if text_val == '':
+        if text_val in ['', '-', '+']:
             self.button_box.setEnabled(False)
         else:
             self.probe_settings['probe_length'] = int(text_val)
@@ -457,7 +468,7 @@ class LinearSiliconInfoDialog(QDialog):
 
     def probe_thickness_changed(self, obj):
         text_val = obj[1]
-        if text_val == '':
+        if text_val in ['', '-', '+']:
             self.button_box.setEnabled(False)
         else:
             self.probe_settings['probe_thickness'] = int(text_val)
@@ -468,18 +479,18 @@ class LinearSiliconInfoDialog(QDialog):
 
     def tip_length_changed(self, obj):
         text_val = obj[1]
-        if text_val == '':
+        if text_val in ['', '-', '+']:
             self.button_box.setEnabled(False)
         else:
             self.probe_settings['tip_length'] = int(text_val)
-            if float(text_val) < 0 or float(text_val) > self.probe_settings['probe_length'] :
+            if float(text_val) < 0 or float(text_val) > self.probe_settings['probe_length']:
                 self.button_box.setEnabled(False)
             else:
                 self.button_box.setEnabled(True)
 
     def site_width_changed(self, obj):
         text_val = obj[1]
-        if text_val == '':
+        if text_val in ['', '-', '+']:
             self.button_box.setEnabled(False)
         else:
             self.probe_settings['site_width'] = int(text_val)
@@ -490,7 +501,7 @@ class LinearSiliconInfoDialog(QDialog):
 
     def site_height_changed(self, obj):
         text_val = obj[1]
-        if text_val == '':
+        if text_val in ['', '-', '+']:
             self.button_box.setVisible(False)
         else:
             self.probe_settings['site_height'] = int(text_val)
@@ -503,7 +514,7 @@ class LinearSiliconInfoDialog(QDialog):
     def sites_distance_changed(self, obj):
         w_id = obj[0]
         text_val = obj[1]
-        if text_val == '':
+        if text_val in ['', '-', '+']:
             self.button_box.setEnabled(False)
         else:
             self.probe_settings['sites_distance'][w_id] = int(text_val)
@@ -515,7 +526,7 @@ class LinearSiliconInfoDialog(QDialog):
     def per_max_sites_changed(self, obj):
         w_id = obj[0]
         text_val = obj[1]
-        if text_val == '':
+        if text_val in ['', '-', '+']:
             self.button_box.setEnabled(False)
         else:
             self.probe_settings['per_max_sites'][w_id] = int(text_val)
@@ -528,19 +539,16 @@ class LinearSiliconInfoDialog(QDialog):
         w_id = obj[0]
         text_val = obj[1]
         # text_val = self.x_bias_wl[index].text()
-        if text_val == '':
+        if text_val in ['', '-', '+']:
             self.button_box.setEnabled(False)
         else:
             self.probe_settings['x_bias'][w_id] = int(text_val)
-            if float(text_val) < 0:
-                self.button_box.setEnabled(False)
-            else:
-                self.button_box.setEnabled(True)
+            self.button_box.setEnabled(True)
 
     def y_bias_changed(self, obj):
         w_id = obj[0]
         text_val = obj[1]
-        if text_val == '':
+        if text_val in ['', '-', '+']:
             self.button_box.setEnabled(False)
         else:
             self.probe_settings['y_bias'][w_id] = int(text_val)
@@ -548,6 +556,164 @@ class LinearSiliconInfoDialog(QDialog):
                 self.button_box.setEnabled(False)
             else:
                 self.button_box.setEnabled(True)
+
+
+class MultiProbePlanningDialog(QDialog):
+    def __init__(self, multi_settings, multi_shank):
+        super().__init__()
+
+        self.setWindowTitle('Multi-Probe Geometry Setting Window')
+        self.setStyleSheet(dialog_style)
+
+        btn_box = QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+
+        self.button_box = QDialogButtonBox(btn_box)
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+
+        fig_label = QLabel()
+        pixmap = QPixmap('icons/toolbar/multi_probe.png')
+        fig_label.setPixmap(pixmap)
+        fig_label.setFixedHeight(300)
+
+        # initial values
+        if multi_settings is None:
+            self.multi_settings = {}
+            if multi_shank is None:
+                self.multi_settings['x_vals'] = [-300, 300, -100, -300, 300]
+                self.multi_settings['y_vals'] = [-100, -100, 0, 100, 100]
+                self.multi_settings['faces'] = ['Top', 'Top', 'Top', 'Top', 'Top']
+            else:
+                self.multi_settings['x_vals'] = [-500, 500]
+                self.multi_settings['y_vals'] = [0, 0]
+                self.multi_settings['faces'] = ['Top', 'Top']
+        else:
+            self.multi_settings = multi_settings
+
+        n_probe = len(self.multi_settings['x_vals'])
+
+        # initial widgets
+        n_probe_label = QLabel('Number of Probes (stk): ')
+        self.n_probe_spinbox = QSpinBox()
+        self.n_probe_spinbox.setMinimum(1)
+        self.n_probe_spinbox.setValue(n_probe)
+
+        row_names = [QLabel('X Coordinates (um): '), QLabel('Y Coordinates (um): '),
+                     QLabel('Probe Faces: ')]
+
+        self.x_val_wl = []
+        self.y_val_wl = []
+        self.faces_wl = []
+        # self.types_wl = []
+        for i in range(n_probe):
+            self.x_val_wl.append(IntLineEdit(i, str(self.multi_settings['x_vals'][i])))
+            self.y_val_wl.append(IntLineEdit(i, str(self.multi_settings['y_vals'][i])))
+            self.faces_wl.append(FaceCombo(i))
+            self.faces_wl[-1].addItems(['Top', 'Bottom', 'Left', 'Right'])
+            self.faces_wl[-1].setCurrentText(str(self.multi_settings['faces'][i]))
+            self.x_val_wl[-1].sig_text_changed.connect(self.x_vals_changed)
+            self.y_val_wl[-1].sig_text_changed.connect(self.y_vals_changed)
+            self.faces_wl[-1].sig_text_changed.connect(self.faces_changed)
+
+        # connect
+        self.n_probe_spinbox.valueChanged.connect(self.n_probe_changed)
+
+        # add widgets to layout
+        right_frame = QFrame()
+        self.right_layout = QGridLayout(right_frame)
+        self.right_layout.addWidget(n_probe_label, 0, 0, 1, 1)
+        self.right_layout.addWidget(self.n_probe_spinbox, 0, 1, 1, 1)
+
+        for i in range(len(row_names)):
+            self.right_layout.addWidget(row_names[i], 1 + i, 0, 1, 1)
+
+        for j in range(n_probe):
+            self.right_layout.addWidget(self.x_val_wl[j], 1, j + 1, 1, 1)
+            self.right_layout.addWidget(self.y_val_wl[j], 2, j + 1, 1, 1)
+            self.right_layout.addWidget(self.faces_wl[j], 3, j + 1, 1, 1)
+
+        #
+        out_frame = QFrame()
+        out_layout = QHBoxLayout(out_frame)
+        out_layout.addWidget(fig_label)
+        out_layout.addWidget(right_frame)
+
+        # add widget to layout
+        layout = QVBoxLayout()
+        layout.addWidget(out_frame)
+        layout.addSpacing(10)
+        layout.addWidget(self.button_box)
+        self.setLayout(layout)
+
+    def n_probe_changed(self):
+        n_probe = self.n_probe_spinbox.value()
+        exist_probe = len(self.x_val_wl)
+        if n_probe == exist_probe:
+            return
+
+        if n_probe < exist_probe:
+            del_index = np.arange(n_probe, exist_probe)[::-1]
+            for da_ind in del_index:
+                self.x_val_wl[da_ind].sig_text_changed.disconnect(self.x_vals_changed)
+                self.y_val_wl[da_ind].sig_text_changed.disconnect(self.y_vals_changed)
+                self.faces_wl[da_ind].sig_text_changed.disconnect(self.faces_changed)
+
+                self.right_layout.removeWidget(self.x_val_wl[da_ind])
+                self.right_layout.removeWidget(self.y_val_wl[da_ind])
+                self.right_layout.removeWidget(self.faces_wl[da_ind])
+                self.x_val_wl[da_ind].deleteLater()
+                self.y_val_wl[da_ind].deleteLater()
+                self.faces_wl[da_ind].deleteLater()
+                del self.x_val_wl[da_ind]
+                del self.y_val_wl[da_ind]
+                del self.faces_wl[da_ind]
+
+                del self.multi_settings['x_vals'][da_ind]
+                del self.multi_settings['y_vals'][da_ind]
+                del self.multi_settings['faces'][da_ind]
+        else:
+            for da_ind in range(exist_probe, n_probe):
+                self.x_val_wl.append(IntLineEdit(da_ind, str(0)))
+                self.y_val_wl.append(IntLineEdit(da_ind, str(0)))
+                self.faces_wl.append(FaceCombo(da_ind))
+                self.faces_wl[-1].addItems(['Top', 'Bottom', 'Left', 'Right'])
+
+                self.x_val_wl[-1].sig_text_changed.connect(self.x_vals_changed)
+                self.y_val_wl[-1].sig_text_changed.connect(self.y_vals_changed)
+                self.faces_wl[-1].sig_text_changed.connect(self.faces_changed)
+
+                self.right_layout.addWidget(self.x_val_wl[-1], 1, da_ind + 1, 1, 1)
+                self.right_layout.addWidget(self.y_val_wl[-1], 2, da_ind + 1, 1, 1)
+                self.right_layout.addWidget(self.faces_wl[-1], 3, da_ind + 1, 1, 1)
+
+                self.multi_settings['x_vals'].append(0)
+                self.multi_settings['y_vals'].append(0)
+                self.multi_settings['faces'].append('Top')
+
+    #
+    def x_vals_changed(self, obj):
+        w_id = obj[0]
+        text_val = obj[1]
+        if text_val in ['', '-', '+']:
+            self.button_box.setEnabled(False)
+        else:
+            self.multi_settings['x_vals'][w_id] = int(text_val)
+            self.button_box.setEnabled(True)
+
+    def y_vals_changed(self, obj):
+        w_id = obj[0]
+        text_val = obj[1]
+        if text_val in ['', '-', '+']:
+            self.button_box.setEnabled(False)
+        else:
+            self.multi_settings['y_vals'][w_id] = int(text_val)
+            self.button_box.setEnabled(True)
+
+    def faces_changed(self, obj):
+        w_id = obj[0]
+        text_val = obj[1]
+        self.multi_settings['faces'][w_id] = text_val
+
 
 
 

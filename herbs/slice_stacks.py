@@ -105,9 +105,7 @@ class SliceStacks(pg.GraphicsLayoutWidget):
         contour_pnts = pg.PlotDataItem(pen=pg.mkPen(color=(255, 0, 255), width=3), brush=None)
         probe_trajectory = pg.PlotDataItem(pen=pg.mkPen(color=(0, 0, 255), width=2), brush=None)
 
-        self.pre_trajectory_list = []
-        for i in range(4):
-            self.pre_trajectory_list.append(pg.PlotDataItem(pen=pg.mkPen(color=(0, 0, 255), width=2), brush=None))
+        self.pre_trajectory_list = [pg.PlotDataItem(pen=pg.mkPen(color=(0, 0, 255), width=2), brush=None)]
 
         self.image_dict = {'atlas-overlay': overlay_img,
                            'atlas-mask': mask_img,
@@ -135,15 +133,41 @@ class SliceStacks(pg.GraphicsLayoutWidget):
         for i in range(len(self.image_dict)):
             self.vb.addItem(self.image_dict[self.image_dict_keys[i]])
 
-        self.vb.addItem(self.boundary)
+        self.vb.addItem(self.pre_trajectory_list[0])
 
-        for i in range(4):
-            self.vb.addItem(self.pre_trajectory_list[i])
+        self.vb.addItem(self.boundary)
 
         # self.vb.addItem(self.after_trajectory)
 
         self.vb.addItem(self.v_line, ignoreBounds=True)
         self.vb.addItem(self.h_line, ignoreBounds=True)
+
+    def set_pre_design_vis_data(self, data):
+        n_probe = len(data)
+        exist_n_probes = len(self.pre_trajectory_list)
+        if n_probe < exist_n_probes:
+            del_ind = np.arange(n_probe, exist_n_probes)[::-1]
+            for i in del_ind:
+                self.vb.removeItem(self.pre_trajectory_list[i])
+                self.pre_trajectory_list[i].deleteLater()
+                del self.pre_trajectory_list[i]
+        elif n_probe > exist_n_probes:
+            for i in range(exist_n_probes, n_probe):
+                self.pre_trajectory_list.append(pg.PlotDataItem(pen=pg.mkPen(color=(0, 0, 255), width=2), brush=None))
+                self.vb.addItem(self.pre_trajectory_list[-1])
+
+        for i in range(n_probe):
+            self.pre_trajectory_list[i].setData(data[i])
+
+    def pre_trajectory_color_changed(self, col, lw):
+        for i in range(len(self.pre_trajectory_list)):
+            self.pre_trajectory_list[i].setPen(pg.mkPen(color=col, width=lw))
+
+
+    def remove_pre_trajectories_vis_lines(self):
+        for i in range(len(self.pre_trajectory_list)):
+            self.pre_trajectory_list[i].clear()
+
 
     def set_data(self, atlas, label, contour, scale=None):
         self.img.set_data(atlas)
@@ -176,8 +200,8 @@ class SliceStacks(pg.GraphicsLayoutWidget):
     def set_label_opacity(self, o):
         self.label_img.setOpacity(o)
 
-    def setLabelColors(self, colors):
-        self.label_colors = colors
+    # def set_label_colors(self, colors):
+    #     self.label_colors = colors
 
     def mouse_hovered(self, event):
         if event.isExit():

@@ -14,7 +14,7 @@ from .slice_stacks import SliceStacks
 from .label_tree import LabelTree
 from .uuuuuu import read_qss_file, get_corner_line_from_rect, get_slice_atlas_coord, make_contour_img,  \
     rotate_base_points, rotation_x, rotation_y, rotation_z
-from .probe_utiles import get_tilt_sign
+from .probe_utiles import get_tilt_sign#, get_direction_rotation
 
 
 class PageController(QWidget):
@@ -1065,7 +1065,7 @@ class AtlasView(QObject):
             da_z = np.ones(len(points2)) * self.current_horizontal_index
         else:
             da_z = horizontal_index
-        points3 = np.vstack([points2[:, 1], points2[:, 0], self.atlas_size[0] - da_z]).T
+        points3 = np.vstack([points2[:, 1], points2[:, 0], da_z]).T
         points3 = points3 - self.origin_3d
         if self.horizontal_rotated:
             rot_mat = self.h_rotm_3d
@@ -1073,7 +1073,7 @@ class AtlasView(QObject):
             points3 = np.dot(rot_mat, (points3 - rotation_origin).T).T + rotation_origin
         return points3
 
-    def get_3d_pnts(self, processing_data, atlas_display):
+    def get_3d_data_from_2d_view(self, processing_data, atlas_display):
         if atlas_display == 'coronal':
             data = self.get_coronal_3d(processing_data)
         elif atlas_display == 'sagittal':
@@ -1127,8 +1127,13 @@ class AtlasView(QObject):
         return points3_list
 
     def pre_trajectory_changed(self):
-        for i in range(4):
-            self.working_atlas.pre_trajectory_list[i].clear()
+        self.working_atlas.remove_pre_trajectories_vis_lines()
+
+
+
+
+
+
 
     #
     def get_pre_coronal_np2_data(self, data, site_face):
@@ -1136,10 +1141,13 @@ class AtlasView(QObject):
         if site_face in [0, 1]:
             start_pnt, end_pnt = rotate_base_points(data, base_loc)
             self.anchor_coronal_index = None
+            line_data = []
             for i in range(4):
                 da_pnts = np.asarray([start_pnt[i], end_pnt[i]])
-                self.working_atlas.pre_trajectory_list[i].setData(da_pnts)
+                line_data.append(da_pnts)
+            self.working_atlas.set_pre_design_vis_data(line_data)
             temp = np.vstack([start_pnt, end_pnt])
+            print(temp)
             self.working_atlas.image_dict['atlas-probe'].setData(pos=temp)
         else:
             start_pnt = data[0]
@@ -1147,6 +1155,34 @@ class AtlasView(QObject):
             self.working_atlas.pre_trajectory_list[0].setData(data)
             self.anchor_coronal_index = base_loc + self.current_coronal_index
         return start_pnt, end_pnt
+
+    def get_pre_vis_data(self, data, base_loc):
+        base_loc = np.ravel(base_loc) / self.vox_size_um
+        start_pnt, end_pnt = rotate_base_points(data, base_loc)
+        return start_pnt, end_pnt
+
+    def set_pre_vis_data(self, start_pnt, end_pnt):
+        line_data = []
+        for i in range(len(start_pnt)):
+            da_pnts = np.asarray([start_pnt[i], end_pnt[i]])
+            line_data.append(da_pnts)
+        self.working_atlas.set_pre_design_vis_data(line_data)
+        self.working_atlas.image_dict['atlas-probe'].setData(pos=np.asarray(start_pnt))
+
+    def draw_pre_2d_vis_data(self, data, base_loc):
+        if len(data) == 1:
+            base_loc = np.ravel(base_loc) / self.vox_size_um
+            temp = np.zeros((len(base_loc), 2))
+            temp[:, 0] = base_loc + data[0][0]
+            temp[:, 1] = data[0][1]
+            self.working_atlas.image_dict['atlas-probe'].setData(pos=np.asarray(temp))
+        elif len(data) == 2:
+            start_pnt, end_pnt = self.get_pre_vis_data(data, base_loc)
+            temp = np.vstack([start_pnt, end_pnt])
+            self.working_atlas.image_dict['atlas-probe'].setData(pos=temp)
+        else:
+            self.working_atlas.image_dict['atlas-probe'].clear()
+            self.working_atlas.remove_pre_trajectories_vis_lines()
 
     #
     def get_pre_sagital_np2_data(self, data, site_face):
@@ -1184,10 +1220,80 @@ class AtlasView(QObject):
             self.anchor_horizontal_index = base_loc + self.current_horizontal_index
         return start_pnt, end_pnt
 
+
+    # def get_pre_multi_probe_data(self, data, atlas_display, multi_settings):
+    #     x_vals = multi_settings['x_vals']
+    #     y_vals = multi_settings['y_vals']
+    #     n_probes = len(x_vals)
+    #
+    #     if atlas_display == 'coronal':
+    #         data3 = self.get_coronal_3d(data)
+    #     elif atlas_display == 'sagittal':
+    #         data3 = self.get_sagital_3d(data)
+    #     else:
+    #         data3 = self.get_horizontal_3d(data)
+    #
+    #     pdata = np.asarray(data3)
+    #     p_order = np.argsort(pdata[:, 1])
+    #     pdata = pdata[p_order, :]
+    #
+    #     direction = pdata[0] - pdata[1]
+    #     direction = direction / np.linalg.norm(direction)
+    #
+    #     rot_m = get_direction_rotation(direction)
+    #     base_end = np.dot(rot_m.T, pdata[1] - pdata[0])
+    #
+    #     base_start_3d = np.zeros((n_probes, 3))
+    #     base_start_3d[:, 1] = x_vals.copy()
+    #     base_start_3d[:, 2] = y_vals.copy()
+    #
+    #     base_end_3d = base_start_3d.copy()
+    #     base_end_3d[:, 0] = base_end
+    #
+    #     points3_list = []
+    #     for i in range(n_probes):
+    #         tp3 = np.vstack([base_start_3d[i], base_end_3d[i]])
+    #         points3 = np.dot(rot_m, tp3.T).T
+    #         points3_list.append(points3)
+    #
+    #     return points3_list
+
+    def get_multi_probe_2d_vis_data(self, data, multi_settings):
+        x_vals = multi_settings['x_vals']
+        y_vals = multi_settings['y_vals']
+        n_probes = len(x_vals)
+
+        vind = np.where(y_vals == 0)[0]
+        if len(vind) == 0:
+            vis_data = [data]
+        else:
+            vis_data = []
+            base_loc = np.ravel(x_vals)[vind]
+
+    def get_plane_norm_vector(self, atlas_display):
+        if atlas_display == 'coronal':
+            if self.coronal_rotated:
+                n_vec = np.dot(self.c_rotm_3d, np.array([0, -1, 0]))
+            else:
+                n_vec = np.array([0, -1, 0])
+        elif atlas_display == 'sagittal':
+            if self.sagital_rotated:
+                n_vec = np.dot(self.s_rotm_3d, np.array([1, 0, 0]))
+            else:
+                n_vec = np.array([1, 0, 0])
+        else:
+            if self.horizontal_rotated:
+                n_vec = np.dot(self.h_rotm_3d, np.array([0, 0, 1]))
+            else:
+                n_vec = np.array([0, 0, 1])
+        return n_vec
+
+
     #
     def draw_volume_pre_trajectory(self, data, n_pre_trajectory):
         if len(data) == 1:
             if n_pre_trajectory == 1:
+
                 self.working_atlas.image_dict['atlas-probe'].setData(pos=np.asarray(data))
             else:
                 base_loc = np.array([-375, -125, 125, 375]) / self.vox_size_um
@@ -1195,6 +1301,9 @@ class AtlasView(QObject):
                 self.working_atlas.image_dict['atlas-probe'].setData(pos=np.asarray(temp))
         elif len(data) == 2:
             if n_pre_trajectory == 1:
+                print('data', data)
+                start_pnt, end_pnt = rotate_base_points(np.asarray(data), np.array([0]))
+                print(start_pnt, end_pnt)
                 self.working_atlas.image_dict['atlas-probe'].setData(pos=np.asarray(data))
             else:
                 base_loc = np.array([-375, -125, 125, 375]) / self.vox_size_um

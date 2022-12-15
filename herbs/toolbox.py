@@ -14,8 +14,11 @@ class ToolBox(QObject):
 
         self.pencil_mask = np.ones((3, 3), 'uint8')
         self.is_closed = False
+        self.multi_shanks = False
 
         self.remove_inside = True
+
+        self.merge_sites = False
 
         # action version
         self.add_atlas = QAction(QIcon('icons/toolbar/atlas_icon.png'), 'Upload Previous Loaded Volume Atlas', self)
@@ -282,54 +285,72 @@ class ToolBox(QObject):
         mask_layout.addStretch(1)
 
         # for probe_btn, probe wrap
+        self.multi_prb_btn = QPushButton()
+        self.multi_prb_btn.setCheckable(True)
+        mp_icon = QIcon()
+        mp_icon.addPixmap(QPixmap("icons/toolbar/multi_pencil.svg"), QIcon.Normal, QIcon.On)
+        mp_icon.addPixmap(QPixmap("icons/toolbar/single_pencil.svg"), QIcon.Normal, QIcon.Off)
+        self.multi_prb_btn.setIcon(mp_icon)
+        self.multi_prb_btn.setIconSize(QSize(20, 20))
+        self.multi_prb_btn.setToolTip('Multi-shanks Switch')
+
         probe_color_label = QLabel('Color:')
+        probe_color_label.setToolTip('Probe Color')
         self.probe_color_btn = pg.ColorButton(padding=0)
         self.probe_color_btn.setColor(QColor(0, 0, 255))
         self.probe_color_btn.setFixedSize(60, 15)
         probe_type_label = QLabel('Type:')
+        probe_type_label.setToolTip('Probe type')
         self.probe_type_combo = QComboBox()
         self.probe_type_combo.setFixedSize(150, 20)
         self.probe_type_combo.addItems(["Neuropixel 1.0", "Neuropixel 2.0", "Linear-silicon", "Tetrode"])
         self.probe_type_combo.setCurrentText("Neuropixel 1.0")
+
+        self.merge_sites_btn = QPushButton()
+        self.merge_sites_btn.setCheckable(True)
+        ms_icon = QIcon()
+        ms_icon.addPixmap(QPixmap("icons/toolbar/line_sites.svg"), QIcon.Normal, QIcon.On)
+        ms_icon.addPixmap(QPixmap("icons/toolbar/separate_sites.svg"), QIcon.Normal, QIcon.Off)
+        self.merge_sites_btn.setIcon(ms_icon)
+        self.merge_sites_btn.setIconSize(QSize(20, 20))
+        self.merge_sites_btn.setToolTip('Merge sites')
+        self.merge_sites_btn.clicked.connect(self.merge_sites_btn_clicked)
+
         site_face_label = QLabel('Site-face:')
-        self.site_face_combo = QComboBox()
-        self.site_face_combo.setFixedSize(150, 20)
-        self.site_face_combo.addItems(["Front", "Back", "Left", "Right"])
-        self.site_face_combo.setCurrentText("Front")
+        site_face_label.setToolTip('Sites Face Direction')
+        self.pre_site_face_combo = QComboBox()
+        self.pre_site_face_combo.setFixedSize(100, 20)
+        self.pre_site_face_combo.addItems(["Out", "In", "Left", "Right"])
+
+        self.after_site_face_combo = QComboBox()
+        self.after_site_face_combo.setFixedSize(100, 20)
+        self.after_site_face_combo.addItems(["Up", "Down", "Left", "Right"])
+        self.after_site_face_combo.setVisible(False)
 
         self.linear_silicon_list = QPushButton()
         self.linear_silicon_list.setFocusPolicy(Qt.NoFocus)
         self.linear_silicon_list.setIcon(QIcon('icons/toolbar/list.svg'))
         self.linear_silicon_list.setIconSize(QSize(20, 20))
         self.linear_silicon_list.setVisible(False)
-
-        # self.probe_type1 = QRadioButton("Neuropixel 1.0")
-        # self.probe_type1.setChecked(True)
-        # self.probe_type2 = QRadioButton("Neuropixel 2.0")
-        # self.probe_type3 = QRadioButton("Tetrode")
-        # self.probe_style_circle = QRadioButton("Circle")
-        # self.probe_style_circle.setChecked(True)
-        # self.probe_style_circle.toggled.connect(self.probe_style_changed)
-        # self.probe_style_square = QRadioButton("Square")
-        # self.probe_style_square.toggled.connect(self.probe_style_changed)
+        self.linear_silicon_list.setToolTip('Linear Silicon Designer')
 
         self.probe_wrap = QFrame()
         probe_layout = QHBoxLayout(self.probe_wrap)
         probe_layout.setAlignment(Qt.AlignVCenter)
         probe_layout.setContentsMargins(0, 0, 0, 0)
         probe_layout.setSpacing(10)
+        probe_layout.addWidget(self.multi_prb_btn)
+        probe_layout.addSpacing(20)
         probe_layout.addWidget(probe_color_label)
         probe_layout.addWidget(self.probe_color_btn)
-        probe_layout.addSpacing(20)
-        # probe_layout.addWidget(probe_style_label)
-        # probe_layout.addWidget(self.probe_style_circle)
-        # probe_layout.addWidget(self.probe_style_square)
-        # probe_layout.addSpacing(10)
+        probe_layout.addSpacing(10)
         probe_layout.addWidget(probe_type_label)
         probe_layout.addWidget(self.probe_type_combo)
-        probe_layout.addSpacing(20)
+        probe_layout.addSpacing(10)
+        probe_layout.addWidget(self.merge_sites_btn)
         probe_layout.addWidget(site_face_label)
-        probe_layout.addWidget(self.site_face_combo)
+        probe_layout.addWidget(self.pre_site_face_combo)
+        probe_layout.addWidget(self.after_site_face_combo)
         probe_layout.addStretch(1)
         probe_layout.addWidget(self.linear_silicon_list)
         probe_layout.addSpacing(10)
@@ -472,6 +493,12 @@ class ToolBox(QObject):
         else:
             self.is_closed = False
 
+    def merge_sites_btn_clicked(self):
+        if self.merge_sites_btn.isChecked():
+            self.merge_sites = True
+        else:
+            self.merge_sites = False
+
     def change_pencil_slider(self):
         val = self.pencil_size_slider.value()
         self.pencil_size_valt.setText(str(val))
@@ -511,6 +538,13 @@ class ToolBox(QObject):
         self.magic_wand_kernel.setCurrentText(data['magic_wand_kernel'])
         self.probe_color_btn.setColor(data['probe_color'])
         self.cell_color_btn.setColor(data['cell_color'])
+
+
+    def multi_prb_status_changed(self):
+        if self.multi_prb_btn.isChecked():
+            self.multi_shanks = True
+        else:
+            self.multi_shanks = False
 
 
 
