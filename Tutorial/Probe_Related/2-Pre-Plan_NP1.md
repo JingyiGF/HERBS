@@ -6,9 +6,6 @@ https://alleninstitute.org/media/filer_public/19/ff/19ff8b8b-9959-4944-a9c0-6100
 
 To plan the probe coordinates before surgeries,
 
-<p style="font-size:140%;">Note: When ONLY atlas is loaded, the pre-surgery mode is ON. 
-When BOTH atlas and histological images are loaded, the after-surgery mode is ON.</p>
-
 1. Load the desire atlas, here we use Waxholm Rat Atlas for illustration. Choose the section and rotate the plane if needed,
 <p align="center">
 <img src="../../image/probe_related/pre_np1_1.jpg" width="20%">
