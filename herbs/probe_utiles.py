@@ -707,139 +707,26 @@ def calculate_probe_info(data_list, pieces_names, label_data, label_info, vxsize
     return data_dict, error_index
 
 
-# def calculate_after_probe_info(data_list, pieces_names, label_data, label_info, vxsize_um, probe_settings,
-#                                merge_sites, bregma, site_face, n_hat):
-#     data_dict = None
-#     data = data_list[0]
-#     for i in range(1, len(data_list)):
-#         data = np.vstack([data, data_list[i]])
-#     print('data', data)
-#
-#     # start_pnt and end_pnt are coordinates related to the given Bregma
-#     probe_type_name = probe_settings['probe_type_name']
-#     probe_max_length_um = probe_settings['probe_length']
-#     tip_length_um = probe_settings['tip_length']
-#
-#     # get direction and probe center start and end (pc - probe center)
-#     pc_start_pnt, pc_end_pnt, avg, direction = line_fit(data)
-#     direction = pc_end_pnt - pc_start_pnt
-#     direction = direction / np.linalg.norm(direction)
-#     pc_start_vox = pc_start_pnt + bregma
-#     pc_end_vox = pc_end_pnt + bregma
-#
-#     print('direction', direction)
-#
-#     # get angels
-#     ap_angle, ml_angle = get_angles(direction)
-#     print('ap_angle', ap_angle)
-#     print(ml_angle)
-#
-#     # correct probe center start point
-#     pc_sp, error_index = correct_start_pnt(label_data, pc_start_pnt, pc_start_vox, direction, bregma, verbose=True)
-#     if error_index != 0:
-#         return data_dict, 15
-#
-#     pc_ep, probe_length_with_tip_um, probe_length_without_tip_um = correct_end_point(
-#         pc_sp, pc_end_pnt, direction, vxsize_um, tip_length_um, probe_max_length_um, verbose=True)
-#
-#     pv_sp = pc_sp + bregma
-#     pv_sp = pv_sp.astype(int)
-#     pv_ep = pc_ep + bregma
-#     pv_ep = pv_ep.astype(int)
-#
-#     enter_coords = pc_sp * vxsize_um
-#     end_coords = pc_ep * vxsize_um
-#
-#     dv = (pc_sp[2] - pc_ep[2]) * vxsize_um
-#     ap_tilt, ml_tilt = get_tilt_info(pc_sp, pc_ep)
-#
-#     r_hat, u_vec, n_vec = calculate_vector_according_to_site_face(direction, site_face)
-#
-#     # sites location, list of  [(n_sites, 3),...], in um
-#     sites_loc_to_base_temp = get_sites_loc_related_to_base_center(probe_settings, probe_length_without_tip_um)
-#     # print('sites_loc_to_base')
-#     # print(sites_loc_to_base)
-#
-#     if merge_sites or probe_type_name == 'Tetrode':
-#         sites_loc_to_base, sites_line_count = merge_sites_into_line(sites_loc_to_base_temp)
-#     else:
-#         sites_loc_to_base = sites_loc_to_base_temp.copy()
-#         sites_line_count = None
-#
-#     # column location list of [(n_locs, 3), ...], in um
-#     column_loc_to_base = get_column_loc(sites_loc_to_base, probe_length_without_tip_um, vxsize_um, verbose=False)
-#
-#     # column location relative to the start, from bottom to top, in um
-#     column_loc = get_loc_related_to_start(column_loc_to_base, probe_length_without_tip_um)
-#     # print('column_loc')
-#     # print(column_loc)
-#
-#     # column points (related to bregma) and column vox
-#     column_pnt, column_vox = get_pnt_from_loc(pc_sp, column_loc, n_vec, u_vec, r_hat, bregma, vxsize_um)
-#     # print('column_pnt')
-#     # print(column_pnt)
-#     # print('column_vox')
-#     # print(column_vox)
-#
-#     fine_label_mat = get_fine_label_matrix(column_vox, label_data, verbose=False)
-#     group_mat, group_id_label = group_labels(fine_label_mat)
-#     label_names, label_acronym, label_color = get_label_name(label_info, group_id_label)
-#
-#     if probe_type_name != 'Tetrode':
-#         # sites loc related to the start, in um
-#         sites_loc = get_loc_related_to_start(sites_loc_to_base, probe_length_without_tip_um)
-#         # print(sites_loc)
-#
-#         sites_pnt, sites_vox = get_pnt_from_loc(pc_sp, sites_loc, n_vec, u_vec, r_hat, bregma, vxsize_um)
-#         # print(sites_pnt)
-#         # print('sites_vox')
-#         # print(sites_vox)
-#         sites_label = []
-#         for i in range(len(sites_vox)):
-#             sites_label.append(label_data[sites_vox[i][:, 0], sites_vox[i][:, 1], sites_vox[i][:, 2]])
-#
-#         # print('sites_label')
-#         # print(sites_label)
-#
-#     else:
-#         sites_pnt = np.repeat(np.array([pc_ep]), 4, axis=0)
-#         sites_vox = sites_pnt + bregma
-#         sites_vox = sites_vox.astype(int)
-#         sites_label = label_data[sites_vox[:, 0], sites_vox[:, 1], sites_vox[:, 2]]
-#
-#     vis_data, region_length, region_site_num, region_text_loc = get_vis_data(
-#         group_mat, column_loc_to_base, sites_loc_to_base, vxsize_um)
-#
-#     data_dict = {'object_name': 'probe', 'probe_type_name': probe_type_name,
-#                  'data': data_list, 'pieces_names': pieces_names, 'ap_tilt': ap_tilt, 'ml_tilt': ml_tilt,
-#                  'insertion_coords_3d': pc_sp, 'terminus_coords_3d': pc_ep,
-#                  'direction': direction, 'probe_length': probe_length_with_tip_um, 'dv': dv,
-#                  'ap_angle': ap_angle, 'ml_angle': ml_angle,
-#                  'insertion_coords': enter_coords, 'insertion_vox': pv_sp,
-#                  'terminus_coords': end_coords, 'terminus_vox': pv_ep,
-#                  'sites_label': sites_label, 'sites_loc_b': sites_pnt, 'sites_vox': sites_vox,
-#                  'region_label': group_id_label,
-#                  'region_length': region_length, 'region_sites': region_site_num, 'text_loc': region_text_loc,
-#                  'label_name': label_names, 'label_acronym': label_acronym, 'label_color': label_color,
-#                  'vis_data': vis_data}
-#     return data_dict, error_index
-
-
-def get_pre_multi_shank_vis_base(x_vals, y_vals, site_face, atlas_display):
+def get_pre_multi_shank_vis_base(x_vals, y_vals):
     x_vals = np.ravel(x_vals)
     y_vals = np.ravel(y_vals)
-    if site_face in [0, 1]:
-        valid_ind = np.where(y_vals == 0)[0]
-        if len(valid_ind) != 0:
-            base_loc = x_vals[valid_ind]
-        else:
-            base_loc = np.array([0])
+    valid_ind = np.where(y_vals == 0)[0]
+    if len(valid_ind) != 0:
+        base_loc = x_vals[valid_ind]
     else:
-        valid_ind = np.where(x_vals == 0)[0]
-        if len(valid_ind) != 0:
-            base_loc = y_vals[valid_ind]
-        else:
-            base_loc = np.array([0])
+        base_loc = np.array([0])
+    # if site_face in [0, 1]:
+    #     valid_ind = np.where(y_vals == 0)[0]
+    #     if len(valid_ind) != 0:
+    #         base_loc = x_vals[valid_ind]
+    #     else:
+    #         base_loc = np.array([0])
+    # else:
+    #     valid_ind = np.where(x_vals == 0)[0]
+    #     if len(valid_ind) != 0:
+    #         base_loc = y_vals[valid_ind]
+    #     else:
+    #         base_loc = np.array([0])
     return base_loc
 
 
@@ -921,15 +808,15 @@ def get_center_lines(r_hat, n_hat, u_hat, x_vals, y_vals, length, site_face):
 
     n_vec, u_vec = get_vector_according_to_site_face(n_hat, u_hat, site_face)
 
-    print(x_vals)
-    print(y_vals)
+    # print(x_vals)
+    # print(y_vals)
 
     line_data = []
     for i in range(len(x_vals)):
         s_val = u_vec * x_vals[i] + n_vec * y_vals[i]
-        print('s_val', s_val)
+        # print('s_val', s_val)
         temp = [s_val, s_val + r_hat * length]
-        print(temp)
+        # print(temp)
         line_data.append(np.asarray(temp))
 
     return line_data
@@ -1114,110 +1001,82 @@ class MultiProbes(object):
         if self.x_vals is None:
             multi_settings = None
         else:
-            multi_settings = {'x_vals': self.x_vals,
-                              'y_vals': self.y_vals,
-                              'faces': self.faces}
+            if not isinstance(self.x_vals, list):
+                x_vals = self.x_vals.tolist()
+            else:
+                x_vals = self.x_vals.copy()
+
+            if not isinstance(self.y_vals, list):
+                y_vals = self.y_vals.tolist()
+            else:
+                y_vals = self.y_vals.copy()
+
+            if not isinstance(self.faces, list):
+                faces = self.faces.tolist()
+            else:
+                faces = self.faces.copy()
+            multi_settings = {'x_vals': x_vals,
+                              'y_vals': y_vals,
+                              'faces': faces}
         return multi_settings
 
-    def check_multi_settings(self, multi_shank):
+    def check_multi_settings(self):
         x_unique = np.unique(self.x_vals)
-        if multi_shank is None:
-            for x_val in x_unique:
-                v_ind = np.where(np.ravel(self.x_vals) == x_val)[0]
-                if len(v_ind) > 1:
-                    if len(np.unique(np.ravel(self.y_vals)[v_ind])) != len(v_ind):
-                        msg = 'There are at least 2 probes located at the same coordinates.'
-                        return msg
-        else:
-            if multi_shank['faces'][0] in ['Top', 'Bottom']:
-                if np.any(np.ravel(multi_shank['faces']) not in ['Top', 'Bottom']):
-                    msg = 'Multi-shank probes must placed either all vertically or all horizontally.'
-                    return msg
-            else:
-                if np.any(np.ravel(multi_shank['faces']) in ['Top', 'Bottom']):
-                    msg = 'Multi-shank probes must placed either all vertically or all horizontally.'
+
+        for x_val in x_unique:
+            v_ind = np.where(np.ravel(self.x_vals) == x_val)[0]
+            if len(v_ind) > 1:
+                if len(np.unique(np.ravel(self.y_vals)[v_ind])) != len(v_ind):
+                    msg = 'There are at least 2 probes located at the same location.'
                     return msg
 
-            for x_val in x_unique:
-                v_ind = np.where(np.ravel(self.x_vals) == x_val)[0]
-                if len(v_ind) > 1:
-                    if np.all(np.ravel(self.faces)[v_ind] not in ['Top', 'Bottom']):
-                        d_val = []
-                        y_vals = np.ravel(self.y_vals)[v_ind]
-                        for i in range(len(y_vals)):
-                            c_val = y_vals - y_vals[i]
-                            c_val = c_val.tolist()
-                            del c_val[i]
-                            d_val.append(c_val)
-                        d_val = np.ravel(d_val)
-
-                        if np.any(d_val) < (multi_shank[-1] - multi_shank[0]):
-                            msg = 'There are at least 2 probes located too close to each other.'
-                            return msg
-            y_unique = np.unique(self.y_vals)
-            for y_val in y_unique:
-                v_ind = np.where(np.ravel(self.y_vals) == y_val)[0]
-                if len(v_ind) > 1:
-                    if np.all(np.ravel(self.faces)[v_ind] in ['Top', 'Bottom']):
-                        d_val = []
-                        x_vals = np.ravel(self.x_vals)[v_ind]
-                        for i in range(len(x_vals)):
-                            c_val = x_vals - x_vals[i]
-                            c_val = c_val.tolist()
-                            del c_val[i]
-                            d_val.append(c_val)
-                        d_val = np.ravel(d_val)
-
-                        if np.any(d_val) < (multi_shank[-1] - multi_shank[0]):
-                            msg = 'There are at least 2 probes located too close to each other.'
-                            return msg
         return
 
-    def get_base_loc_3d(self, multi_shank):
-        if multi_shank is None:
-            points3 = np.zeros((len(self.x_vals), 3))
-            points3[:, 1] = self.x_vals
-            points3[:, 2] = self.y_vals
-        else:
-            n_shank = len(multi_shank)
-            points3 = []
-            if self.faces[0] in ['Top', 'Bottom']:
-                for i in range(len(self.x_vals)):
-                    p3 = np.zeros((n_shank, 3))
-                    p3[:, 1] = multi_shank + self.x_vals[i]
-                    p3[:, 2] = self.y_vals[i]
-                    points3.append(p3)
-            else:
-                for i in range(len(self.x_vals)):
-                    p3 = np.zeros((n_shank, 3))
-                    p3[:, 1] = self.x_vals[i]
-                    p3[:, 2] = multi_shank + self.y_vals[i]
-                    points3.append(p3)
-            points3 = np.concatenate(points3)
-        return points3
-
-    def get_base_loc_2d(self, multi_shank):
-        if multi_shank is None:
-            points2 = np.zeros((len(self.x_vals), 2))
-            points2[:, 0] = self.x_vals
-            points2[:, 1] = self.y_vals
-        else:
-            n_shank = len(multi_shank)
-            points2 = []
-            if self.faces[0] in ['Top', 'Bottom']:
-                for i in range(len(self.x_vals)):
-                    p2 = np.zeros((n_shank, 2))
-                    p2[:, 0] = multi_shank + self.x_vals[i]
-                    p2[:, 1] = self.y_vals[i]
-                    points2.append(p2)
-            else:
-                for i in range(len(self.x_vals)):
-                    p2 = np.zeros((n_shank, 2))
-                    p2[:, 0] = self.x_vals[i]
-                    p2[:, 1] = multi_shank + self.y_vals[i]
-                    points2.append(p2)
-            points2 = np.concatenate(points2)
-        return points2
+    # def get_base_loc_3d(self, multi_shank):
+    #     if multi_shank is None:
+    #         points3 = np.zeros((len(self.x_vals), 3))
+    #         points3[:, 1] = self.x_vals
+    #         points3[:, 2] = self.y_vals
+    #     else:
+    #         n_shank = len(multi_shank)
+    #         points3 = []
+    #         if self.faces[0] in ['Top', 'Bottom']:
+    #             for i in range(len(self.x_vals)):
+    #                 p3 = np.zeros((n_shank, 3))
+    #                 p3[:, 1] = multi_shank + self.x_vals[i]
+    #                 p3[:, 2] = self.y_vals[i]
+    #                 points3.append(p3)
+    #         else:
+    #             for i in range(len(self.x_vals)):
+    #                 p3 = np.zeros((n_shank, 3))
+    #                 p3[:, 1] = self.x_vals[i]
+    #                 p3[:, 2] = multi_shank + self.y_vals[i]
+    #                 points3.append(p3)
+    #         points3 = np.concatenate(points3)
+    #     return points3
+    #
+    # def get_base_loc_2d(self, multi_shank):
+    #     if multi_shank is None:
+    #         points2 = np.zeros((len(self.x_vals), 2))
+    #         points2[:, 0] = self.x_vals
+    #         points2[:, 1] = self.y_vals
+    #     else:
+    #         n_shank = len(multi_shank)
+    #         points2 = []
+    #         if self.faces[0] in ['Top', 'Bottom']:
+    #             for i in range(len(self.x_vals)):
+    #                 p2 = np.zeros((n_shank, 2))
+    #                 p2[:, 0] = multi_shank + self.x_vals[i]
+    #                 p2[:, 1] = self.y_vals[i]
+    #                 points2.append(p2)
+    #         else:
+    #             for i in range(len(self.x_vals)):
+    #                 p2 = np.zeros((n_shank, 2))
+    #                 p2[:, 0] = self.x_vals[i]
+    #                 p2[:, 1] = multi_shank + self.y_vals[i]
+    #                 points2.append(p2)
+    #         points2 = np.concatenate(points2)
+    #     return points2
 
 
 

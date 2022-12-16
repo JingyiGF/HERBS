@@ -559,7 +559,7 @@ class LinearSiliconInfoDialog(QDialog):
 
 
 class MultiProbePlanningDialog(QDialog):
-    def __init__(self, multi_settings, multi_shank):
+    def __init__(self, multi_settings):
         super().__init__()
 
         self.setWindowTitle('Multi-Probe Geometry Setting Window')
@@ -579,14 +579,10 @@ class MultiProbePlanningDialog(QDialog):
         # initial values
         if multi_settings is None:
             self.multi_settings = {}
-            if multi_shank is None:
-                self.multi_settings['x_vals'] = [-300, 300, -100, -300, 300]
-                self.multi_settings['y_vals'] = [-100, -100, 0, 100, 100]
-                self.multi_settings['faces'] = ['Top', 'Top', 'Top', 'Top', 'Top']
-            else:
-                self.multi_settings['x_vals'] = [-500, 500]
-                self.multi_settings['y_vals'] = [0, 0]
-                self.multi_settings['faces'] = ['Top', 'Top']
+            self.multi_settings['x_vals'] = [-300, 300, -100, -300, 300]
+            self.multi_settings['y_vals'] = [-100, -100, 0, 100, 100]
+            self.multi_settings['faces'] = ['Out', 'Out', 'Out', 'Out', 'Out']
+
         else:
             self.multi_settings = multi_settings
 
@@ -595,7 +591,7 @@ class MultiProbePlanningDialog(QDialog):
         # initial widgets
         n_probe_label = QLabel('Number of Probes (stk): ')
         self.n_probe_spinbox = QSpinBox()
-        self.n_probe_spinbox.setMinimum(1)
+        self.n_probe_spinbox.setMinimum(2)
         self.n_probe_spinbox.setValue(n_probe)
 
         row_names = [QLabel('X Coordinates (um): '), QLabel('Y Coordinates (um): '),
@@ -609,7 +605,7 @@ class MultiProbePlanningDialog(QDialog):
             self.x_val_wl.append(IntLineEdit(i, str(self.multi_settings['x_vals'][i])))
             self.y_val_wl.append(IntLineEdit(i, str(self.multi_settings['y_vals'][i])))
             self.faces_wl.append(FaceCombo(i))
-            self.faces_wl[-1].addItems(['Top', 'Bottom', 'Left', 'Right'])
+            self.faces_wl[-1].addItems(['Out', 'In', 'Left', 'Right'])
             self.faces_wl[-1].setCurrentText(str(self.multi_settings['faces'][i]))
             self.x_val_wl[-1].sig_text_changed.connect(self.x_vals_changed)
             self.y_val_wl[-1].sig_text_changed.connect(self.y_vals_changed)
@@ -676,7 +672,7 @@ class MultiProbePlanningDialog(QDialog):
                 self.x_val_wl.append(IntLineEdit(da_ind, str(0)))
                 self.y_val_wl.append(IntLineEdit(da_ind, str(0)))
                 self.faces_wl.append(FaceCombo(da_ind))
-                self.faces_wl[-1].addItems(['Top', 'Bottom', 'Left', 'Right'])
+                self.faces_wl[-1].addItems(['Out', 'In', 'Left', 'Right'])
 
                 self.x_val_wl[-1].sig_text_changed.connect(self.x_vals_changed)
                 self.y_val_wl[-1].sig_text_changed.connect(self.y_vals_changed)
@@ -688,7 +684,7 @@ class MultiProbePlanningDialog(QDialog):
 
                 self.multi_settings['x_vals'].append(0)
                 self.multi_settings['y_vals'].append(0)
-                self.multi_settings['faces'].append('Top')
+                self.multi_settings['faces'].append('Out')
 
     #
     def x_vals_changed(self, obj):

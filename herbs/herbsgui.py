@@ -808,14 +808,15 @@ class HERBS(QMainWindow, FORM_Main):
     # ------------------------------------------------------------------
     def multi_probe_setting_called(self):
         multi_settings = self.multi_settings.get_multi_settings()
-        multi_probe_info = MultiProbePlanningDialog(multi_settings, self.probe_settings.multi_shanks)
+        multi_probe_info = MultiProbePlanningDialog(multi_settings)
         rsp = multi_probe_info.exec_()
         if rsp == QDialog.Accepted:
             self.multi_settings.set_multi_probes(multi_probe_info.multi_settings)
-            msg = self.multi_settings.check_multi_settings(self.probe_settings.multi_shanks)
+            msg = self.multi_settings.check_multi_settings()
             if msg is not None:
                 self.print_message(msg, self.error_message_color)
                 return
+            self.valid_multi_settings = True
 
 
 
@@ -1959,8 +1960,12 @@ class HERBS(QMainWindow, FORM_Main):
             if self.probe_settings.multi_shanks is not None:
                 n_shanks = len(self.probe_settings.multi_shanks)
                 site_face = self.tool_box.pre_site_face_combo.currentText()
-                x_vals = np.ravel(self.probe_settings.multi_shanks)
-                y_vals = np.zeros(n_shanks)
+                if self.site_face in [0, 1]:
+                    x_vals = np.ravel(self.probe_settings.multi_shanks)
+                    y_vals = np.zeros(n_shanks)
+                else:
+                    y_vals = np.ravel(self.probe_settings.multi_shanks)
+                    x_vals = np.zeros(n_shanks)
                 multi_settings = {'x_vals': x_vals,
                                   'y_vals': y_vals,
                                   'faces': [site_face for _ in range(len(self.probe_settings.multi_shanks))]}
@@ -3448,7 +3453,7 @@ class HERBS(QMainWindow, FORM_Main):
                     points2d.append([x, y])
                     if self.multi_shanks and self.valid_multi_settings:
                         base_loc_1d = get_pre_multi_shank_vis_base(
-                            self.multi_settings.x_vals, self.multi_settings.y_vals, self.site_face, 'coronal')
+                            self.multi_settings.x_vals, self.multi_settings.y_vals)
                     else:
                         base_loc_1d = np.array([0])
 
@@ -3511,7 +3516,7 @@ class HERBS(QMainWindow, FORM_Main):
                     points2d.append([x, y])
                     if self.multi_shanks and self.valid_multi_settings:
                         base_loc_1d = get_pre_multi_shank_vis_base(
-                            self.multi_settings.x_vals, self.multi_settings.y_vals, self.site_face, 'sagittal')
+                            self.multi_settings.x_vals, self.multi_settings.y_vals)
                     else:
                         base_loc_1d = np.array([0])
 
@@ -3574,7 +3579,7 @@ class HERBS(QMainWindow, FORM_Main):
                     points2d.append([x, y])
                     if self.multi_shanks and self.valid_multi_settings:
                         base_loc_1d = get_pre_multi_shank_vis_base(
-                            self.multi_settings.x_vals, self.multi_settings.y_vals, self.site_face, 'horizontal')
+                            self.multi_settings.x_vals, self.multi_settings.y_vals)
                     else:
                         base_loc_1d = np.array([0])
                     start_pnt, end_pnt = self.atlas_view.get_pre_vis_data(np.asarray(points2d), base_loc_1d)
@@ -3746,7 +3751,7 @@ class HERBS(QMainWindow, FORM_Main):
                 if self.current_atlas == 'volume':
                     if self.multi_shanks and self.valid_multi_settings:
                         base_loc_1d = get_pre_multi_shank_vis_base(
-                            self.multi_settings.x_vals, self.multi_settings.y_vals, self.site_face, self.atlas_display)
+                            self.multi_settings.x_vals, self.multi_settings.y_vals)
                     else:
                         base_loc_1d = np.array([0])
                     self.atlas_view.draw_pre_2d_vis_data(np.asarray(points2d), base_loc_1d)
@@ -4450,6 +4455,10 @@ class HERBS(QMainWindow, FORM_Main):
         merge_sites = self.tool_box.merge_sites
         if self.image_view.image_file is None:
             # pre-surgery
+            if self.multi_shanks and self.valid_multi_settings:
+                site_face_vec = self.multi_settings.faces.copy()
+            else:
+                site_face_vec = [self.site_face for _ in range(len(data))]
             for i in range(len(data)):
                 if len(data[i]) != 1:
                     msg = 'For pre-surgery plan, the desired probe can be merged from only one piece.'
@@ -4464,7 +4473,7 @@ class HERBS(QMainWindow, FORM_Main):
 
                 info_dict, error_index = calculate_probe_info(
                     data[i], pieces_names[i], label_data, self.atlas_view.label_info, self.atlas_view.vox_size_um,
-                    probe_setting_data, merge_sites, self.atlas_view.origin_3d, self.site_face, n_hat, False)
+                    probe_setting_data, merge_sites, self.atlas_view.origin_3d, site_face_vec[i], n_hat, False)
 
                 if error_index != 0:
                     msg = 'Error index: {}, please contact maintainers.'.format(error_index)
