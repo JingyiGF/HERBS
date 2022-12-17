@@ -164,9 +164,15 @@ def pandas_to_str(label_name, label_ano, length, channels):
 
 def correct_start_pnt(label_data, start_pnt, start_vox, direction, bregma, verbose=False):
     error_index = 0
+    print('start_vox', start_vox)
     direction = direction / np.linalg.norm(direction)
     check_vec = label_data[int(start_vox[0]), int(start_vox[1]), :]
-    top_vox = np.where(check_vec != 0)[0][-1]
+    top_vox = np.where(check_vec != 0)[0]
+    print(np.where(check_vec != 0))
+    if len(top_vox) == 0:
+        print('wrong')
+    else:
+        top_vox = top_vox[-1]
     check_vox = start_vox.astype(int)
     new_sp = start_pnt.copy()
 
@@ -610,6 +616,8 @@ def calculate_probe_info(data_list, pieces_names, label_data, label_info, vxsize
     print('ap_angle', ap_angle)
     print(ml_angle)
 
+    print('check-start_pnt', pc_start_pnt)
+    print(pc_start_vox)
     # correct probe center start point
     pc_sp, error_index = correct_start_pnt(label_data, pc_start_pnt, pc_start_vox, direction, bregma, verbose=True)
     if error_index != 0:
@@ -625,6 +633,8 @@ def calculate_probe_info(data_list, pieces_names, label_data, label_info, vxsize
 
     enter_coords = pc_sp * vxsize_um
     end_coords = pc_ep * vxsize_um
+
+    print('')
 
     dv = (pc_sp[2] - pc_ep[2]) * vxsize_um
     ap_tilt, ml_tilt = get_tilt_info(pc_sp, pc_ep)
@@ -804,7 +814,7 @@ def calculate_vector_according_to_site_face(direction, site_face):
     return r_hat, u_hat, n_hat
 
 
-def get_center_lines(r_hat, n_hat, u_hat, x_vals, y_vals, length, site_face):
+def get_center_lines(pnts, r_hat, n_hat, u_hat, x_vals, y_vals, length, site_face, vox_size):
 
     n_vec, u_vec = get_vector_according_to_site_face(n_hat, u_hat, site_face)
 
@@ -815,9 +825,9 @@ def get_center_lines(r_hat, n_hat, u_hat, x_vals, y_vals, length, site_face):
     for i in range(len(x_vals)):
         s_val = u_vec * x_vals[i] + n_vec * y_vals[i]
         # print('s_val', s_val)
-        temp = [s_val, s_val + r_hat * length]
+        temp = [s_val, s_val + r_hat * length * vox_size]
         # print(temp)
-        line_data.append(np.asarray(temp))
+        line_data.append(pnts[0] + np.asarray(temp) / vox_size)
 
     return line_data
 

@@ -279,10 +279,10 @@ class FaceCombo(QComboBox):
     def __init__(self, w_id, parent=None):
         QComboBox.__init__(self)
         self.id = w_id
-        self.currentTextChanged.connect(self.text_changed)
+        self.currentIndexChanged.connect(self.index_changed)
 
-    def text_changed(self, text):
-        self.sig_text_changed.emit((self.id, text))
+    def index_changed(self, index):
+        self.sig_text_changed.emit((self.id, index))
 
 
 class LinearSiliconInfoDialog(QDialog):
@@ -581,7 +581,7 @@ class MultiProbePlanningDialog(QDialog):
             self.multi_settings = {}
             self.multi_settings['x_vals'] = [-300, 300, -100, -300, 300]
             self.multi_settings['y_vals'] = [-100, -100, 0, 100, 100]
-            self.multi_settings['faces'] = ['Out', 'Out', 'Out', 'Out', 'Out']
+            self.multi_settings['faces'] = [0, 0, 0, 0, 0]
 
         else:
             self.multi_settings = multi_settings
@@ -684,7 +684,7 @@ class MultiProbePlanningDialog(QDialog):
 
                 self.multi_settings['x_vals'].append(0)
                 self.multi_settings['y_vals'].append(0)
-                self.multi_settings['faces'].append('Out')
+                self.multi_settings['faces'].append(0)
 
     #
     def x_vals_changed(self, obj):
@@ -707,8 +707,8 @@ class MultiProbePlanningDialog(QDialog):
 
     def faces_changed(self, obj):
         w_id = obj[0]
-        text_val = obj[1]
-        self.multi_settings['faces'][w_id] = text_val
+        index_val = obj[1]
+        self.multi_settings['faces'][w_id] = index_val
 
 
 

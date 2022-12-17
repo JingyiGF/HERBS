@@ -418,14 +418,12 @@ class HERBS(QMainWindow, FORM_Main):
         # objects menu related
         # self.actionSave_Probe_Setting
         # self.actionLoad_Probe_Setting
-        # self.actionLoad_Points_Data
+        self.actionLoad_Points_Data.triggered.connect(self.load_point_data_called)
         # self.action_Save_Loaded_Data
         self.actionMulti_Probe_Planning.triggered.connect(self.multi_probe_setting_called)
 
         # about menu related
         self.actionAbout_HERBS.triggered.connect(self.about_herbs_info)
-
-        # objects menu related
 
 
         self.init_tool_bar()
@@ -817,6 +815,30 @@ class HERBS(QMainWindow, FORM_Main):
                 self.print_message(msg, self.error_message_color)
                 return
             self.valid_multi_settings = True
+
+    def load_point_data_called(self):
+        if self.volume_atlas_path is None:
+            return
+        file_path = os.path.join(self.volume_atlas_path, 'atlas_axis_info.pkl')
+        if not os.path.exists(file_path):
+            msg = 'No atlas rotation information saved. Please contact maintainers.'
+            self.print_message(msg, self.error_message_color)
+            return
+
+        # try:
+
+
+
+        dlg = QFileDialog()
+        dlg.setFileMode(QFileDialog.ExistingFiles)
+        data_file_path = dlg.getOpenFileNames(self, "Load Point Data",
+                                         self.home_path, "Numpy File (*.npy);Pickle File (*.pkl)")
+
+        if data_file_path != '':
+            file_basename = os.path.basename(data_file_path)
+            file_name, file_ext = os.path.splitext(file_basename)
+
+
 
 
 
@@ -1959,7 +1981,7 @@ class HERBS(QMainWindow, FORM_Main):
             self.multi_shanks = True
             if self.probe_settings.multi_shanks is not None:
                 n_shanks = len(self.probe_settings.multi_shanks)
-                site_face = self.tool_box.pre_site_face_combo.currentText()
+                site_face = self.tool_box.pre_site_face_combo.currentIndex()
                 if self.site_face in [0, 1]:
                     x_vals = np.ravel(self.probe_settings.multi_shanks)
                     y_vals = np.zeros(n_shanks)
@@ -4281,7 +4303,7 @@ class HERBS(QMainWindow, FORM_Main):
             center_data_3d = self.atlas_view.get_3d_data_from_2d_view(center_data_2d, self.atlas_display)
             order_index = np.argsort(center_data_3d[:, 2])[::-1]
             center_data_3d = center_data_3d[order_index, :]
-
+            print('center_data_3d', center_data_3d)
             if self.image_view.image_file is None:
                 if len(center_data_2d) != 2:
                     msg = 'Pre-plan probe requires two points.'
@@ -4294,10 +4316,13 @@ class HERBS(QMainWindow, FORM_Main):
                     base_length = np.sqrt(np.sum((center_data_3d[1] - center_data_3d[0]) ** 2))
                     n_hat = self.atlas_view.get_plane_norm_vector(self.atlas_display)
                     u_hat = np.cross(n_hat, r_hat)
-                    line_data = get_center_lines(r_hat, n_hat, u_hat, self.multi_settings.x_vals,
-                                                 self.multi_settings.y_vals, base_length, self.site_face)
+                    line_data = get_center_lines(center_data_3d, r_hat, n_hat, u_hat, self.multi_settings.x_vals,
+                                                 self.multi_settings.y_vals, base_length, self.site_face,
+                                                 self.atlas_view.vox_size_um)
                 else:
                     line_data = [center_data_3d]
+
+                print('line_data', line_data)
 
                 for i in range(len(line_data)):
                     self.object_ctrl.add_object(object_name='probe {} - piece'.format(i),
@@ -4473,7 +4498,7 @@ class HERBS(QMainWindow, FORM_Main):
 
                 info_dict, error_index = calculate_probe_info(
                     data[i], pieces_names[i], label_data, self.atlas_view.label_info, self.atlas_view.vox_size_um,
-                    probe_setting_data, merge_sites, self.atlas_view.origin_3d, site_face_vec[i], n_hat, False)
+                    probe_setting_data, merge_sites, self.atlas_view.origin_3d, site_face_vec[i], n_hat, True)
 
                 if error_index != 0:
                     msg = 'Error index: {}, please contact maintainers.'.format(error_index)
