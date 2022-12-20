@@ -45,7 +45,7 @@ from .uuuuuu import get_cell_count, num_side_pnt_changed, rotate, merge_channels
     warp_triangle, warp_points, get_pnts_triangle_ind, make_label_rgb_img, get_corner_line_from_rect,  \
     delete_points_inside_eraser, get_bound_color,  \
     calculate_cells_info, calculate_virus_info, calculate_drawing_info, calculate_contour_line, \
-    check_loading_pickle_file, check_bounding_contains, get_statusbar_style
+    check_loading_pickle_file, check_bounding_contains, get_statusbar_style, load_point_data
 from .probe_utiles import line_fit_2d, Probe, MultiProbes, calculate_probe_info, \
     get_pre_multi_shank_vis_base, get_center_lines
 from .czi_reader import CZIReader
@@ -356,6 +356,7 @@ class HERBS(QMainWindow, FORM_Main):
         self.actionLoad_Project.triggered.connect(self.load_project_called)
         self.actionLoad_Objects.triggered.connect(self.load_objects)
         self.actionLoad_Layers.triggered.connect(self.load_layers_called)
+        self.actionExternal_Cells.triggered.connect(self.load_external_cells_called)
 
         # edit menu related
         self.actionDistance.triggered.connect(self.shift_setting_changed)
@@ -416,10 +417,8 @@ class HERBS(QMainWindow, FORM_Main):
         self.actionHide.triggered.connect(self.hide_image)
 
         # objects menu related
-        # self.actionSave_Probe_Setting
-        # self.actionLoad_Probe_Setting
-        self.actionLoad_Points_Data.triggered.connect(self.load_point_data_called)
-        # self.action_Save_Loaded_Data
+        self.actionSave_Probe_Setting.triggered.connect(self.save_probe_setting_called)
+        self.actionLoad_Probe_Setting.triggered.connect(self.load_probe_setting_called)
         self.actionMulti_Probe_Planning.triggered.connect(self.multi_probe_setting_called)
 
         # about menu related
@@ -816,27 +815,18 @@ class HERBS(QMainWindow, FORM_Main):
                 return
             self.valid_multi_settings = True
 
-    def load_point_data_called(self):
-        if self.volume_atlas_path is None:
-            return
-        file_path = os.path.join(self.volume_atlas_path, 'atlas_axis_info.pkl')
-        if not os.path.exists(file_path):
-            msg = 'No atlas rotation information saved. Please contact maintainers.'
-            self.print_message(msg, self.error_message_color)
-            return
+    def save_probe_setting_called(self):
+        self.print_message('under development', self.error_message_color)
 
-        # try:
+    def load_probe_setting_called(self):
+        self.print_message('under development', self.error_message_color)
 
 
 
-        dlg = QFileDialog()
-        dlg.setFileMode(QFileDialog.ExistingFiles)
-        data_file_path = dlg.getOpenFileNames(self, "Load Point Data",
-                                         self.home_path, "Numpy File (*.npy);Pickle File (*.pkl)")
 
-        if data_file_path != '':
-            file_basename = os.path.basename(data_file_path)
-            file_name, file_ext = os.path.splitext(file_basename)
+
+
+
 
 
 
@@ -4303,7 +4293,7 @@ class HERBS(QMainWindow, FORM_Main):
             center_data_3d = self.atlas_view.get_3d_data_from_2d_view(center_data_2d, self.atlas_display)
             order_index = np.argsort(center_data_3d[:, 2])[::-1]
             center_data_3d = center_data_3d[order_index, :]
-            print('center_data_3d', center_data_3d)
+
             if self.image_view.image_file is None:
                 if len(center_data_2d) != 2:
                     msg = 'Pre-plan probe requires two points.'
@@ -4322,20 +4312,11 @@ class HERBS(QMainWindow, FORM_Main):
                 else:
                     line_data = [center_data_3d]
 
-                print('line_data', line_data)
-
                 for i in range(len(line_data)):
                     self.object_ctrl.add_object(object_name='probe {} - piece'.format(i),
                                                 object_type='probe piece',
                                                 object_data=line_data[i],
                                                 object_mode=self.obj_display_mode)
-
-                # data_3d_list = self.atlas_view.get_pre_np2_data(data_2d, self.atlas_display, self.site_face)
-                # for i in range(4):
-                #     self.object_ctrl.add_object(object_name='probe {} - piece'.format(i),
-                #                                 object_type='probe piece',
-                #                                 object_data=data_3d_list[i],
-                #                                 object_mode=self.obj_display_mode)
             else:
                 self.object_ctrl.add_object(object_name='probe - piece',
                                             object_type='probe piece',
@@ -5068,9 +5049,12 @@ class HERBS(QMainWindow, FORM_Main):
             msg = 'Loading objects functions only when single atlas slice window displayed.'
             self.print_message(msg, self.error_message_color)
             return
+        file_options = QFileDialog.Options()
+        file_options |= QFileDialog.DontUseNativeDialog
         dlg = QFileDialog()
         dlg.setFileMode(QFileDialog.ExistingFiles)
-        object_file_path = dlg.getOpenFileNames(self, "Load Object Files", self.home_path, "Pickle File (*.pkl)")
+        object_file_path = dlg.getOpenFileNames(self, "Load Object Files", self.home_path, "Pickle File (*.pkl)",
+                                                options=file_options)
 
         if object_file_path[0]:
             n_files = len(object_file_path[0])
@@ -5418,9 +5402,12 @@ class HERBS(QMainWindow, FORM_Main):
 
     def load_layers_called(self):
         self.print_message('Loading layers ...', self.normal_color)
+        file_options = QFileDialog.Options()
+        file_options |= QFileDialog.DontUseNativeDialog
         dlg = QFileDialog()
         dlg.setFileMode(QFileDialog.ExistingFiles)
-        layer_files_path = dlg.getOpenFileNames(self, "Load Layer Files", self.home_path, "Pickle File (*.pkl)")
+        layer_files_path = dlg.getOpenFileNames(self, "Load Layer Files", self.home_path, "Pickle File (*.pkl)",
+                                                options=file_options)
 
         if layer_files_path[0]:
             n_files = len(layer_files_path[0])
@@ -5762,9 +5749,12 @@ class HERBS(QMainWindow, FORM_Main):
             self.object_ctrl.clear_all()
 
         self.print_message('Loading project....', self.normal_color)
+        file_options = QFileDialog.Options()
+        file_options |= QFileDialog.DontUseNativeDialog
         dlg = QFileDialog()
         dlg.setFileMode(QFileDialog.ExistingFiles)
-        project_path = dlg.getOpenFileName(self, "Load Project", self.home_path, "Pickle File (*.pkl)")
+        project_path = dlg.getOpenFileName(self, "Load Project", self.home_path, "Pickle File (*.pkl)",
+                                           options=file_options)
 
         if project_path[0] != '':
             p_dict, msg = check_loading_pickle_file(project_path[0])
@@ -5791,6 +5781,65 @@ class HERBS(QMainWindow, FORM_Main):
         else:
             self.print_message('', self.normal_color)
 
+    # ------------------- file menu related ----------------
+    def load_external_cells_called(self):
+        if self.volume_atlas_path is None:
+            return
+        file_path = os.path.join(self.volume_atlas_path, 'atlas_axis_info.pkl')
+        if not os.path.exists(file_path):
+            msg = 'No atlas rotation information saved. Please contact maintainers.'
+            self.print_message(msg, self.error_message_color)
+            return
+
+        try:
+            with open(file_path, 'rb') as f:
+                axis_info = pickle.load(f)
+            transpose_order = axis_info['to_HERBS']
+            atlas_size = axis_info['size']
+            direction_change = axis_info['direction_change']
+            print(axis_info)
+        except (IOError, OSError, ValueError, KeyError, IndexError, pickle.PickleError, pickle.UnpicklingError):
+            msg = 'Can not open atlas axis information file, please check the Tutorial on GitHub.'
+            self.print_message(msg, self.error_message_color)
+            return
+
+        file_options = QFileDialog.Options()
+        file_options |= QFileDialog.DontUseNativeDialog
+        dlg = QFileDialog()
+        dlg.setFileMode(QFileDialog.ExistingFiles)
+        data_file_path = dlg.getOpenFileName(self, "Load Point Data", self.home_path,
+                                             "Numpy File (*.npy);;Pickle File (*.pkl)", options=file_options)
+
+        if data_file_path[0] != '':
+            data, msg = load_point_data(data_file_path[0])
+            if msg is not None:
+                self.print_message(msg, self.error_message_color)
+                return
+            if isinstance(data[0, 1], float):
+                extra_vox = 0
+            elif isinstance(data[0, 1], int):
+                extra_vox = 1
+            else:
+                msg = 'Data is in wrong type, please check the Tutorial on GitHub.'
+                self.print_message(msg, self.error_message_color)
+                return
+
+            data_temp = data.copy()
+            for i in range(data.shape[1]):
+                if direction_change[i]:
+                    data_temp[:, i] = atlas_size[i] - extra_vox - data_temp[:, i]
+            if transpose_order != (0, 1, 2):
+                pnt_vox = data_temp[:, transpose_order]
+            else:
+                pnt_vox = data_temp.copy()
+
+            pnt_vis = pnt_vox - self.atlas_view.origin_3d
+
+            self.object_ctrl.add_object(object_name='loaded point data',
+                                        object_type='cells piece',
+                                        object_data=pnt_vis,
+                                        object_mode=self.obj_display_mode)
+
     # status
     def print_message(self, msg, col):
         self.statusbar.setStyleSheet(get_statusbar_style(col))
@@ -5800,6 +5849,7 @@ class HERBS(QMainWindow, FORM_Main):
     def about_herbs_info(self):
         dlg = AboutHERBSWindow()
         dlg.exec()
+
 
 def main():
     app = QApplication(argv)

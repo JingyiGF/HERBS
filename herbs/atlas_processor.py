@@ -34,11 +34,9 @@ class CustomerAtlasWorker(QObject):
         self.l_val = None
         self.vox_size = None
         self.factor = 2
+        self.axis_info = None
 
-        self.direction_change = [False, False, False]
-        self.transpose_order = [-1, -1, -1]
-
-    def set_data(self, saving_folder, data_local, segmentation_local, label_local, direction_change, transpose_order,
+    def set_data(self, saving_folder, data_local, segmentation_local, label_local, axis_info,
                  b_val, vox_size, mask_local=None, factor=2):
         self.saving_folder = saving_folder
         self.data_local = data_local
@@ -47,8 +45,7 @@ class CustomerAtlasWorker(QObject):
         self.mask_local = mask_local
         self.b_val = b_val
         self.vox_size = vox_size
-        self.direction_change = direction_change
-        self.transpose_order = transpose_order
+        self.axis_info = axis_info
         self.factor = factor
 
     def progress_control(self, total_count):
@@ -179,20 +176,20 @@ class CustomerAtlasWorker(QObject):
         n_unique_labels = len(unique_label)
         self.progress.emit(35)
 
-        if self.direction_change[0]:
+        if self.axis_info['direction_change'][0]:
             segmentation_data = segmentation_data[::-1, :, :]
             atlas_data = atlas_data[::-1, :, :]
         self.progress.emit(36)
-        if self.direction_change[1]:
+        if self.axis_info['direction_change'][1]:
             segmentation_data = segmentation_data[:, ::-1, :]
             atlas_data = atlas_data[:, ::-1, :]
         self.progress.emit(37)
-        if self.direction_change[2]:
+        if self.axis_info['direction_change'][2]:
             segmentation_data = segmentation_data[:, :, ::-1]
             atlas_data = atlas_data[:, :, ::-1]
         self.progress.emit(38)
 
-        segmentation_data = np.transpose(segmentation_data, self.transpose_order)
+        segmentation_data = np.transpose(segmentation_data, self.axis_info['to_HERBS'])
         segmentation_data = segmentation_data.astype(int)
         # print(segmentation_data.shape)
         self.progress.emit(39)
@@ -205,7 +202,7 @@ class CustomerAtlasWorker(QObject):
         self.progress.emit(42)
 
         new_atlas_shape = atlas_data.shape
-        b_val = np.ravel(self.b_val)[self.transpose_order]
+        b_val = np.ravel(self.b_val)[self.axis_info['to_HERBS']]
         if b_val[0] == 0:
             b_val[0] = int(new_atlas_shape[0] / 2)
         self.progress.emit(43)
@@ -214,7 +211,7 @@ class CustomerAtlasWorker(QObject):
         self.progress.emit(44)
 
         for i in range(3):
-            if self.direction_change[i]:
+            if self.axis_info['direction_change'][i]:
                 b_val[i] = new_atlas_shape[i] - 1 - b_val[i]
 
         if b_val[2] == 0:
@@ -311,6 +308,12 @@ class CustomerAtlasWorker(QObject):
         pickle.dump(horizontal_contour_img, outfile_ct)
         outfile_ct.close()
 
+        # saving atlas axis changing information
+        self.axis_info['size'] = tuple(atlas_size)
+        outfile_axis = open(os.path.join(self.saving_folder, 'atlas_axis_info.pkl'), 'wb')
+        pickle.dump(self.axis_info, outfile_axis)
+        outfile_axis.close()
+
         self.progress.emit(100)
 
         self.finished.emit()
@@ -333,6 +336,7 @@ class AtlasProcessor(QDialog):
         self.lambda_coord = [0, 0, 0]
         self.voxel_size = 0
         self.factor_val = 2
+        self.axis_info = None
         self.directions = [0, 0, 0]
         self.dim_group = [-1, -1, -1]
         self.info_flag = True
@@ -501,6 +505,34 @@ class AtlasProcessor(QDialog):
             self.directions[1] = self.y_axis_combo.currentIndex()
         else:
             self.directions[2] = self.z_axis_combo.currentIndex()
+
+        if np.all(np.ravel(self.directions) != 0):
+            dir_groups = self.group_maps[np.array(self.directions) - 1]
+
+            dir_goal = ['Post. --> Ant.', 'Inf. --> Sup.', 'L.H. --> R.H.']
+            direction_change = [False, False, False]
+            if self.x_axis_combo.currentText() not in dir_goal:
+                direction_change[0] = True
+            if self.y_axis_combo.currentText() not in dir_goal:
+                direction_change[1] = True
+            if self.z_axis_combo.currentText() not in dir_goal:
+                direction_change[2] = True
+
+            transpose_order = dir_groups - 1
+            transpose_order = transpose_order.tolist()
+
+            if transpose_order == [1, 2, 0]:
+                inv_transpose_order = [2, 0, 1]
+            elif transpose_order == [2, 0, 1]:
+                inv_transpose_order = [1, 2, 0]
+            else:
+                inv_transpose_order = transpose_order.copy()
+
+            self.axis_info = {'to_HERBS': tuple(inv_transpose_order),
+                              'from_HERBS': tuple(transpose_order),
+                              'direction_change': tuple(direction_change)}
+
+            print(self.axis_info)
 
     def get_folder_path(self, file_path):
         self.folder_path = os.path.dirname(file_path)

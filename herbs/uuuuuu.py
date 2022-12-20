@@ -1010,3 +1010,34 @@ def get_cell_count(cell_layer_index):
     return cell_count
 
 
+def load_point_data(data_file_path):
+    file_basename = os.path.basename(data_file_path)
+    file_name, file_ext = os.path.splitext(file_basename)
+    msg = None
+    data = None
+    try:
+        if file_ext == '.npy':
+            data = np.load(data_file_path)
+        elif file_ext == '.pkl':
+            with open(data_file_path, 'rb') as f:
+                data = pickle.load(f)
+            # data = data_file['points']
+    except (IOError, OSError, ValueError, KeyError, IndexError, pickle.PickleError, pickle.UnpicklingError):
+        msg = 'Can not open atlas axis information file, please check the Tutorial on GitHub.'
+        return data, msg
+
+    if not isinstance(data, np.ndarray):
+        msg = 'Data is not numpy ndarray, please check the Tutorial on GitHub.'
+        return data, msg
+
+    data_shape = data.shape
+    if len(data_shape) != 2:
+        msg = 'Data has wrong size, please check the Tutorial on GitHub.'
+        return data, msg
+
+    if data_shape[1] != 3:
+        msg = 'Data has wrong size, please check the Tutorial on GitHub.'
+        return data, msg
+
+    return data, msg
+

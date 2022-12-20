@@ -68,6 +68,14 @@ class WorkerProcessAllen(QObject):
         self.progress.emit(15)
 
         atlas_size = label_data.shape
+
+        axis_info = {'to_HERBS': (2, 0, 1), 'from_HERBS': (1, 2, 0), 'direction_change': (True, True, False),
+                     'size': tuple(atlas_size)}
+
+        outfile_axis = open(os.path.join(self.saving_folder, 'atlas_axis_info.pkl'), 'wb')
+        pickle.dump(axis_info, outfile_axis)
+        outfile_axis.close()
+
         downloaded_mesh_path = os.path.join(self.saving_folder, 'downloaded_meshes')
 
         progress_step = np.linspace(15, 30, n_unique_labels)

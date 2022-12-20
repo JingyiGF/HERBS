@@ -230,6 +230,12 @@ border-color: rgb(75, 78, 84);</string>
      <addaction name="actionSave_Contours"/>
      <addaction name="actionSave_Drawings"/>
     </widget>
+    <widget class="QMenu" name="menuLoad_External_Data">
+     <property name="title">
+      <string>Load External Data</string>
+     </property>
+     <addaction name="actionExternal_Cells"/>
+    </widget>
     <addaction name="actionAtlas"/>
     <addaction name="actionSingle_Image"/>
     <addaction name="separator"/>
@@ -240,6 +246,8 @@ border-color: rgb(75, 78, 84);</string>
     <addaction name="actionLoad_Project"/>
     <addaction name="actionLoad_Layers"/>
     <addaction name="actionLoad_Objects"/>
+    <addaction name="separator"/>
+    <addaction name="menuLoad_External_Data"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="styleSheet">
@@ -348,8 +356,6 @@ border-color: rgb(75, 78, 84);</string>
     <addaction name="separator"/>
     <addaction name="actionMulti_Probe_Planning"/>
     <addaction name="separator"/>
-    <addaction name="actionLoad_Points_Data"/>
-    <addaction name="action_Save_Loaded_Data"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="styleSheet">
@@ -851,6 +857,11 @@ selection-background-color: rgb(50, 50, 50);</string>
   <action name="action_Save_Loaded_Data">
    <property name="text">
     <string>&amp;Save Loaded Data</string>
+   </property>
+  </action>
+  <action name="actionExternal_Cells">
+   <property name="text">
+    <string>Cells</string>
    </property>
   </action>
  </widget>
