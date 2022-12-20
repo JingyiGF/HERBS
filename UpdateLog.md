@@ -27,3 +27,11 @@ Fix the atlas rotation slider value changed issue.
 ### 04th Nov. 2022
 ##### Minor debug.
 Fix the valid values for the text input of on side points.
+
+### 20th Dec. 2022
+##### Major update!
+1. Re-design probe sites visualisation.
+2. Add linear silicon probe design.
+3. Add multi-shanks probe design.
+4. Support uploading external cell points.
+5. Support un-merging merged object.
