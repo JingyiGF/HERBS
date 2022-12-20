@@ -58,19 +58,21 @@ meanwhile the second and third are in range [0, 1024] and [0, 512], respectively
     </tr>
 </table>
 
+
+
 1. Click <b>File</b> menu -> <b>Load External Data</b> -> Cells. 
 A file dialog will pop up and select the data file you would like to upload.
 <p align="center">
-<img src="../image/external_related/cell1.jpg" width="40%">
+<img src="../../image/external_related/cell1.jpg" width="40%">
 </p>
 
 2. After selecting the data file, go to <b>Object View Controller</b> panel, a cell piece is added there.
 <p align="center">
-<img src="../image/external_related/cell2.jpg" width="40%">
+<img src="../../image/external_related/cell2.jpg" width="40%">
 </p>
 
 3. Click <b>Merge Cells</b> button, and view the information by clicking the <b>Information</b> button 
 and view 3D by clicking <b>View</b> menu -> <b>3D window</b>.
 <p align="center">
-<img src="../image/external_related/cell3.jpg" width="100%">
+<img src="../../image/external_related/cell3.jpg" width="100%">
 </p>
