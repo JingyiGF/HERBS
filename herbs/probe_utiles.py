@@ -38,7 +38,7 @@ def line_fit_2d(points_2d, image=None):
         if len(valid_ind) > 0:
             valid_ind = valid_ind[0]
         else:
-            msg = 'something went wrong for the probe location.'
+            msg = 'Something went wrong for the probe location. Please contact maintainers.'
 
         if int(sp[1]) < valid_ind:
             sign_flag = -1
@@ -56,7 +56,7 @@ def line_fit_2d(points_2d, image=None):
             if len(valid_ind) > 0:
                 valid_ind = valid_ind[0]
             else:
-                msg = 'something went wrong for the probe location.'
+                msg = 'Something went wrong for the probe location. Please contact maintainers.'
                 break
 
         sp = sp + sign_flag * stop_steps * direction

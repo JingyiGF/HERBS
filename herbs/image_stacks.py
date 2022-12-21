@@ -107,16 +107,14 @@ class SliceStack(pg.GraphicsLayoutWidget):
 
         cell_pnts = pg.ScatterPlotItem(pen=(0, 255, 0), brush=(0, 255, 0), size=5, hoverSize=8)
         probe_pnts = pg.ScatterPlotItem(pen=(0, 0, 255), brush=(0, 0, 255), symbol='s', size=5, hoverSize=8)
-        bregma_pnt = pg.ScatterPlotItem(pen=(255, 255, 0), brush=(255, 255, 0), symbol='star', size=10, hoverSize=15)
+        bregma_pnt = pg.ScatterPlotItem(pen=(180, 112, 57), brush=(180, 112, 57), symbol='star', size=10, hoverSize=15)
 
         drawing_pnts = pg.PlotDataItem(pen=pg.mkPen(color=(255, 102, 0), width=2), brush=None)
         contour_pnts = pg.PlotDataItem(pen=pg.mkPen(color=(255, 0, 255), width=3), brush=None)
 
-        self.pre_trajectory_list = []
-        for i in range(4):
-            self.pre_trajectory_list.append(pg.PlotDataItem(pen=pg.mkPen(color=(0, 0, 255), width=2), brush=None,
-                                                            symbolPen=(0, 0, 255), symbolBrush=(0, 0, 255),
-                                                            symbol='s', symbolSize=3))
+        probe_trajectory = pg.PlotDataItem(pen=pg.mkPen(color=(0, 0, 255), width=2), brush=None)
+
+        self.pre_trajectory_list = [pg.PlotDataItem(pen=pg.mkPen(color=(0, 0, 255), width=2), brush=None)]
 
         self.image_dict = {'atlas-overlay': overlay_img,
                            'overlay_contour': overlay_contour,
@@ -130,7 +128,8 @@ class SliceStack(pg.GraphicsLayoutWidget):
                            'atlas-probe': probe_pnts,
                            'bregma_pnt': bregma_pnt,
                            'ruler_path': ruler_path,
-                           'atlas-cells': cell_pnts}
+                           'atlas-cells': cell_pnts,
+                           'atlas-trajectory': probe_trajectory}
         self.image_dict_keys = list(self.image_dict.keys())
 
         self.vb.addItem(self.base_layer)
@@ -139,8 +138,7 @@ class SliceStack(pg.GraphicsLayoutWidget):
         for i in range(len(self.image_dict)):
             self.vb.addItem(self.image_dict[self.image_dict_keys[i]])
 
-        for i in range(4):
-            self.vb.addItem(self.pre_trajectory_list[i])
+        self.vb.addItem(self.pre_trajectory_list[0])
 
     def set_data(self, data, scale=None):
         self.data = data
@@ -150,6 +148,36 @@ class SliceStack(pg.GraphicsLayoutWidget):
         base_img = np.zeros(data.shape[:2], 'uint8')
         self.base_layer.setImage(base_img)
         self.img_layer.setImage(data)
+
+    def set_pre_design_vis_data(self, data):
+        n_probe = len(data)
+        exist_n_probes = len(self.pre_trajectory_list)
+        if n_probe < exist_n_probes:
+            del_ind = np.arange(n_probe, exist_n_probes)[::-1]
+            for i in del_ind:
+                self.vb.removeItem(self.pre_trajectory_list[i])
+                self.pre_trajectory_list[i].deleteLater()
+                del self.pre_trajectory_list[i]
+        elif n_probe > exist_n_probes:
+            for i in range(exist_n_probes, n_probe):
+                self.pre_trajectory_list.append(pg.PlotDataItem(pen=pg.mkPen(color=(0, 0, 255), width=2), brush=None))
+                self.vb.addItem(self.pre_trajectory_list[-1])
+
+        for i in range(n_probe):
+            self.pre_trajectory_list[i].setData(data[i])
+
+    def pre_trajectory_color_changed(self, col, lw):
+        for i in range(len(self.pre_trajectory_list)):
+            self.pre_trajectory_list[i].setPen(pg.mkPen(color=col, width=lw))
+
+    def remove_pre_trajectories_vis_lines(self):
+        del_ind = np.arange(len(self.pre_trajectory_list))[::-1]
+        for i in del_ind:
+            self.vb.removeItem(self.pre_trajectory_list[i])
+            self.pre_trajectory_list[i].deleteLater()
+            del self.pre_trajectory_list[i]
+            # self.pre_trajectory_list[i].updateItems(True)
+        self.pre_trajectory_list.clear()
 
     def boundingRect(self):
         return self.base_layer.boundingRect()

@@ -1340,7 +1340,16 @@ class HERBS(QMainWindow, FORM_Main):
             self.print_message('Please load Atlas Slice image.', self.reminder_color)
             return
         if self.atlas_lasso_is_closure:
+            print(self.atlas_view.slice_bregma)
             cut_rect = cv2.boundingRect(np.asarray(self.working_atlas_data['lasso_path']).astype('int'))
+            if self.atlas_view.slice_bregma:
+                self.atlas_view.slice_bregma[0] = self.atlas_view.slice_bregma[0] - cut_rect[0]
+                self.atlas_view.slice_bregma[1] = self.atlas_view.slice_bregma[1] - cut_rect[1]
+                self.atlas_view.slice_stack.image_dict['bregma_pnt'].setData(
+                    pos=np.array([self.atlas_view.slice_bregma]))
+
+            print(self.atlas_view.slice_bregma)
+
             temp = self.atlas_view.slice_image_data.copy()
             cut_img = temp[cut_rect[1]:(cut_rect[1] + cut_rect[3]), cut_rect[0]:(cut_rect[0] + cut_rect[2])]
             self.atlas_view.processing_slice = cut_img
@@ -1399,6 +1408,8 @@ class HERBS(QMainWindow, FORM_Main):
             self.reset_tri_points_atlas()
             self.actionBregma_Picker.setEnabled(True)
             self.actionCreate_Slice_Layer.setEnabled(True)
+            self.object_ctrl.add_object_btn.setEnabled(False)
+            self.object_ctrl.merge_probe_btn.setEnabled(False)
         else:
             self.current_atlas_path = self.slice_atlas_path
             self.actionSwitch_Atlas.setText('Switch Atlas: Volume')
@@ -1409,6 +1420,8 @@ class HERBS(QMainWindow, FORM_Main):
             self.reset_tri_points_atlas()
             self.actionBregma_Picker.setEnabled(False)
             self.actionCreate_Slice_Layer.setEnabled(False)
+            self.object_ctrl.add_object_btn.setEnabled(True)
+            self.object_ctrl.merge_probe_btn.setEnabled(True)
 
     def reset_atlas_slice(self):
         self.atlas_view.slice_stack.set_data(self.atlas_view.slice_image_data)
@@ -3437,8 +3450,21 @@ class HERBS(QMainWindow, FORM_Main):
                 temp = self.working_atlas_data['ruler_path'].copy()
                 temp.append([x, y])
                 self.atlas_view.slice_stack.image_dict['ruler_path'].setData(np.asarray(temp))
-        # elif self.tool_box.checkable_btn_dict['atlas-probe'].isChecked() and self.image_view.image_file is None:
-        #     if len(self.working_atlas_data['atlas-probe']) == 1:
+        # ---------  probe  ----------
+        elif self.tool_box.checkable_btn_dict['probe_btn'].isChecked():
+            if self.image_view.image_file is None:
+                if len(self.working_atlas_data['atlas-probe']) == 1:
+                    points2d = self.working_atlas_data['atlas-probe'].copy()
+                    points2d.append([x, y])
+                    if self.multi_shanks and self.valid_multi_settings:
+                        base_loc_1d = get_pre_multi_shank_vis_base(
+                            self.multi_settings.x_vals, self.multi_settings.y_vals)
+                    else:
+                        base_loc_1d = np.array([0])
+
+                    start_pnt, end_pnt = self.atlas_view.get_pre_vis_data_for_slice_atlas(
+                        np.asarray(points2d), base_loc_1d)
+                    self.atlas_view.set_pre_vis_data(start_pnt, end_pnt)
 
         if not self.atlas_view.slice_info_ready:
             msg = 'Atlas Slice Image coordinates: {} px, {} px'.format(int(x), int(y))
@@ -3469,7 +3495,7 @@ class HERBS(QMainWindow, FORM_Main):
                     else:
                         base_loc_1d = np.array([0])
 
-                    start_pnt, end_pnt = self.atlas_view.get_pre_vis_data(np.asarray(points2d), base_loc_1d)
+                    start_pnt, end_pnt = self.atlas_view.get_pre_vis_data_for_volume_atlas(np.asarray(points2d), base_loc_1d)
                     self.atlas_view.set_pre_vis_data(start_pnt, end_pnt)
 
         c_id = self.atlas_view.current_coronal_index
@@ -3661,11 +3687,16 @@ class HERBS(QMainWindow, FORM_Main):
         # print('atlas clicked')
         x = pos[0]
         y = pos[1]
+        if self.num_windows == 4:
+            self.print_message('Atlas window can not be clicked when 4-window is on.', self.error_message_color)
+            return
         if self.current_atlas == 'volume':
-            if self.atlas_view.atlas_data is None or self.num_windows == 4:
+            if self.atlas_view.atlas_data is None:
+                self.print_message('No volume atlas data is loaded.', self.error_message_color)
                 return
         else:
             if self.atlas_view.slice_image_data is None:
+                self.print_message('No slice atlas data is loaded.', self.error_message_color)
                 return
         # ------------------------- ruler
         if self.tool_box.checkable_btn_dict['ruler_btn'].isChecked():
@@ -3759,23 +3790,33 @@ class HERBS(QMainWindow, FORM_Main):
                 self.atlas_view.working_atlas.remove_pre_trajectories_vis_lines()
                 return
             if self.image_view.image_file is None:
+                # pre-surgery
                 points2d = self.working_atlas_data['atlas-probe'].copy()
-                if self.current_atlas == 'volume':
-                    if self.multi_shanks and self.valid_multi_settings:
-                        base_loc_1d = get_pre_multi_shank_vis_base(
-                            self.multi_settings.x_vals, self.multi_settings.y_vals)
-                    else:
-                        base_loc_1d = np.array([0])
-                    self.atlas_view.draw_pre_2d_vis_data(np.asarray(points2d), base_loc_1d)
+                points2d = np.asarray(points2d)
+
+                if self.multi_shanks and self.valid_multi_settings:
+                    base_loc_1d = get_pre_multi_shank_vis_base(
+                        self.multi_settings.x_vals, self.multi_settings.y_vals)
                 else:
-                    self.atlas_view.working_atlas.image_dict['atlas-probe'].setData(pos=np.asarray(points2d))
+                    base_loc_1d = np.array([0])
+
+                if self.current_atlas == 'volume':
+                    self.atlas_view.draw_pre_2d_vis_data_for_volume_atlas(points2d, base_loc_1d)
+                else:
+                    self.atlas_view.draw_pre_2d_vis_data_for_slice_atlas(points2d, base_loc_1d)
             else:
+                # after-surgery
                 self.atlas_view.working_atlas.image_dict['atlas-probe'].setData(
                     pos=np.asarray(self.working_atlas_data['atlas-probe']))
                 if len(self.working_atlas_data['atlas-probe']) > 1:
-                    current_img = self.atlas_view.working_atlas.label_img.image.copy()
-                    print(np.any(current_img != 0))
+                    if self.current_atlas == 'volume':
+                        current_img = self.atlas_view.working_atlas.label_img.image.copy()
+                    else:
+                        current_img = None
                     vis_points, msg = line_fit_2d(self.working_atlas_data['atlas-probe'], current_img)
+                    if msg is not None:
+                        self.print_message(msg, self.error_message_color)
+                        return
                     self.atlas_view.working_atlas.image_dict['atlas-trajectory'].setData(vis_points)
 
             vis_img = create_vis_img(self.atlas_view.slice_size, self.working_atlas_data['atlas-probe'],
@@ -4803,6 +4844,8 @@ class HERBS(QMainWindow, FORM_Main):
 
         self.reset_tri_points_atlas()
 
+        self.show_only_slice_window()
+
         self.actionSwitch_Atlas.setText('Switch Atlas: Slice')
         self.current_atlas = 'slice'
         self.atlascontrolpanel.setEnabled(False)
@@ -4810,6 +4853,9 @@ class HERBS(QMainWindow, FORM_Main):
         self.actionBregma_Picker.setEnabled(True)
         self.actionCreate_Slice_Layer.setEnabled(True)
         self.delete_all_atlas_layer()
+
+        self.object_ctrl.add_object_btn.setEnabled(False)
+        self.object_ctrl.merge_probe_btn.setEnabled(False)
 
     def set_volume_atlas_to_view(self, atlas_data, segmentation_data, atlas_info, label_info, boundary):
         if self.atlas_view.atlas_data is not None:

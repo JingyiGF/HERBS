@@ -1156,8 +1156,12 @@ class AtlasView(QObject):
             self.anchor_coronal_index = base_loc + self.current_coronal_index
         return start_pnt, end_pnt
 
-    def get_pre_vis_data(self, data, base_loc):
+    def get_pre_vis_data_for_volume_atlas(self, data, base_loc):
         base_loc = np.ravel(base_loc) / self.vox_size_um
+        start_pnt, end_pnt = rotate_base_points(data, base_loc)
+        return start_pnt, end_pnt
+
+    def get_pre_vis_data_for_slice_atlas(self, data, base_loc):
         start_pnt, end_pnt = rotate_base_points(data, base_loc)
         return start_pnt, end_pnt
 
@@ -1169,7 +1173,7 @@ class AtlasView(QObject):
         self.working_atlas.set_pre_design_vis_data(line_data)
         self.working_atlas.image_dict['atlas-probe'].setData(pos=np.asarray(start_pnt))
 
-    def draw_pre_2d_vis_data(self, data, base_loc):
+    def draw_pre_2d_vis_data_for_volume_atlas(self, data, base_loc):
         if len(data) == 1:
             base_loc = np.ravel(base_loc) / self.vox_size_um
             temp = np.zeros((len(base_loc), 2))
@@ -1177,13 +1181,37 @@ class AtlasView(QObject):
             temp[:, 1] = data[0][1]
             self.working_atlas.image_dict['atlas-probe'].setData(pos=np.asarray(temp))
         elif len(data) == 2:
-            start_pnt, end_pnt = self.get_pre_vis_data(data, base_loc)
+            start_pnt, end_pnt = self.get_pre_vis_data_for_volume_atlas(data, base_loc)
             temp = np.vstack([start_pnt, end_pnt])
             self.working_atlas.image_dict['atlas-probe'].setData(pos=temp)
         else:
             self.working_atlas.image_dict['atlas-probe'].clear()
             self.working_atlas.remove_pre_trajectories_vis_lines()
 
+    def draw_pre_2d_vis_data_for_slice_atlas(self, data, base_loc):
+        if self.slice_info_ready:
+            base_loc = np.ravel(base_loc) / 1000 * self.slice_size[1] / self.slice_width
+            if len(data) == 1:
+                temp = np.zeros((len(base_loc), 2))
+                temp[:, 0] = base_loc + data[0][0]
+                temp[:, 1] = data[0][1]
+                self.working_atlas.image_dict['atlas-probe'].setData(pos=np.asarray(temp))
+            elif len(data) == 2:
+                start_pnt, end_pnt = self.get_pre_vis_data_for_slice_atlas(data, base_loc)
+                temp = np.vstack([start_pnt, end_pnt])
+                self.working_atlas.image_dict['atlas-probe'].setData(pos=temp)
+            else:
+                self.working_atlas.image_dict['atlas-probe'].clear()
+                self.working_atlas.remove_pre_trajectories_vis_lines()
+        else:
+            if len(data) == 1:
+                self.working_atlas.image_dict['atlas-probe'].setData(pos=np.asarray(data))
+            elif len(data) == 2:
+                self.working_atlas.image_dict['atlas-probe'].setData(pos=np.asarray(data))
+                self.working_atlas.set_pre_design_vis_data([np.asarray(data)])
+            else:
+                self.working_atlas.image_dict['atlas-probe'].clear()
+                self.working_atlas.remove_pre_trajectories_vis_lines()
     #
     def get_pre_sagital_np2_data(self, data, site_face):
         base_loc = np.array([-375, -125, 125, 375]) / self.vox_size_um

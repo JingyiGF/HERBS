@@ -163,10 +163,14 @@ class SliceStacks(pg.GraphicsLayoutWidget):
         for i in range(len(self.pre_trajectory_list)):
             self.pre_trajectory_list[i].setPen(pg.mkPen(color=col, width=lw))
 
-
     def remove_pre_trajectories_vis_lines(self):
-        for i in range(len(self.pre_trajectory_list)):
-            self.pre_trajectory_list[i].clear()
+        del_ind = np.arange(len(self.pre_trajectory_list))[::-1]
+        for i in del_ind:
+            self.vb.removeItem(self.pre_trajectory_list[i])
+            self.pre_trajectory_list[i].deleteLater()
+            del self.pre_trajectory_list[i]
+            # self.pre_trajectory_list[i].updateItems(True)
+        self.pre_trajectory_list.clear()
 
 
     def set_data(self, atlas, label, contour, scale=None):
