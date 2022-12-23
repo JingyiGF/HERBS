@@ -35,3 +35,7 @@ Fix the valid values for the text input of on side points.
 3. Add multi-shanks probe design.
 4. Support uploading external cell points.
 5. Support un-merging merged object.
+
+### 23rd Dec. 2022
+##### Minor update!
+Feature: Keep slice angles when page number changed for volume atlas.

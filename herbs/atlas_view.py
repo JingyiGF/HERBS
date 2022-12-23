@@ -252,9 +252,13 @@ class AtlasView(QObject):
         self.slice_boundary_points = []
         self.slice_info_ready = False
 
+        self.remain_angle = False
         self.coronal_rotated = False
-        self.sagital_rotated = False
+        self.sagittal_rotated = False
         self.horizontal_rotated = False
+        self.coronal_rads = (0, 0)
+        self.sagittal_rads = (0, 0)
+        self.horizontal_rads = (0, 0)
 
         self.atlas_size = None
         self.anterior_info = None
@@ -286,7 +290,7 @@ class AtlasView(QObject):
 
         self.anchor_coronal_index = None
         self.anchor_sagital_index = None
-        self.anchor_horicontal_index = None
+        self.anchor_horizontal_index = None
 
         self.has_display_objects = False
 
@@ -410,16 +414,22 @@ class AtlasView(QObject):
         opacity_layout.addWidget(self.atlas_op_slider)
         opacity_layout.addWidget(self.atlas_op_spinbox)
 
-        # boundary
+        # show brain region boundary of a volume atlas slice
         self.show_boundary_btn = QPushButton('Show Boundary')
         self.show_boundary_btn.setStyleSheet(button_style)
         self.show_boundary_btn.setCheckable(True)
 
-        #
+        # turn on/off navigation
         self.navigation_btn = QPushButton('Navigation')
         self.navigation_btn.setStyleSheet(button_style)
         self.navigation_btn.setCheckable(True)
         self.navigation_btn.clicked.connect(self.navigation_btn_clicked)
+
+        # turn on/off rotation remain
+        self.rotation_remain_btn = QPushButton('Keep Slice Angles')
+        self.rotation_remain_btn.setStyleSheet(button_style)
+        self.rotation_remain_btn.setCheckable(True)
+        self.rotation_remain_btn.clicked.connect(self.rotation_remain_btn_clicked)
 
         # coronal section control
         coronal_rotation_wrap = QGroupBox('Coronal Section')
@@ -504,7 +514,9 @@ class AtlasView(QObject):
         sidebar_wrap_layout.addWidget(sagital_rotation_wrap)
         sidebar_wrap_layout.addSpacing(10)
         sidebar_wrap_layout.addWidget(horizontal_rotation_wrap)
-        sidebar_wrap_layout.addSpacing(10)
+        sidebar_wrap_layout.addSpacing(5)
+        sidebar_wrap_layout.addWidget(self.rotation_remain_btn)
+        sidebar_wrap_layout.addStretch(1)
         sidebar_wrap_layout.addWidget(self.navigation_btn)
 
         # self.lut.sigLookupTableChanged.connect(self.histlut_changed)
@@ -717,6 +729,7 @@ class AtlasView(QObject):
 
     def navigation_btn_clicked(self):
         if self.navigation_btn.isChecked():
+            # self.
             self.cimg.v_line.setVisible(True)
             self.cimg.h_line.setVisible(True)
             self.himg.v_line.setVisible(True)
@@ -731,6 +744,12 @@ class AtlasView(QObject):
             self.simg.v_line.setVisible(False)
             self.simg.h_line.setVisible(False)
 
+    def rotation_remain_btn_clicked(self):
+        if self.rotation_remain_btn.isChecked():
+            self.remain_angle = True
+        else:
+            self.remain_angle = False
+
     def change_opacity_spinbox_value(self):
         val = self.atlas_op_slider.value()
         self.atlas_op_spinbox.setValue(val / 100)
@@ -743,86 +762,27 @@ class AtlasView(QObject):
         self.simg.label_img.setOpts(opacity=val)
         self.himg.label_img.setOpts(opacity=val)
 
-    # slice number changed
-    def coronal_slice_page_changed(self, page_number):
-        self.clear_all_display_obj()
-        self.crotation_ctrl.h_spinbox.setValue(0)
-        self.crotation_ctrl.v_spinbox.setValue(0)
-        if self.atlas_data is None or self.atlas_label is None:
-            return
-        self.current_coronal_index = page_number
-        da_atlas_slice = self.atlas_data[:, :, page_number]
-        da_atlas_label = self.atlas_label[:, :, page_number]
-        da_atlas_contour = self.atlas_boundary['c_contour'][:, :, page_number]
+    # coronal page number changed and slice rotated
+    def set_perfect_coronal_slice(self):
+        da_atlas_slice = self.atlas_data[:, :, self.current_coronal_index]
+        da_atlas_label = self.atlas_label[:, :, self.current_coronal_index]
+        da_atlas_contour = self.atlas_boundary['c_contour'][:, :, self.current_coronal_index]
         self.cimg.set_data(da_atlas_slice, da_atlas_label, da_atlas_contour, scale=None)
 
-        slide_dist = (page_number - self.origin_3d[1])
+        slide_dist = (self.current_coronal_index - self.origin_3d[1])
         ap_plate_verts = self.ap_plate_verts + np.array([0, slide_dist, 0])
         ap_plate_md = gl.MeshData(vertexes=ap_plate_verts, faces=self.ap_plate_faces)
         self.ap_plate_mesh.setMeshData(meshdata=ap_plate_md)
         self.get_3d_origin()
 
-    def sagital_slice_page_changed(self, page_number):
-        self.clear_all_display_obj()
-        self.srotation_ctrl.h_spinbox.setValue(0)
-        self.srotation_ctrl.v_spinbox.setValue(0)
-        if self.atlas_data is None or self.atlas_label is None:
-            return
-        self.current_sagital_index = page_number
-        da_atlas_slice = self.atlas_data[:, page_number, :]
-        da_atlas_label = self.atlas_label[:, page_number, :]
-        da_atlas_contour = self.atlas_boundary['s_contour'][:, page_number, :]
-        self.simg.set_data(da_atlas_slice, da_atlas_label, da_atlas_contour, scale=None)
-
-        slide_dist = (page_number - self.origin_3d[0])
-        ml_plate_verts = self.ml_plate_verts + np.array([slide_dist, 0, 0])
-        ml_plate_md = gl.MeshData(vertexes=ml_plate_verts, faces=self.ml_plate_faces)
-        self.ml_plate_mesh.setMeshData(meshdata=ml_plate_md)
-        self.get_3d_origin()
-
-    def horizontal_slice_page_changed(self, page_number):
-        self.clear_all_display_obj()
-        self.hrotation_ctrl.h_spinbox.setValue(0)
-        self.hrotation_ctrl.v_spinbox.setValue(0)
-        if self.atlas_data is None or self.atlas_label is None:
-            return
-        self.current_horizontal_index = page_number
-        slice_number = self.atlas_size[0] - 1 - page_number
-        da_atlas_slice = self.atlas_data[slice_number, :, :]
-        da_atlas_label = self.atlas_label[slice_number, :, :]
-        da_atlas_contour = self.atlas_boundary['h_contour'][slice_number, :, :]
-        self.himg.set_data(da_atlas_slice, da_atlas_label, da_atlas_contour, scale=None)
-
-        slide_dist = (page_number - self.origin_3d[2])
-        dv_plate_verts = self.dv_plate_verts + np.array([0, 0, slide_dist])
-        dv_plate_md = gl.MeshData(vertexes=dv_plate_verts, faces=self.dv_plate_faces)
-        self.dv_plate_mesh.setMeshData(meshdata=dv_plate_md)
-        self.get_3d_origin()
-
-    def get_3d_origin(self):
-        c_id = self.current_coronal_index
-        s_id = self.current_sagital_index
-        h_id = self.current_horizontal_index
-        o_rot = np.array([s_id, c_id, h_id])
-        self.rotate_origin_3d = o_rot - self.origin_3d
-
-    def coronal_slice_rotated(self, rads):
-        self.clear_all_display_obj()
-        if self.atlas_data is None or self.atlas_label is None:
-            return
-        if np.all(np.ravel(rads) == 0):
-            self.coronal_rotated = False
-            return
-
-        self.coronal_rotated = True
-
+    def rotate_coronal_current_slice(self):
         # calculate for 2d rotation
         c_id = self.current_coronal_index
         s_id = self.current_sagital_index
         h_id = self.atlas_size[0] - 1 - self.current_horizontal_index
 
-        z_angle = rads[0]
-        x_angle = rads[1]
+        z_angle = self.coronal_rads[0]
+        x_angle = self.coronal_rads[1]
         self.c_rotm_2d = np.dot(rotation_x(z_angle), rotation_y(x_angle))
 
         o_val = np.array([0, 0, c_id])
@@ -851,22 +811,59 @@ class AtlasView(QObject):
         ap_plate_md = gl.MeshData(vertexes=ap_plate_verts, faces=self.ap_plate_faces)
         self.ap_plate_mesh.setMeshData(meshdata=ap_plate_md)
 
-    def sagital_slice_rotated(self, rads):
+    def coronal_slice_page_changed(self, page_number):
         self.clear_all_display_obj()
         if self.atlas_data is None or self.atlas_label is None:
             return
-        if np.all(np.ravel(rads) == 0):
-            self.sagital_rotated = False
+        self.current_coronal_index = page_number
+        self.set_perfect_coronal_slice()
+        if self.remain_angle:
+            if self.coronal_rotated:
+                self.rotate_coronal_current_slice()
+        else:
+            if self.coronal_rotated:
+                self.crotation_ctrl.h_spinbox.blockSignals(True)
+                self.crotation_ctrl.v_spinbox.blockSignals(True)
+                self.crotation_ctrl.h_slider.setValue(0)
+                self.crotation_ctrl.v_slider.setValue(0)
+                self.crotation_ctrl.h_spinbox.blockSignals(False)
+                self.crotation_ctrl.v_spinbox.blockSignals(False)
+                self.coronal_rotated = False
+
+    def coronal_slice_rotated(self, rads):
+        self.clear_all_display_obj()
+        if self.atlas_data is None or self.atlas_label is None:
             return
+        self.coronal_rads = rads
+        if np.all(np.ravel(rads) == 0):
+            if self.coronal_rotated:
+                self.set_perfect_coronal_slice()
+                self.coronal_rotated = False
+        else:
+            self.rotate_coronal_current_slice()
+            self.coronal_rotated = True
 
-        self.sagital_rotated = True
+    # sagittal page number changed and slice rotated
+    def set_perfect_sagittal_slice(self):
+        da_atlas_slice = self.atlas_data[:, self.current_sagital_index, :]
+        da_atlas_label = self.atlas_label[:, self.current_sagital_index, :]
+        da_atlas_contour = self.atlas_boundary['s_contour'][:, self.current_sagital_index, :]
+        self.simg.set_data(da_atlas_slice, da_atlas_label, da_atlas_contour, scale=None)
 
+        slide_dist = (self.current_sagital_index - self.origin_3d[0])
+        ml_plate_verts = self.ml_plate_verts + np.array([slide_dist, 0, 0])
+        ml_plate_md = gl.MeshData(vertexes=ml_plate_verts, faces=self.ml_plate_faces)
+        self.ml_plate_mesh.setMeshData(meshdata=ml_plate_md)
+        self.get_3d_origin()
+
+    def rotate_sagittal_current_slice(self):
+        # calculate for 2d rotation
         c_id = self.current_coronal_index
         s_id = self.current_sagital_index
         h_id = self.atlas_size[0] - 1 - self.current_horizontal_index
 
-        z_angle = rads[0]
-        y_angle = rads[1]
+        z_angle = self.sagittal_rads[0]
+        y_angle = self.sagittal_rads[1]
         self.s_rotm_2d = np.dot(rotation_x(z_angle), rotation_z(y_angle))
 
         o_val = np.array([0, s_id, 0])
@@ -895,22 +892,59 @@ class AtlasView(QObject):
         ml_plate_md = gl.MeshData(vertexes=ml_plate_verts, faces=self.ml_plate_faces)
         self.ml_plate_mesh.setMeshData(meshdata=ml_plate_md)
 
-    def horizontal_slice_rotated(self, rads):
+    def sagital_slice_page_changed(self, page_number):
         self.clear_all_display_obj()
         if self.atlas_data is None or self.atlas_label is None:
             return
-        if np.all(np.ravel(rads) == 0):
-            self.horizontal_rotated = False
+        self.current_sagital_index = page_number
+        self.set_perfect_sagittal_slice()
+        if self.remain_angle:
+            if self.sagittal_rotated:
+                self.rotate_sagittal_current_slice()
+        else:
+            if self.sagittal_rotated:
+                self.srotation_ctrl.h_spinbox.blockSignals(True)
+                self.srotation_ctrl.v_spinbox.blockSignals(True)
+                self.srotation_ctrl.h_slider.setValue(0)
+                self.srotation_ctrl.v_slider.setValue(0)
+                self.srotation_ctrl.h_spinbox.blockSignals(False)
+                self.srotation_ctrl.v_spinbox.blockSignals(False)
+                self.sagittal_rotated = False
+
+    def sagital_slice_rotated(self, rads):
+        self.clear_all_display_obj()
+        if self.atlas_data is None or self.atlas_label is None:
             return
+        self.sagittal_rads = rads
+        if np.all(np.ravel(rads) == 0):
+            if self.sagittal_rotated:
+                self.set_perfect_sagittal_slice()
+                self.sagittal_rotated = False
+        else:
+            self.rotate_sagittal_current_slice()
+            self.sagittal_rotated = True
 
-        self.horizontal_rotated = True
+    # horizontal page number changed and slice rotated
+    def set_perfect_horizontal_slice(self):
+        slice_number = self.atlas_size[0] - 1 - self.current_horizontal_index
+        da_atlas_slice = self.atlas_data[slice_number, :, :]
+        da_atlas_label = self.atlas_label[slice_number, :, :]
+        da_atlas_contour = self.atlas_boundary['h_contour'][slice_number, :, :]
+        self.himg.set_data(da_atlas_slice, da_atlas_label, da_atlas_contour, scale=None)
 
+        slide_dist = (self.current_horizontal_index - self.origin_3d[2])
+        dv_plate_verts = self.dv_plate_verts + np.array([0, 0, slide_dist])
+        dv_plate_md = gl.MeshData(vertexes=dv_plate_verts, faces=self.dv_plate_faces)
+        self.dv_plate_mesh.setMeshData(meshdata=dv_plate_md)
+        self.get_3d_origin()
+
+    def rotate_horizontal_current_slice(self):
         c_id = self.current_coronal_index
         s_id = self.current_sagital_index
         h_id = self.atlas_size[0] - 1 - self.current_horizontal_index
 
-        x_angle = rads[0]
-        y_angle = rads[1]
+        x_angle = self.horizontal_rads[0]
+        y_angle = self.horizontal_rads[1]
         self.h_rotm_2d = np.dot(rotation_z(y_angle), rotation_y(x_angle))
 
         o_val = np.array([h_id, 0, 0])
@@ -939,6 +973,48 @@ class AtlasView(QObject):
         dv_plate_md = gl.MeshData(vertexes=dv_plate_verts, faces=self.dv_plate_faces)
         self.dv_plate_mesh.setMeshData(meshdata=dv_plate_md)
 
+    def horizontal_slice_page_changed(self, page_number):
+        self.clear_all_display_obj()
+        if self.atlas_data is None or self.atlas_label is None:
+            return
+        self.current_horizontal_index = page_number
+
+        self.set_perfect_horizontal_slice()
+        if self.remain_angle:
+            if self.horizontal_rotated:
+                self.rotate_horizontal_current_slice()
+        else:
+            if self.horizontal_rotated:
+                self.hrotation_ctrl.h_spinbox.blockSignals(True)
+                self.hrotation_ctrl.v_spinbox.blockSignals(True)
+                self.hrotation_ctrl.h_slider.setValue(0)
+                self.hrotation_ctrl.v_slider.setValue(0)
+                self.hrotation_ctrl.h_spinbox.blockSignals(False)
+                self.hrotation_ctrl.v_spinbox.blockSignals(False)
+                self.horizontal_rotated = False
+
+    def horizontal_slice_rotated(self, rads):
+        self.clear_all_display_obj()
+        if self.atlas_data is None or self.atlas_label is None:
+            return
+        self.horizontal_rads = rads
+        if np.all(np.ravel(rads) == 0):
+            if self.horizontal_rotated:
+                self.set_perfect_horizontal_slice()
+                self.horizontal_rotated = False
+        else:
+            self.rotate_horizontal_current_slice()
+            self.horizontal_rotated = True
+
+    # get 3d rotation origin
+    def get_3d_origin(self):
+        c_id = self.current_coronal_index
+        s_id = self.current_sagital_index
+        h_id = self.current_horizontal_index
+        o_rot = np.array([s_id, c_id, h_id])
+        self.rotate_origin_3d = o_rot - self.origin_3d
+
+    #
     def rotate_cs_plane_after_merging_probe(self, display_data):
         # display data has to be the merged probe data
         self.cpage_ctrl.set_val(display_data['insertion_vox'][1])
@@ -1047,14 +1123,14 @@ class AtlasView(QObject):
             points3 = np.dot(rot_mat, (points3 - rotation_origin).T).T + rotation_origin
         return points3
 
-    def get_sagital_3d(self, points2, sagital_index=None):
+    def get_sagittal_3d(self, points2, sagital_index=None):
         if sagital_index is None:
             da_x = np.ones(len(points2)) * self.current_sagital_index
         else:
             da_x = sagital_index
         points3 = np.vstack([da_x, points2[:, 0], self.atlas_size[0] - points2[:, 1]]).T
         points3 = points3 - self.origin_3d
-        if self.sagital_rotated:
+        if self.sagittal_rotated:
             rot_mat = self.s_rotm_3d
             rotation_origin = self.rotate_origin_3d
             points3 = np.dot(rot_mat, (points3 - rotation_origin).T).T + rotation_origin
@@ -1077,84 +1153,13 @@ class AtlasView(QObject):
         if atlas_display == 'coronal':
             data = self.get_coronal_3d(processing_data)
         elif atlas_display == 'sagittal':
-            data = self.get_sagital_3d(processing_data)
+            data = self.get_sagittal_3d(processing_data)
         else:
             data = self.get_horizontal_3d(processing_data)
         return data
 
-    def get_pre_np2_data(self, data, atlas_display, site_face):
-        points3_list = []
-        base_loc = np.array([-375, -125, 125, 375]) / self.vox_size_um
-        if atlas_display == 'coronal':
-            if site_face in [0, 1]:
-                start_pnt, end_pnt = rotate_base_points(data, base_loc)
-                for i in range(4):
-                    points2 = np.vstack([start_pnt[i], end_pnt[i]])
-                    p3 = self.get_coronal_3d(points2)
-                    points3_list.append(p3)
-            else:
-                for i in range(4):
-                    points2 = data.copy()
-                    coronal_index = np.ones(2) * (self.current_coronal_index + base_loc[i])
-                    p3 = self.get_coronal_3d(points2, coronal_index)
-                    points3_list.append(p3)
-        elif atlas_display == 'sagittal':
-            if site_face in [2, 3]:
-                start_pnt, end_pnt = rotate_base_points(data, base_loc)
-                for i in range(4):
-                    points2 = np.vstack([start_pnt[i], end_pnt[i]])
-                    p3 = self.get_sagital_3d(points2)
-                    points3_list.append(p3)
-            else:
-                for i in range(4):
-                    points2 = data.copy()
-                    sagital_index = np.ones(2) * (self.current_sagital_index + base_loc[i])
-                    p3 = self.get_sagital_3d(points2, sagital_index)
-                    points3_list.append(p3)
-        else:
-            if site_face in [0, 1]:
-                start_pnt, end_pnt = rotate_base_points(data, base_loc)
-                for i in range(4):
-                    points2 = np.vstack([start_pnt[i], end_pnt[i]])
-                    p3 = self.get_horizontal_3d(points2)
-                    points3_list.append(p3)
-            else:
-                for i in range(4):
-                    points2 = data.copy()
-                    horizontal_index = np.ones(2) * (self.current_horizontal_index + base_loc[i])
-                    p3 = self.get_horizontal_3d(points2, horizontal_index)
-                    points3_list.append(p3)
-        return points3_list
-
     def pre_trajectory_changed(self):
         self.working_atlas.remove_pre_trajectories_vis_lines()
-
-
-
-
-
-
-
-    #
-    def get_pre_coronal_np2_data(self, data, site_face):
-        base_loc = np.array([-375, -125, 125, 375]) / self.vox_size_um
-        if site_face in [0, 1]:
-            start_pnt, end_pnt = rotate_base_points(data, base_loc)
-            self.anchor_coronal_index = None
-            line_data = []
-            for i in range(4):
-                da_pnts = np.asarray([start_pnt[i], end_pnt[i]])
-                line_data.append(da_pnts)
-            self.working_atlas.set_pre_design_vis_data(line_data)
-            temp = np.vstack([start_pnt, end_pnt])
-            print(temp)
-            self.working_atlas.image_dict['atlas-probe'].setData(pos=temp)
-        else:
-            start_pnt = data[0]
-            end_pnt = data[1]
-            self.working_atlas.pre_trajectory_list[0].setData(data)
-            self.anchor_coronal_index = base_loc + self.current_coronal_index
-        return start_pnt, end_pnt
 
     def get_pre_vis_data_for_volume_atlas(self, data, base_loc):
         base_loc = np.ravel(base_loc) / self.vox_size_um
@@ -1212,41 +1217,6 @@ class AtlasView(QObject):
             else:
                 self.working_atlas.image_dict['atlas-probe'].clear()
                 self.working_atlas.remove_pre_trajectories_vis_lines()
-    #
-    def get_pre_sagital_np2_data(self, data, site_face):
-        base_loc = np.array([-375, -125, 125, 375]) / self.vox_size_um
-        if site_face in [2, 3]:
-            start_pnt, end_pnt = rotate_base_points(data, base_loc)
-            self.anchor_sagital_index = None
-            for i in range(4):
-                da_pnts = np.asarray([start_pnt[i], end_pnt[i]])
-                self.working_atlas.pre_trajectory_list[i].setData(da_pnts)
-            temp = np.vstack([start_pnt, end_pnt])
-            self.working_atlas.image_dict['atlas-probe'].setData(pos=temp)
-        else:
-            start_pnt = data[0]
-            end_pnt = data[1]
-            self.working_atlas.pre_trajectory_list[0].setData(data)
-            self.anchor_sagital_index = base_loc + self.current_sagital_index
-        return start_pnt, end_pnt
-
-    #
-    def get_pre_horizontal_np2_data(self, data, site_face):
-        base_loc = np.array([-375, -125, 125, 375]) / self.vox_size_um
-        if site_face in [0, 1]:
-            start_pnt, end_pnt = rotate_base_points(data, base_loc)
-            self.anchor_horizontal_index = None
-            for i in range(4):
-                da_pnts = np.asarray([start_pnt[i], end_pnt[i]])
-                self.working_atlas.pre_trajectory_list[i].setData(da_pnts)
-            temp = np.vstack([start_pnt, end_pnt])
-            self.working_atlas.image_dict['atlas-probe'].setData(pos=temp)
-        else:
-            start_pnt = data[0]
-            end_pnt = data[1]
-            self.working_atlas.pre_trajectory_list[0].setData(data)
-            self.anchor_horizontal_index = base_loc + self.current_horizontal_index
-        return start_pnt, end_pnt
 
 
     # def get_pre_multi_probe_data(self, data, atlas_display, multi_settings):
@@ -1257,7 +1227,7 @@ class AtlasView(QObject):
     #     if atlas_display == 'coronal':
     #         data3 = self.get_coronal_3d(data)
     #     elif atlas_display == 'sagittal':
-    #         data3 = self.get_sagital_3d(data)
+    #         data3 = self.get_sagittal_3d(data)
     #     else:
     #         data3 = self.get_horizontal_3d(data)
     #
@@ -1305,7 +1275,7 @@ class AtlasView(QObject):
             else:
                 n_vec = np.array([0, -1, 0])
         elif atlas_display == 'sagittal':
-            if self.sagital_rotated:
+            if self.sagittal_rotated:
                 n_vec = np.dot(self.s_rotm_3d, np.array([1, 0, 0]))
             else:
                 n_vec = np.array([1, 0, 0])

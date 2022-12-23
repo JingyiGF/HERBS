@@ -3568,7 +3568,7 @@ class HERBS(QMainWindow, FORM_Main):
         o_rot = np.array([h_id, s_id, c_id])
         da_pnt = np.array([y, s_id, x])
 
-        if self.atlas_view.sagital_rotated:
+        if self.atlas_view.sagittal_rotated:
             da_pnt = o_rot + np.dot(self.atlas_view.s_rotm_2d, (da_pnt - o_rot))
 
         da_label = self.atlas_view.simg.label_img.image.copy()
