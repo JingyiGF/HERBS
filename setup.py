@@ -18,11 +18,12 @@ if sys.version_info.minor == 8 and sys.version_info.micro < 10:
 if sys.version_info.minor == 9 and sys.version_info.micro == 0:
     is_problematic = True
 
-if sys.version_info.minor == 10 and sys.version_info.micro >= 5:
+if sys.version_info.minor == 10 and sys.version_info.micro > 10:
     is_problematic = True
 
 if is_problematic:
-    raise RuntimeError("Python version >= 3.8.10 < 3.10.5 / 3.9.0 required.")
+    raise RuntimeError("Python version >= 3.8.10 <= 3.10.9 / 3.9.0 required.")
+
 
 # Utility function to read the README file.
 def read(fname):
@@ -64,7 +65,7 @@ requests >= 2.26.0
 nibabel >= 3.2.1
 pynrrd >= 0.4.3
 tifffile >= 2021.11.2
-aicspylibczi >= 3.0.3
+aicspylibczi == 3.0.3
 pandas >= 1.3.5
 natsort >= 8.0.2
 imagecodecs >= 2022.2.22
@@ -90,21 +91,21 @@ qss/*.qss
 
 setup(
     name="herbs",
-    version="0.2.2",
+    version="0.2.3",
     author="Jingyi GF",
     author_email="jingyi.g.fuglstad@gmail.com",
     description="A Python-based GUI for Histological E-data Registration in Brain Space",
     keywords="brain atlas, histological image registration, probe coordinates",
     url="https://github.com/JingyiGF/HERBS",
     packages=find_packages(),
-    package_data={'': [_f for _f in PACKAGE_DATA.split('\n') if _f]},
+    package_data={"": [_f for _f in PACKAGE_DATA.split("\n") if _f]},
     include_package_data=True,
-    long_description=read('README.md'),
+    long_description=read("README.md"),
     long_description_content_type="text/markdown",
     project_urls={
         "Bug Tracker": "https://github.com/JingyiGF/HERBS/issues",
     },
-    classifiers=[_f for _f in CLASSIFIERS.split('\n') if _f],
+    classifiers=[_f for _f in CLASSIFIERS.split("\n") if _f],
     python_requires=">=3.8",
-    install_requires=[_f for _f in REQUIRES.split('\n') if _f]
+    install_requires=[_f for _f in REQUIRES.split("\n") if _f],
 )
