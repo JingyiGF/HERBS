@@ -54,6 +54,7 @@ REQUIRES = """
 PyQt5 >= 5.14.2; python_version == "3.8"
 PyQt5 >= 5.15.1; python_version == "3.9"
 PyQt5 >= 5.15.5; python_version == "3.10"
+aicspylibczi >= 3.0.3
 pyqtgraph == 0.12.3
 PyOpenGL >= 3.1.5
 QtRangeSlider == 0.1.5
@@ -65,7 +66,6 @@ requests >= 2.26.0
 nibabel >= 3.2.1
 pynrrd >= 0.4.3
 tifffile >= 2021.11.2
-aicspylibczi == 3.0.3
 pandas >= 1.3.5
 natsort >= 8.0.2
 imagecodecs >= 2022.2.22
@@ -91,7 +91,7 @@ qss/*.qss
 
 setup(
     name="herbs",
-    version="0.2.3",
+    version="0.2.5",
     author="Jingyi GF",
     author_email="jingyi.g.fuglstad@gmail.com",
     description="A Python-based GUI for Histological E-data Registration in Brain Space",
