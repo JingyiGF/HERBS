@@ -864,6 +864,11 @@ selection-background-color: rgb(50, 50, 50);</string>
     <string>Cells</string>
    </property>
   </action>
+  <action name="actionExport_Atlas_Overlay">
+   <property name="text">
+    <string>Export Atlas Overlay</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>

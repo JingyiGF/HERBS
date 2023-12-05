@@ -989,6 +989,7 @@ class HERBS(QMainWindow, FORM_Main):
         self.working_atlas_data["atlas-mask"] = np.ones(
             self.atlas_view.slice_size
         ).astype("uint8")
+        # should I delete all layers ???
         # self.check_n_trajectory()
 
     def clear_tri_inside(self):
@@ -7591,6 +7592,102 @@ class HERBS(QMainWindow, FORM_Main):
                 object_mode=self.obj_display_mode,
             )
 
+    # -------------------------------------------------------------
+    #                    Export
+    # -------------------------------------------------------------
+    def export_atlas_overlay_layers(self):
+        if not "atlas-overlay" in self.layer_ctrl.layer_link:
+            self.print_message(
+                "No atlas-overlay layer is created.", self.error_message_color
+            )
+            return
+        self.print_message("Export atlas overaly layers...", self.normal_color)
+        path = QFileDialog.getSaveFileName(
+            self, "Export image", self.current_img_path, "JPEG (*.jpg)"
+        )
+        if path[0] != "":
+            overlay_img = self.atlas_view.working_atlas.image_dict[
+                "atlas-overlay"
+            ].image
+
+            atlas_data = self.atlas_view.working_atlas.img.image.copy()
+
+            slice_shape = self.atlas_view.slice_size
+
+            atlas_data_temp = np.zeros((slice_shape[0], slice_shape[1], 3))
+            atlas_data_temp[:, :, 0] = atlas_data
+            atlas_data_temp[:, :, 1] = atlas_data
+            atlas_data_temp[:, :, 2] = atlas_data
+
+            max_val = int(np.max(atlas_data) * 255)
+            slice_img = cv2.normalize(
+                atlas_data_temp, None, 0, max_val, cv2.NORM_MINMAX, dtype=cv2.CV_8U
+            )
+
+            label_data = self.atlas_view.working_atlas.label_img.image.copy()
+            unique_labels = np.unique(label_data)
+
+            label_colors = self.atlas_view.label_tree.lookup_table()
+
+            valid_label = np.where(label_colors[:, 3] != 0)[0].astype(int)
+
+            label_img = np.zeros((slice_shape[0], slice_shape[1], 3))
+            for labl in valid_label:
+                if labl in unique_labels:
+                    loc_filter = np.where(label_data == labl)
+                    label_img[loc_filter[0], loc_filter[1], 0] = label_colors[labl, 0]
+                    label_img[loc_filter[0], loc_filter[1], 1] = label_colors[labl, 1]
+                    label_img[loc_filter[0], loc_filter[1], 2] = label_colors[labl, 2]
+
+            label_img = cv2.normalize(
+                label_img, None, 0, np.max(label_img), cv2.NORM_MINMAX, dtype=cv2.CV_8U
+            )
+
+            label_img = cv2.cvtColor(label_img, cv2.COLOR_RGB2BGR)
+
+            blend_img = cv2.addWeighted(slice_img, 0.8, label_img, 0.2, 0)
+            if overlay_img is not None:
+                overlay_img = cv2.cvtColor(overlay_img, cv2.COLOR_RGB2BGR)
+                blend_img = cv2.addWeighted(blend_img, 0.6, overlay_img, 0.4, 0)
+
+            point_data = self.atlas_view.working_atlas.image_dict["tri_pnts"].data
+
+            # font = cv2.FONT_HERSHEY_SIMPLEX
+            # font_scale = 0.3
+            # color = (128, 128, 128)
+            # thickness = 1
+
+            if len(point_data["pos"]) > 4:
+                for i in range(len(point_data["pos"][4:])):
+                    point = point_data["pos"][4 + i]
+                    blend_img = cv2.circle(
+                        blend_img,
+                        tuple(point),
+                        radius=3,
+                        color=(128, 128, 128),
+                        thickness=-1,
+                    )
+                    # point_image = cv2.putText(
+                    #     point_image,
+                    #     f"{i+1}",
+                    #     tuple(point),
+                    #     font,
+                    #     font_scale,
+                    #     color,
+                    #     thickness,
+                    #     cv2.LINE_AA,
+                    # )
+            cv2.imwrite(path[0], blend_img)
+
+            self.print_message(
+                "Merged image is exported successfully.", self.normal_color
+            )
+        else:
+            self.print_message("", self.normal_color)
+
+    # -------------------------------------------------------------
+    #                    Status
+    # -------------------------------------------------------------
     # status
     def print_message(self, msg, col):
         self.statusbar.setStyleSheet(get_statusbar_style(col))
@@ -7602,6 +7699,9 @@ class HERBS(QMainWindow, FORM_Main):
         dlg.exec()
 
 
+# -------------------------------------------------------------
+#                    Main run
+# -------------------------------------------------------------
 def main():
     app = QApplication(argv)
     qss_file_name = "qss/main_window.qss"
