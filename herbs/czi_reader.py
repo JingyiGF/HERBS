@@ -55,20 +55,16 @@ class CZIReader(object):
         self.n_scenes = len(self.dimensions)
         self.has_fixed_box = False
         if self.n_scenes == 1:
-            if self.dimensions[0]["S"][2] != 1:
-                self.n_scenes = self.dimensions[0]["S"][2]
+            if self.dimensions[0]["S"][1] != 1:
+                self.n_scenes = self.dimensions[0]["S"][1]
                 self.has_fixed_box = True
         self.scene_bbox = []
         if self.is_mosaic:
             for i in range(self.n_scenes):
-                if self.has_fixed_box:
-                    i = 0
                 bbox = self.czi.get_mosaic_scene_bounding_box(index=i)
                 self.scene_bbox.append((bbox.x, bbox.y, bbox.w, bbox.h))
         else:
             for i in range(self.n_scenes):
-                if self.has_fixed_box:
-                    i = 0
                 bbox = self.czi.get_scene_bounding_box(index=i)
                 self.scene_bbox.append((bbox.x, bbox.y, bbox.w, bbox.h))
 
